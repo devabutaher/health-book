@@ -1,0 +1,13 @@
+{
+  "extends": "@healthbook/config-tsconfig/node.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "verbatimModuleSyntax": false,
+    "paths": {
+      "@healthbook/shared": ["../../packages/shared/src"],
+      "@healthbook/shared/*": ["../../packages/shared/src/*"]
+    }
+  },
+  "include": ["src", "generated"],
+  "exclude": ["node_modules", "dist"]
+}

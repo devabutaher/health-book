@@ -1,0 +1,62 @@
+# Dependencies
+node_modules/
+
+# Build output
+.next/
+dist/
+out/
+build/
+.turbo/
+
+# Testing
+coverage/
+cypress/videos/
+cypress/screenshots/
+playwright-report/
+test-results/
+
+# TypeScript
+*.tsbuildinfo
+
+# Environment
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Prisma generated client
+apps/api/generated/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Secrets / certs
+*.pem
+
+# Uploaded images
+apps/api/uploads/
+
+# Vercel
+.vercel
+
+# Temp
+*.tmp
+*.temp
+
+pnpm-lock.yaml

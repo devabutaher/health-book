@@ -1,0 +1,19 @@
+{
+  "name": "HealthBook",
+  "short_name": "HealthBook",
+  "description": "Your health journey, shared with friends",
+  "start_url": "/feed",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#0d9488",
+  "background_color": "#09090b",
+  "categories": ["health", "fitness", "social"],
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

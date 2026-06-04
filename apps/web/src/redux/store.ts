@@ -1,0 +1,105 @@
+import { configureStore, type Middleware } from "@reduxjs/toolkit";
+import { setupListeners } from "@reduxjs/toolkit/query";
+import { authApi } from "./api/authApi";
+import { challengesApi } from "./api/challengesApi";
+import { commentApi } from "./api/commentApi";
+import { groupsApi } from "./api/groupsApi";
+import { groupEventApi } from "./api/groupEventApi";
+import { groupPollApi } from "./api/groupPollApi";
+import { healthLogApi } from "./api/healthLogApi";
+import { highlightsApi } from "./api/highlightsApi";
+import { messagingApi } from "./api/messagingApi";
+import { notificationApi } from "./api/notificationApi";
+import { periodLogApi } from "./api/periodLogApi";
+import { postApi } from "./api/postApi";
+import { reelsApi } from "./api/reelsApi";
+import { searchApi } from "./api/searchApi";
+import { storiesApi } from "./api/storiesApi";
+import { userApi } from "./api/userApi";
+import { weightLogApi } from "./api/weightLogApi";
+import { newsApi } from "./api/newsApi";
+import { pushApi } from "./api/pushApi";
+import authReducer from "./slices/authSlice";
+import settingsReducer, { type SettingsState } from "./slices/settingsSlice";
+
+const SETTINGS_STORAGE_KEY = "hb-settings";
+
+const persistSettingsMiddleware: Middleware = (store) => {
+  let lastSerialized = "";
+  return (next) => (action) => {
+    const result = next(action);
+    if (typeof window === "undefined") return result;
+    const settings = (store.getState() as { settings: SettingsState }).settings;
+    const serialized = JSON.stringify(settings);
+    if (serialized !== lastSerialized) {
+      lastSerialized = serialized;
+      try {
+        window.localStorage.setItem(SETTINGS_STORAGE_KEY, serialized);
+      } catch {
+        /* quota or private mode */
+      }
+    }
+    return result;
+  };
+};
+
+export const store = configureStore({
+  reducer: {
+    auth: authReducer,
+    settings: settingsReducer,
+    [authApi.reducerPath]: authApi.reducer,
+    [userApi.reducerPath]: userApi.reducer,
+    [postApi.reducerPath]: postApi.reducer,
+    [commentApi.reducerPath]: commentApi.reducer,
+    [healthLogApi.reducerPath]: healthLogApi.reducer,
+    [searchApi.reducerPath]: searchApi.reducer,
+    [notificationApi.reducerPath]: notificationApi.reducer,
+    [periodLogApi.reducerPath]: periodLogApi.reducer,
+    [weightLogApi.reducerPath]: weightLogApi.reducer,
+    [messagingApi.reducerPath]: messagingApi.reducer,
+    [groupsApi.reducerPath]: groupsApi.reducer,
+    [challengesApi.reducerPath]: challengesApi.reducer,
+    [groupEventApi.reducerPath]: groupEventApi.reducer,
+    [groupPollApi.reducerPath]: groupPollApi.reducer,
+    [storiesApi.reducerPath]: storiesApi.reducer,
+    [reelsApi.reducerPath]: reelsApi.reducer,
+    [highlightsApi.reducerPath]: highlightsApi.reducer,
+    [newsApi.reducerPath]: newsApi.reducer,
+    [pushApi.reducerPath]: pushApi.reducer,
+  },
+  middleware: (getDefaultMiddleware) =>
+    getDefaultMiddleware({
+      immutableCheck: false,
+      serializableCheck: false,
+    }).concat(
+      persistSettingsMiddleware,
+      authApi.middleware,
+      userApi.middleware,
+      postApi.middleware,
+      commentApi.middleware,
+      healthLogApi.middleware,
+      searchApi.middleware,
+      notificationApi.middleware,
+      periodLogApi.middleware,
+      weightLogApi.middleware,
+      messagingApi.middleware,
+      groupsApi.middleware,
+      challengesApi.middleware,
+      groupEventApi.middleware,
+      groupPollApi.middleware,
+      storiesApi.middleware,
+      reelsApi.middleware,
+      highlightsApi.middleware,
+      newsApi.middleware,
+      pushApi.middleware,
+    ),
+});
+
+setupListeners(store.dispatch);
+
+export type RootState = ReturnType<typeof store.getState>;
+export type AppDispatch = typeof store.dispatch;
+
+export const resetApiCache = () => {
+  store.dispatch(postApi.util.resetApiState());
+};
