@@ -85,6 +85,11 @@ export function createBaseQuery(baseUrl: string) {
     let result = await apiBaseQuery(args, api, extraOptions);
 
     if (result.error && result.error.status === 401) {
+      const state = api.getState() as RootState;
+      if (!state.auth.refreshToken) {
+        return result;
+      }
+
       const refreshed = await acquireRefreshLock(api, extraOptions);
 
       if (refreshed) {

@@ -11,13 +11,13 @@ router.get("/explore", postController.getExplore);
 router.get("/saved", authenticate, postController.getSaved);
 router.get("/group/:id", authenticate, postController.getGroupFeed);
 router.get("/user/:userId", postController.getUserPosts);
+router.get("/drafts", authenticate, postController.getDrafts);
 router.get("/:id", postController.getById);
 router.put("/:id", authenticate, postController.update);
 router.delete("/:id", authenticate, postController.delete);
 router.post("/:id/reactions", authenticate, postController.toggleReaction);
 router.delete("/:id/reactions", authenticate, postController.removeReaction);
 router.post("/:id/save", authenticate, postController.toggleSave);
-router.get("/drafts", authenticate, postController.getDrafts);
 router.post("/:id/publish", authenticate, postController.publishDraft);
 router.post("/media", authenticate, upload.single("image"), postController.uploadMedia);
 
