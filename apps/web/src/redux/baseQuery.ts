@@ -19,6 +19,33 @@ const refreshBaseQuery = fetchBaseQuery({
 
 let pendingRefresh: Promise<boolean> | null = null;
 
+async function attemptRefresh(
+  api: BaseQueryApi,
+  extraOptions: Record<string, unknown>,
+): Promise<boolean> {
+  const refreshToken = (api.getState() as RootState).auth.refreshToken;
+  if (!refreshToken) return false;
+
+  const refreshResult = await refreshBaseQuery(
+    { url: "/refresh", method: "POST", body: { refreshToken } },
+    api,
+    extraOptions,
+  );
+
+  if (refreshResult.data) {
+    const data = refreshResult.data as RefreshResponse;
+    api.dispatch(
+      setCredentials({
+        user: data.data.user,
+        accessToken: data.data.accessToken,
+        refreshToken: data.data.refreshToken,
+      }),
+    );
+    return true;
+  }
+  return false;
+}
+
 function acquireRefreshLock(
   api: BaseQueryApi,
   extraOptions: Record<string, unknown>,
@@ -26,27 +53,9 @@ function acquireRefreshLock(
   if (!pendingRefresh) {
     pendingRefresh = (async () => {
       try {
-        const refreshToken = (api.getState() as RootState).auth.refreshToken;
-        if (!refreshToken) return false;
-
-        const refreshResult = await refreshBaseQuery(
-          { url: "/refresh", method: "POST", body: { refreshToken } },
-          api,
-          extraOptions,
-        );
-
-        if (refreshResult.data) {
-          const data = refreshResult.data as RefreshResponse;
-          api.dispatch(
-            setCredentials({
-              user: data.data.user,
-              accessToken: data.data.accessToken,
-              refreshToken: data.data.refreshToken,
-            }),
-          );
-          return true;
-        }
-        return false;
+        const ok = await attemptRefresh(api, extraOptions);
+        if (ok) return true;
+        return await attemptRefresh(api, extraOptions);
       } catch {
         return false;
       } finally {

@@ -103,8 +103,14 @@ export const authService = {
 
   async refreshUser(refreshToken: string) {
     const { data, error } = await supabase.auth.refreshSession({ refresh_token: refreshToken });
-    if (error) throw error;
-    if (!data.session || !data.user) throw new AppError(401, "Invalid refresh session");
+    if (error) {
+      console.error("[auth] refreshSession failed:", error.message, error.code);
+      throw error;
+    }
+    if (!data.session || !data.user) {
+      console.error("[auth] refreshSession returned no session or user");
+      throw new AppError(401, "Invalid refresh session");
+    }
 
     const profile = await ensureUser(data.user);
 

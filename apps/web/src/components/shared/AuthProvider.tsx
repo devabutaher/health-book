@@ -16,11 +16,27 @@ function clearCookie(name: string) {
   document.cookie = `${name}=; Path=/; Max-Age=0; Secure; SameSite=Lax`;
 }
 
+function loadTokensFromStorage(): { accessToken: string | null; refreshToken: string | null } {
+  try {
+    const raw = sessionStorage.getItem("hb_auth");
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return {
+        accessToken: parsed.accessToken || null,
+        refreshToken: parsed.refreshToken || null,
+      };
+    }
+  } catch {
+    /* corrupt data — ignore */
+  }
+  return { accessToken: null, refreshToken: null };
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const dispatch = useAppDispatch();
   const accessToken = useAppSelector((s) => s.auth.accessToken);
   const refreshToken = useAppSelector((s) => s.auth.refreshToken);
-  const { data, isLoading, isError } = useGetMeQuery(undefined, { skip: !accessToken });
+  const { data, isError } = useGetMeQuery(undefined, { skip: !accessToken });
   const initRef = useRef(false);
 
   usePresenceRealtime();
@@ -39,16 +55,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    if (!refreshToken && !accessToken) {
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session?.access_token && session?.refresh_token) {
-          dispatch(setTokens({ accessToken: session.access_token, refreshToken: session.refresh_token }));
-        } else {
-          dispatch(setLoading(false));
-        }
-      });
+    const stored = loadTokensFromStorage();
+    if (stored.accessToken && stored.refreshToken) {
+      dispatch(setTokens({ accessToken: stored.accessToken, refreshToken: stored.refreshToken }));
+      return;
     }
-  }, [dispatch, refreshToken, accessToken]);
+
+    dispatch(setLoading(false));
+  }, [dispatch]);
 
   useEffect(() => {
     if (data && data.data) {
