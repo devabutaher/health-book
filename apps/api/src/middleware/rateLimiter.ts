@@ -25,19 +25,3 @@ export const postLimiter = rateLimit({
   legacyHeaders: false,
   message: { success: false, message: "Post limit reached. Try again later." },
 });
-
-export const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: isDev ? 100 : 20,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { success: false, message: "Too many login attempts. Try again in 15 minutes." },
-});
-
-export const postLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000,
-  max: isDev ? 500 : 50,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { success: false, message: "Post limit reached. Try again later." },
-});
