@@ -1,14 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { MessageCircle, PenLine, Users } from "lucide-react";
-import { GlassCard } from "@/components/ui/glass-card";
-import { ProtectedRoute } from "@/components/shared/ProtectedRoute";
 import { ConversationList } from "@/components/messaging/ConversationList";
 import { NewConversationModal } from "@/components/messaging/NewConversationModal";
-import { useUnreadCount } from "@/hooks/useUnreadCount";
+import { ProtectedRoute } from "@/components/shared/ProtectedRoute";
+import { GlassCard } from "@/components/ui/glass-card";
 import { useAppSelector } from "@/hooks";
+import { useUnreadCount } from "@/hooks/useUnreadCount";
+import { MessageCircle, PenLine, Users } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 export default function MessagesPage() {
   const router = useRouter();
   const userId = useAppSelector((s) => s.auth.user?.id);
@@ -20,7 +20,7 @@ export default function MessagesPage() {
     <ProtectedRoute>
       <GlassCard
         variant="elevated"
-        className="mx-auto flex h-[calc(100vh-8rem)] max-w-5xl overflow-hidden! rounded-2xl"
+        className="mx-auto flex h-[calc(100vh-10rem)] max-w-5xl overflow-hidden! rounded-2xl md:h-[calc(100vh-8rem)]"
       >
         <div className="flex w-full flex-col border-r border-[var(--border-default)] lg:w-96">
           <div className="flex items-center justify-between border-b border-[var(--border-default)] px-4 py-3">

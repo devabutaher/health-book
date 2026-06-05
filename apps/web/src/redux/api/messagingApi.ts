@@ -37,7 +37,7 @@ export const messagingApi = createApi({
           if (!conv) return;
           dispatch(
             messagingApi.util.updateQueryData("getConversations", undefined, (draft) => {
-              if (!draft) return;
+              if (!Array.isArray(draft)) return;
               const exists = draft.find((c) => c.id === conv.id);
               if (!exists) draft.unshift(conv);
             }),
@@ -112,7 +112,7 @@ export const messagingApi = createApi({
         // Also update conversation list preview
         const patchConvList = dispatch(
           messagingApi.util.updateQueryData("getConversations", undefined, (draft) => {
-            if (!draft) return;
+            if (!Array.isArray(draft)) return;
             const conv = draft.find((c) => c.id === conversationId);
             if (conv) {
               (conv as any).lastMessage = {
@@ -178,7 +178,7 @@ export const messagingApi = createApi({
       onQueryStarted: async (conversationId, { dispatch, queryFulfilled }) => {
         const patch = dispatch(
           messagingApi.util.updateQueryData("getConversations", undefined, (draft) => {
-            if (!draft) return;
+            if (!Array.isArray(draft)) return;
             const conv = draft.find((c) => c.id === conversationId);
             if (!conv) return;
             conv.isMuted = !conv.isMuted;
@@ -200,12 +200,10 @@ export const messagingApi = createApi({
       onQueryStarted: async (conversationId, { dispatch, queryFulfilled }) => {
         const patchConv = dispatch(
           messagingApi.util.updateQueryData("getConversations", undefined, (draft) => {
-            if (!draft) return;
+            if (!Array.isArray(draft)) return;
             const conv = draft.find((c) => c.id === conversationId);
             if (!conv) return;
-            const prevUnread = (conv as any).unreadCount || 0;
             (conv as any).unreadCount = 0;
-            return prevUnread; // return for use below if needed
           }),
         );
         // Also update global unread count
@@ -235,7 +233,7 @@ export const messagingApi = createApi({
       onQueryStarted: async ({ conversationId }, { dispatch, queryFulfilled }) => {
         const patch = dispatch(
           messagingApi.util.updateQueryData("getConversations", undefined, (draft) => {
-            if (!draft) return;
+            if (!Array.isArray(draft)) return;
             const idx = draft.findIndex((c) => c.id === conversationId);
             if (idx >= 0) draft.splice(idx, 1);
           }),

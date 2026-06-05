@@ -1,73 +1,73 @@
-"use client"
+"use client";
 
-import { useState, useRef, useEffect, useMemo } from "react"
-import { useRouter } from "next/navigation"
-import Image from "next/image"
-import { Search, X, User as UserIcon, ArrowRight } from "lucide-react"
-import { useSearchUsersQuery } from "@/redux/api/searchApi"
-import { Input } from "@/components/ui/input"
-import { Spinner } from "@/components/ui/spinner"
-import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty"
-import { motion, AnimatePresence } from "framer-motion"
+import { useState, useRef, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
+import Image from "next/image";
+import { Search, X, User as UserIcon, ArrowRight } from "lucide-react";
+import { useSearchUsersQuery } from "@/redux/api/searchApi";
+import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
+import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface UserHit {
-  id: string
-  name: string
-  username: string
-  avatar?: string | null
+  id: string;
+  name: string;
+  username: string;
+  avatar?: string | null;
 }
 
 export default function MobileSearch() {
-  const [open, setOpen] = useState(false)
-  const [query, setQuery] = useState("")
-  const [debounced, setDebounced] = useState("")
-  const router = useRouter()
-  const dropdownRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [debounced, setDebounced] = useState("");
+  const router = useRouter();
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setOpen(false)
+        setOpen(false);
       }
-    }
+    };
     if (open) {
-      document.addEventListener("mousedown", handler)
-      return () => document.removeEventListener("mousedown", handler)
+      document.addEventListener("mousedown", handler);
+      return () => document.removeEventListener("mousedown", handler);
     }
-  }, [open])
+  }, [open]);
 
   useEffect(() => {
-    const timer = setTimeout(() => setDebounced(query), 300)
-    return () => clearTimeout(timer)
-  }, [query])
+    const timer = setTimeout(() => setDebounced(query), 300);
+    return () => clearTimeout(timer);
+  }, [query]);
 
-  const { data, isFetching } = useSearchUsersQuery(debounced, { skip: debounced.length < 2 })
+  const { data, isFetching } = useSearchUsersQuery(debounced, { skip: debounced.length < 2 });
 
   useEffect(() => {
     if (open) {
-      setTimeout(() => inputRef.current?.focus(), 100)
+      setTimeout(() => inputRef.current?.focus(), 100);
     }
-  }, [open])
+  }, [open]);
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    const trimmed = query.trim()
+    e.preventDefault();
+    const trimmed = query.trim();
     if (trimmed) {
-      router.push(`/search?q=${encodeURIComponent(trimmed)}`)
-      setOpen(false)
+      router.push(`/search?q=${encodeURIComponent(trimmed)}`);
+      setOpen(false);
     }
-  }
+  };
 
   const users = useMemo<UserHit[]>(() => {
-    const raw = data as UserHit[] | undefined
-    return Array.isArray(raw) ? raw : []
-  }, [data])
+    const raw = data as UserHit[] | undefined;
+    return Array.isArray(raw) ? raw : [];
+  }, [data]);
 
-  const showResults = query.length >= 2
+  const showResults = query.length >= 2;
 
   return (
-    <div ref={dropdownRef} className="relative md:hidden">
+    <div ref={dropdownRef} className="relative lg:hidden">
       <button
         type="button"
         onClick={() => setOpen(!open)}
@@ -86,7 +86,10 @@ export default function MobileSearch() {
             transition={{ duration: 0.15 }}
             className="fixed left-3 right-3 top-[60px] z-50 sm:absolute sm:right-0 sm:left-auto sm:top-full sm:mt-2 sm:w-80 rounded-2xl border border-[var(--glass-border)] bg-[var(--popover)] backdrop-blur-2xl shadow-[var(--shadow-lg)] overflow-hidden"
           >
-            <form onSubmit={handleSubmit} className="flex items-center gap-2 border-b border-[var(--border-subtle)] px-3 py-3">
+            <form
+              onSubmit={handleSubmit}
+              className="flex items-center gap-2 border-b border-[var(--border-subtle)] px-3 py-3"
+            >
               <div className="relative flex-1">
                 <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
@@ -101,9 +104,9 @@ export default function MobileSearch() {
                   <button
                     type="button"
                     onClick={() => {
-                      setQuery("")
-                      setDebounced("")
-                      inputRef.current?.focus()
+                      setQuery("");
+                      setDebounced("");
+                      inputRef.current?.focus();
                     }}
                     aria-label="Clear search"
                     className="absolute right-1 top-1/2 -translate-y-1/2 rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-[var(--bg-overlay)] hover:text-foreground"
@@ -124,7 +127,9 @@ export default function MobileSearch() {
                 ) : users.length === 0 ? (
                   <Empty className="border-0 bg-transparent py-6">
                     <EmptyTitle className="text-sm">No users found</EmptyTitle>
-                    <EmptyDescription className="text-xs">Try a different search term</EmptyDescription>
+                    <EmptyDescription className="text-xs">
+                      Try a different search term
+                    </EmptyDescription>
                   </Empty>
                 ) : (
                   <div className="py-1">
@@ -133,8 +138,8 @@ export default function MobileSearch() {
                         key={u.id}
                         type="button"
                         onClick={() => {
-                          router.push(`/${u.username}`)
-                          setOpen(false)
+                          router.push(`/${u.username}`);
+                          setOpen(false);
                         }}
                         className="group flex w-full items-center gap-3 px-4 py-2.5 text-sm transition-colors hover:bg-[var(--bg-overlay)] focus-visible:bg-[var(--bg-overlay)] focus-visible:outline-none"
                       >
@@ -185,5 +190,5 @@ export default function MobileSearch() {
         )}
       </AnimatePresence>
     </div>
-  )
+  );
 }

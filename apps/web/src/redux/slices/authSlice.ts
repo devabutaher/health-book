@@ -26,13 +26,13 @@ export interface AuthState {
 const STORAGE_KEY = "hb_auth";
 
 function isBrowser(): boolean {
-  return typeof sessionStorage !== "undefined";
+  return typeof localStorage !== "undefined";
 }
 
 function loadFromStorage(): { accessToken: string | null; refreshToken: string | null } {
   if (!isBrowser()) return { accessToken: null, refreshToken: null };
   try {
-    const raw = sessionStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
       return {
@@ -50,9 +50,9 @@ function saveToStorage(accessToken: string | null, refreshToken: string | null) 
   if (!isBrowser()) return;
   try {
     if (accessToken && refreshToken) {
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ accessToken, refreshToken }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ accessToken, refreshToken }));
     } else {
-      sessionStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(STORAGE_KEY);
     }
   } catch {
     /* quota exceeded or blocked — ignore */
@@ -66,7 +66,7 @@ const initialState: AuthState = {
   accessToken: stored.accessToken,
   refreshToken: stored.refreshToken,
   isAuthenticated: false,
-  isLoading: !!(stored.accessToken || stored.refreshToken),
+  isLoading: true,
 };
 
 const authSlice = createSlice({

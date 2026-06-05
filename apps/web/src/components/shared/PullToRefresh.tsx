@@ -4,6 +4,16 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Heart } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
+function isInsideElement(target: EventTarget | null, attr: string): boolean {
+  if (!target) return false;
+  let el = target as HTMLElement | null;
+  while (el) {
+    if (el.hasAttribute(attr)) return true;
+    el = el.parentElement;
+  }
+  return false;
+}
+
 export function PullToRefresh({
   onRefresh,
   disabled,
@@ -40,6 +50,7 @@ export function PullToRefresh({
     let currentDistance = 0;
 
     const onStart = (e: TouchEvent) => {
+      if (isInsideElement(e.target, "data-story-viewer")) return;
       if (scrollContainer.scrollTop <= 0) {
         if (!scrollContainer.contains(e.target as Node)) return;
         startY = e.touches[0].clientY;
@@ -48,6 +59,7 @@ export function PullToRefresh({
     };
 
     const onMove = (e: TouchEvent) => {
+      if (isInsideElement(e.target, "data-story-viewer")) return;
       if (!isDragging) return;
       const dy = e.touches[0].clientY - startY;
       if (dy > 20 && scrollContainer.scrollTop <= 0) {

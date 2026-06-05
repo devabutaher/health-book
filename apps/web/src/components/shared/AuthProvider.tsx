@@ -40,7 +40,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     if (!refreshToken && !accessToken) {
-      dispatch(setLoading(false));
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session?.access_token && session?.refresh_token) {
+          dispatch(setTokens({ accessToken: session.access_token, refreshToken: session.refresh_token }));
+        } else {
+          dispatch(setLoading(false));
+        }
+      });
     }
   }, [dispatch, refreshToken, accessToken]);
 

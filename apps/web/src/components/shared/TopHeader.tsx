@@ -1,14 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { useSyncExternalStore } from "react";
-import { useAppSelector, useAppDispatch } from "@/hooks";
-import { useGetHealthStatsQuery } from "@/redux/api/healthLogApi";
-import { useLogoutMutation } from "@/redux/api/authApi";
-import { logout } from "@/redux/slices/authSlice";
-import { isOnline, subscribeOnline } from "@/lib/onlineStore";
-import { Activity, BookOpen, Flame, LogOut, Trophy, User as UserIcon, Users } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,14 +8,22 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import SearchBar from "./SearchBar";
-import MobileSearch from "./MobileSearch";
+import { useAppDispatch, useAppSelector } from "@/hooks";
+import { isOnline, subscribeOnline } from "@/lib/onlineStore";
+import { cn } from "@/lib/utils";
+import { useLogoutMutation } from "@/redux/api/authApi";
+import { useGetHealthStatsQuery } from "@/redux/api/healthLogApi";
+import { logout } from "@/redux/slices/authSlice";
+import { Activity, BookOpen, Flame, LogOut, Trophy, User as UserIcon, Users } from "lucide-react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { useSyncExternalStore } from "react";
 import MessagesBell from "../messaging/MessagesBell";
 import NotificationBell from "../notifications/NotificationBell";
+import MobileSearch from "./MobileSearch";
 import RefreshButton from "./RefreshButton";
+import SearchBar from "./SearchBar";
 import { ThemeToggle } from "./ThemeToggle";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { cn } from "@/lib/utils";
 
 const pageNames: Record<string, string> = {
   "/feed": "Home",
@@ -92,12 +92,10 @@ export default function TopHeader() {
           </Link>
         </div>
 
-        <div className="flex-1 min-w-0 relative hidden md:flex items-center h-full">
-          <div className="hidden lg:flex items-center gap-3 shrink-0">
-            <div className="h-6 w-px bg-gradient-to-b from-brand-teal to-brand-green" />
-            {currentPage && (
-              <span className="text-sm font-semibold text-muted-foreground">{currentPage}</span>
-            )}
+        <div className="h-6 w-px bg-gradient-to-b from-brand-teal to-brand-green hidden xl:block" />
+
+        <div className="flex-1 min-w-0 relative hidden lg:flex items-center h-full">
+          <div className="hidden 2xl:flex items-center gap-3 shrink-0 pl-2">
             <div className="flex items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--bg-overlay)] px-2.5 py-1">
               <Flame className="size-3.5 text-brand-amber" />
               <span className="text-xs font-semibold text-foreground">{streak}</span>
@@ -143,7 +141,9 @@ export default function TopHeader() {
 
             <MessagesBell />
             <NotificationBell />
-            <span className="md:hidden"><RefreshButton /></span>
+            <span className="md:hidden">
+              <RefreshButton />
+            </span>
 
             <ThemeToggle />
 
@@ -183,7 +183,11 @@ export default function TopHeader() {
                 </div>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link href={`/${user?.username || ""}`} prefetch={false} className="cursor-pointer">
+                  <Link
+                    href={`/${user?.username || ""}`}
+                    prefetch={false}
+                    className="cursor-pointer"
+                  >
                     <UserIcon />
                     Profile
                   </Link>

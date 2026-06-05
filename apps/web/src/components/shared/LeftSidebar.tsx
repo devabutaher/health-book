@@ -79,7 +79,7 @@ export default function LeftSidebar({
   return (
     <aside
       className={cn(
-        "hidden lg:flex fixed left-0 top-14 bottom-0 w-60 flex-col",
+        "hidden md:flex fixed left-0 top-14 bottom-0 w-60 flex-col",
         "bg-[var(--glass-bg)] backdrop-blur-md md:backdrop-blur-2xl",
         "border-r border-[var(--glass-border)]",
         "p-4",

@@ -36,7 +36,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         onOpenDrafts={() => setDraftsOpen(true)}
       />
       <RightSidebar />
-      <main className="flex-1 overflow-y-auto pt-2 lg:pt-4 lg:pl-60 xl:pr-96">
+      <main className="flex-1 overflow-y-auto pt-4 md:pt-6 md:pl-60 xl:pr-96">
         <PullToRefresh onRefresh={handleRefresh} disabled={disablePullToRefresh}>
           <PageTransition>
             <div className="mx-auto max-w-6xl pb-4 px-4 sm:pb-8 lg:pb-12">{children}</div>

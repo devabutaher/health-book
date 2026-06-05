@@ -22,7 +22,8 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   const { data: allConvos } = useGetConversationsQuery();
   const conv = allConvos?.find((c) => c.id === id);
   const isGroup = conv?.isGroup;
-  const isAdmin = conv?.participants?.some((p) => p.userId === userId && p.role === "ADMIN") ?? false;
+  const isAdmin =
+    conv?.participants?.some((p) => p.userId === userId && p.role === "ADMIN") ?? false;
   const [newConvoOpen, setNewConvoOpen] = useState(false);
   const [newGroupOpen, setNewGroupOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -33,7 +34,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
     <ProtectedRoute>
       <GlassCard
         variant="elevated"
-        className="mx-auto flex h-[calc(100vh-8rem)] max-w-5xl overflow-hidden! rounded-2xl"
+        className="mx-auto flex h-[calc(100vh-10rem)] max-w-5xl overflow-hidden! rounded-2xl md:h-[calc(100vh-8rem)]"
       >
         <div className="hidden w-96 flex-col border-r border-[var(--border-default)] lg:flex">
           <div className="flex items-center justify-between border-b border-[var(--border-default)] px-4 py-3">

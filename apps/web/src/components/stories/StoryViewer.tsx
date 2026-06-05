@@ -399,6 +399,7 @@ export function StoryViewer({
 
   return (
     <motion.div
+      data-story-viewer=""
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
