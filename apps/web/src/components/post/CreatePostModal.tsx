@@ -105,6 +105,7 @@ export function CreatePostModal({
     postNowRef.current = false;
 
     setUploading(true);
+    const toastId = toast.loading("Uploading post...");
     try {
       const mediaUrls: string[] = [];
       for (const file of files) {
@@ -158,6 +159,7 @@ export function CreatePostModal({
       if (!isPostNow && scheduledAt) payload.scheduledAt = new Date(scheduledAt).toISOString();
 
       await create(payload).unwrap();
+      toast.dismiss(toastId);
       toast.success(isScheduled ? "Post scheduled!" : isDraft ? "Draft saved!" : "Post shared!");
       resetForm();
       onCreated?.();
@@ -165,6 +167,7 @@ export function CreatePostModal({
     } catch (err: unknown) {
       const msg =
         (err as { data?: { message?: string } })?.data?.message || "Failed to create post";
+      toast.dismiss(toastId);
       toast.error(msg);
     } finally {
       setUploading(false);

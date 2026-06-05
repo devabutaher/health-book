@@ -116,6 +116,7 @@ export function CommentSection({ postId, postUserId }: { postId: string; postUse
                     <div className="flex items-center gap-1.5">
                       <Link
                         href={`/${comment.user.username}`}
+                        prefetch={false}
                         className="text-sm font-semibold hover:underline"
                       >
                         {comment.user.name}
@@ -195,6 +196,7 @@ export function CommentSection({ postId, postUserId }: { postId: string; postUse
                         <div className="rounded-2xl rounded-tl-md border border-[var(--glass-border)] bg-[var(--bg-overlay)] px-3 py-2">
                           <Link
                             href={`/${reply.user.username}`}
+                            prefetch={false}
                             className="text-sm font-semibold hover:underline"
                           >
                             {reply.user.name}

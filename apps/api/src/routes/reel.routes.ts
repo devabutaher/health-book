@@ -5,8 +5,8 @@ import { upload } from "../middleware/upload";
 
 const router = Router() as ReturnType<typeof Router>;
 
-router.get("/", reelController.browse);
-router.get("/:id", reelController.getById);
+router.get("/", authenticate, reelController.browse);
+router.get("/:id", authenticate, reelController.getById);
 
 router.post("/", authenticate, reelController.create);
 router.post("/upload", authenticate, upload.single("video"), reelController.upload);

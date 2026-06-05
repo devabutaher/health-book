@@ -1,14 +1,16 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { Heart } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
 
 export function PullToRefresh({
   onRefresh,
+  disabled,
   children,
 }: {
   onRefresh: () => Promise<void> | void;
+  disabled?: boolean;
   children: React.ReactNode;
 }) {
   const [pulling, setPulling] = useState(false);
@@ -19,6 +21,7 @@ export function PullToRefresh({
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (disabled) return;
     if (window.innerWidth >= 1024) return;
 
     const scrollContainer = (() => {
@@ -38,6 +41,7 @@ export function PullToRefresh({
 
     const onStart = (e: TouchEvent) => {
       if (scrollContainer.scrollTop <= 0) {
+        if (!scrollContainer.contains(e.target as Node)) return;
         startY = e.touches[0].clientY;
         isDragging = true;
       }
@@ -46,8 +50,8 @@ export function PullToRefresh({
     const onMove = (e: TouchEvent) => {
       if (!isDragging) return;
       const dy = e.touches[0].clientY - startY;
-      if (dy > 0 && scrollContainer.scrollTop <= 0) {
-        e.preventDefault();
+      if (dy > 20 && scrollContainer.scrollTop <= 0) {
+        if (e.cancelable) e.preventDefault();
         isPulling = true;
         currentDistance = Math.min(dy * 0.5, THRESHOLD + 20);
         setPulling(true);
@@ -85,7 +89,7 @@ export function PullToRefresh({
       document.removeEventListener("touchmove", onMove);
       document.removeEventListener("touchend", onEnd);
     };
-  }, [onRefresh]);
+  }, [onRefresh, disabled]);
 
   const progress = Math.min(distance / THRESHOLD, 1);
   const showHeart = pulling || refreshing;

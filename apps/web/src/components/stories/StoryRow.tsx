@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useGetFriendsStoriesQuery } from "@/redux/api/storiesApi";
+import { motion } from "framer-motion";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { StoryCircle } from "./StoryCircle";
 import { StoryCreateButton } from "./StoryCreateButton";
 import { StoryViewer } from "./StoryViewer";
-import { useGetFriendsStoriesQuery } from "@/redux/api/storiesApi";
-import { motion } from "framer-motion";
 
 function SkeletonCard() {
   return (
@@ -25,6 +25,25 @@ export function StoryRow() {
   const { data: groups, isLoading } = useGetFriendsStoriesQuery();
   const [viewerOpen, setViewerOpen] = useState(false);
   const [initialIdx, setInitialIdx] = useState(0);
+  const [showShadow, setShowShadow] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const checkShadow = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const hasOverflow = el.scrollWidth > el.clientWidth;
+    const hasMoreContent = el.scrollLeft + el.clientWidth < el.scrollWidth - 1;
+    setShowShadow(hasOverflow && hasMoreContent);
+  }, []);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    checkShadow();
+    const observer = new ResizeObserver(checkShadow);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [checkShadow]);
 
   const activeGroups = groups
     ?.map((group) => ({
@@ -40,33 +59,41 @@ export function StoryRow() {
 
   return (
     <>
-      <div
-        className="flex gap-2 overflow-x-auto px-0 pb-2 scrollbar-none"
-        style={{
-          maskImage: "linear-gradient(to right, black 90%, transparent)",
-          WebkitMaskImage: "linear-gradient(to right, black 90%, transparent)",
-        }}
-      >
-        <StoryCreateButton onStoryCreated={() => {}} />
-        {isLoading ? (
-          <>
-            <SkeletonCard />
-            <SkeletonCard />
-            <SkeletonCard />
-            <SkeletonCard />
-          </>
-        ) : (
-          activeGroups?.map((group, idx) => (
-            <StoryCircle
-              key={group.user.id}
-              group={group}
-              storyMediaUrl={group.stories[0]?.mediaUrl}
-              storyType={group.stories[0]?.type}
-              backgroundColor={group.stories[0]?.backgroundColor}
-              onClick={() => handleStoryClick(idx)}
-            />
-          ))
-        )}
+      {/* Fix: Create button sticky outside scroll, mask only on right side */}
+      <div className="flex items-start gap-2">
+        <div className="shrink-0">
+          <StoryCreateButton onStoryCreated={() => {}} />
+        </div>
+
+        <div
+          ref={scrollRef}
+          onScroll={checkShadow}
+          className="flex gap-2 overflow-x-auto pb-2 scrollbar-none"
+          style={showShadow ? {
+            maskImage: "linear-gradient(to right, black 85%, transparent)",
+            WebkitMaskImage: "linear-gradient(to right, black 85%, transparent)",
+          } : undefined}
+        >
+          {isLoading ? (
+            <>
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+            </>
+          ) : (
+            activeGroups?.map((group, idx) => (
+              <StoryCircle
+                key={group.user.id}
+                group={group}
+                storyMediaUrl={group.stories[0]?.mediaUrl}
+                storyType={group.stories[0]?.type}
+                backgroundColor={group.stories[0]?.backgroundColor}
+                onClick={() => handleStoryClick(idx)}
+              />
+            ))
+          )}
+        </div>
       </div>
 
       {viewerOpen && activeGroups && (

@@ -52,12 +52,14 @@ export const healthLogApi = createApi({
         return `/?${search.toString()}`;
       },
       providesTags: ["HealthLogs"],
+      keepUnusedDataFor: 300,
     }),
     getHealthLog: builder.query({
       query: (id: string) => `/${id}`,
       providesTags: (_result: unknown, _error: unknown, id: string) => [
         { type: "HealthLogs" as const, id },
       ],
+      keepUnusedDataFor: 300,
     }),
     createHealthLog: builder.mutation({
       query: (body: {
@@ -174,15 +176,18 @@ export const healthLogApi = createApi({
     getHealthStats: builder.query({
       query: () => "/stats",
       providesTags: ["HealthStats"],
+      keepUnusedDataFor: 300,
     }),
     getTrends: builder.query({
       query: ({ days }: { days?: number } = {}) => `/trends${days ? `?days=${days}` : ""}`,
       providesTags: ["HealthStats"],
+      keepUnusedDataFor: 300,
     }),
     getCalendar: builder.query({
       query: ({ year, month }: { year: number; month: number }) =>
         `/calendar?year=${year}&month=${month}`,
       providesTags: ["Calendar"],
+      keepUnusedDataFor: 300,
     }),
   }),
 });

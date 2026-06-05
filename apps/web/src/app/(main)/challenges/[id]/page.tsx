@@ -227,6 +227,7 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
               {challenge.groupId && challenge.group && (
                 <Link
                   href={`/groups/${challenge.groupId}`}
+                  prefetch={false}
                   className="mt-2 inline-flex items-center gap-1.5 text-xs text-brand-teal hover:underline"
                 >
                   <Users className="size-3.5" />

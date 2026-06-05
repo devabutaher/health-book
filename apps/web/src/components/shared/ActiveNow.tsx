@@ -81,13 +81,13 @@ function ActiveNowAvatars() {
         <div className="flex size-10 items-center justify-center rounded-full bg-[var(--bg-overlay)]">
           <Users className="size-5 text-muted-foreground" />
         </div>
-        <p className="text-xs text-muted-foreground">No one active right now</p>
+        <p className="text-xs text-muted-foreground">No active yet.</p>
       </div>
     );
   }
 
   return (
-    <div className="flex items-center gap-2 overflow-x-auto px-3 scrollbar-none">
+    <div className="flex items-center gap-3 overflow-x-auto px-3 scrollbar-none">
       <AnimatePresence>
         {displayUsers.map((u) => (
           <motion.div
@@ -103,13 +103,15 @@ function ActiveNowAvatars() {
               title={`Message ${u.name}`}
             >
               <div className="relative">
-                <div className="absolute inset-0 rounded-full bg-green-500/30 animate-pulse" />
-                <Avatar size="default" className="relative size-10 ring-2 ring-green-500">
-                  {u.avatar ? <AvatarImage src={u.avatar} alt={u.name} /> : null}
-                  <AvatarFallback className="bg-gradient-to-br from-brand-teal to-brand-green text-white text-xs font-semibold">
-                    {u.name?.charAt(0)?.toUpperCase() || "?"}
-                  </AvatarFallback>
-                </Avatar>
+                <div className="overflow-hidden rounded-full">
+                  <div className="absolute inset-0 rounded-full bg-green-500/30 animate-pulse" />
+                  <Avatar size="default" className="relative size-10 ring-2 ring-green-500">
+                    {u.avatar ? <AvatarImage src={u.avatar} alt={u.name} /> : null}
+                    <AvatarFallback className="bg-gradient-to-br from-brand-teal to-brand-green text-white text-xs font-semibold">
+                      {u.name?.charAt(0)?.toUpperCase() || "?"}
+                    </AvatarFallback>
+                  </Avatar>
+                </div>
                 <span className="absolute -bottom-0.5 -right-0.5 size-3 rounded-full border-2 border-[var(--bg-elevated)] bg-green-500" />
               </div>
               <span className="max-w-14 truncate text-[9px] font-medium text-muted-foreground group-hover:text-foreground">

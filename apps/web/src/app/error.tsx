@@ -54,7 +54,7 @@ export default function RootError({
               Try again
             </Button>
             <Button asChild variant="outline" size="lg">
-              <Link href="/">
+              <Link href="/" prefetch={false}>
                 <Home />
                 Home
               </Link>

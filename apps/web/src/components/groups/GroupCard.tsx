@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Users, Check, Loader2 } from "lucide-react";
+import { memo } from "react";
 import { motion } from "framer-motion";
 import type { Group } from "@/types/group";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -11,7 +12,7 @@ import { GroupTypeBadge } from "./GroupTypeBadge";
 import { useJoinGroupMutation, useLeaveGroupMutation } from "@/redux/api/groupsApi";
 import { toast } from "sonner";
 
-export function GroupCard({ group }: { group: Group }) {
+export const GroupCard = memo(function GroupCard({ group }: { group: Group }) {
   const initials = group.name.slice(0, 2).toUpperCase();
   const [joinGroup, { isLoading: isJoining }] = useJoinGroupMutation();
   const [leaveGroup, { isLoading: isLeaving }] = useLeaveGroupMutation();
@@ -46,6 +47,7 @@ export function GroupCard({ group }: { group: Group }) {
     >
       <Link
         href={`/groups/${group.id}`}
+        prefetch={false}
         className="group relative flex flex-col overflow-hidden rounded-2xl border border-[var(--border-default)] bg-[var(--bg-elevated)] shadow-[var(--shadow-card)] transition-shadow duration-300 hover:shadow-[var(--shadow-lg)]"
       >
         <div className="aspect-video overflow-hidden bg-[var(--bg-subtle)]">
@@ -119,4 +121,4 @@ export function GroupCard({ group }: { group: Group }) {
       </Link>
     </motion.div>
   );
-}
+});

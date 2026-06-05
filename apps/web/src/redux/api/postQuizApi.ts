@@ -14,11 +14,26 @@ export const postQuizApi = createApi({
         body: { selectedIndex },
       }),
       invalidatesTags: (_result, _error, { postId }) => [{ type: "PostQuiz", id: postId }],
+      onQueryStarted: async ({ postId, selectedIndex }, { dispatch, queryFulfilled }) => {
+        const patch = dispatch(
+          postQuizApi.util.updateQueryData("getQuizResults", postId, (draft) => {
+            if (!draft) return;
+            (draft as any).userAnswer = selectedIndex;
+            draft.totalAnswers = (draft.totalAnswers ?? 0) + 1;
+          }),
+        );
+        try {
+          await queryFulfilled;
+        } catch {
+          patch.undo();
+        }
+      },
     }),
     getQuizResults: builder.query<PostQuizResults, string>({
       query: (postId) => `/${postId}/results`,
       providesTags: (_result, _error, postId) => [{ type: "PostQuiz", id: postId }],
       transformResponse: (response: { success: boolean; data: PostQuizResults }) => response.data,
+      keepUnusedDataFor: 300,
     }),
   }),
 });

@@ -87,7 +87,7 @@ export const PostCard = memo(function PostCard({ post }: { post: Post }) {
     <motion.div variants={staggerItem}>
       <GlassCard variant="elevated" className="p-3 sm:p-4">
         <div className="flex items-start justify-between">
-          <Link href={`/${post.user.username}`} className="flex items-center gap-3">
+          <Link href={`/${post.user.username}`} prefetch={false} className="flex items-center gap-3">
             <UserAvatar
               name={post.user.name}
               avatar={post.user.avatar}

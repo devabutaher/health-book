@@ -30,7 +30,6 @@ export function ReelsFeed({ onUploadClick }: { onUploadClick?: () => void }) {
   const [followUser] = useFollowMutation();
   const [unfollowUser] = useUnfollowMutation();
 
-
   useEffect(() => {
     if (data?.reels) {
       setAllReels((prev) => {
@@ -192,89 +191,92 @@ export function ReelsFeed({ onUploadClick }: { onUploadClick?: () => void }) {
         className="h-full snap-y snap-mandatory overflow-y-auto scrollbar-none"
       >
         {displayReels.map((reel, index) => (
-          <div key={reel.id} className="relative h-[calc(100%-16px)] snap-start mx-3 my-2">
-            <div className="relative mx-auto h-full w-full max-w-md rounded-2xl">
-              <div className="relative h-full w-full overflow-hidden rounded-2xl">
-                <ReelPlayer
-                  videoUrl={reel.videoUrl}
-                  isActive={index === activeIdx && commentsReelId !== reel.id}
-                  onDoubleTapLike={() => handleLikeToggle(reel.id)}
-                />
+          <div key={reel.id} className="relative h-full snap-start my-2">
+            <div className="relative mx-auto h-full w-full max-w-md">
+              <div className="h-full flex items-center justify-center">
+                <div className="relative w-full aspect-[9/16] max-h-full rounded-2xl overflow-hidden">
+                  <ReelPlayer
+                    videoUrl={reel.videoUrl}
+                    isActive={index === activeIdx && commentsReelId !== reel.id}
+                    onDoubleTapLike={() => handleLikeToggle(reel.id)}
+                  />
 
-                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent p-4 pt-12">
-                  <div className="flex items-center gap-2">
-                    <Link href={`/${reel.user.username}`}>
-                      <Avatar
-                        size="sm"
-                        className="size-8 ring-2 ring-white/30 cursor-pointer hover:opacity-80 transition-opacity"
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent p-4 pt-12">
+                    <div className="flex items-center gap-2">
+                      <Link href={`/${reel.user.username}`} prefetch={false}>
+                        <Avatar
+                          size="sm"
+                          className="size-8 ring-2 ring-white/30 cursor-pointer hover:opacity-80 transition-opacity"
+                        >
+                          {reel.user.avatar ? (
+                            <AvatarImage src={reel.user.avatar} alt={reel.user.name} />
+                          ) : null}
+                          <AvatarFallback className="bg-gradient-to-br from-brand-teal to-brand-green text-xs text-white">
+                            {reel.user.name?.charAt(0)?.toUpperCase() || "?"}
+                          </AvatarFallback>
+                        </Avatar>
+                      </Link>
+                      <Link
+                        href={`/${reel.user.username}`}
+                        prefetch={false}
+                        className="text-sm font-semibold text-white hover:underline"
                       >
-                        {reel.user.avatar ? (
-                          <AvatarImage src={reel.user.avatar} alt={reel.user.name} />
-                        ) : null}
-                        <AvatarFallback className="bg-gradient-to-br from-brand-teal to-brand-green text-xs text-white">
-                          {reel.user.name?.charAt(0)?.toUpperCase() || "?"}
-                        </AvatarFallback>
-                      </Avatar>
-                    </Link>
-                    <Link
-                      href={`/${reel.user.username}`}
-                      className="text-sm font-semibold text-white hover:underline"
-                    >
-                      {reel.user.name}
-                    </Link>
-                    {currentUserId && reel.user.id !== currentUserId && (
-                      <button
-                        onClick={() =>
-                          reel.user.isFollowing
-                            ? handleUnfollow(reel.user.id)
-                            : handleFollow(reel.user.id)
-                        }
-                        className="ml-1 inline-flex min-h-[36px] items-center justify-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold text-white transition-colors hover:bg-white/20"
-                      >
-                        {reel.user.isFollowing ? (
-                          "Following"
-                        ) : (
-                          <>
-                            <UserPlus className="size-3 shrink-0" /> Follow
-                          </>
-                        )}
-                      </button>
+                        {reel.user.name}
+                      </Link>
+                      {currentUserId && reel.user.id !== currentUserId && (
+                        <button
+                          onClick={() =>
+                            reel.user.isFollowing
+                              ? handleUnfollow(reel.user.id)
+                              : handleFollow(reel.user.id)
+                          }
+                          className="ml-1 inline-flex min-h-[36px] items-center justify-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold text-white transition-colors hover:bg-white/20"
+                        >
+                          {reel.user.isFollowing ? (
+                            "Following"
+                          ) : (
+                            <>
+                              <UserPlus className="size-3 shrink-0" /> Follow
+                            </>
+                          )}
+                        </button>
+                      )}
+                    </div>
+                    {reel.caption && (
+                      <p className="mt-1.5 line-clamp-2 text-sm text-white/80">{reel.caption}</p>
                     )}
                   </div>
-                  {reel.caption && (
-                    <p className="mt-1.5 line-clamp-2 text-xs text-white/80">{reel.caption}</p>
+
+                  <ReelActions
+                    reelId={reel.id}
+                    currentCaption={reel.caption}
+                    initialLiked={reel.isLiked}
+                    initialLikesCount={reel.likesCount}
+                    commentsCount={reel.commentsCount}
+                    isOwner={currentUserId === reel.user.id}
+                    onLikeToggle={() => handleLikeToggle(reel.id)}
+                    onCommentClick={() =>
+                      setCommentsReelId(commentsReelId === reel.id ? null : reel.id)
+                    }
+                    onDelete={() => handleDeleteReel(reel.id)}
+                    onCaptionUpdate={(c) => handleCaptionUpdate(reel.id, c)}
+                  />
+
+                  {commentsReelId === reel.id && (
+                    <ReelComments
+                      reelId={reel.id}
+                      open={true}
+                      onClose={() => setCommentsReelId(null)}
+                    />
                   )}
                 </div>
               </div>
-
-              <ReelActions
-                reelId={reel.id}
-                currentCaption={reel.caption}
-                initialLiked={reel.isLiked}
-                initialLikesCount={reel.likesCount}
-                commentsCount={reel.commentsCount}
-                isOwner={currentUserId === reel.user.id}
-                onLikeToggle={() => handleLikeToggle(reel.id)}
-                onCommentClick={() =>
-                  setCommentsReelId(commentsReelId === reel.id ? null : reel.id)
-                }
-                onDelete={() => handleDeleteReel(reel.id)}
-                onCaptionUpdate={(c) => handleCaptionUpdate(reel.id, c)}
-              />
-
-              {commentsReelId === reel.id && (
-                <ReelComments
-                  reelId={reel.id}
-                  open={true}
-                  onClose={() => setCommentsReelId(null)}
-                />
-              )}
             </div>
           </div>
         ))}
 
         {!data?.hasMore && displayReels.length > 0 && !isFetching && (
-          <div className="relative h-[calc(100%-16px)] snap-start mx-3 my-2">
+          <div className="relative h-full snap-start my-0">
             <div className="relative mx-auto flex h-full w-full max-w-md flex-col items-center justify-center gap-4 rounded-2xl bg-white/5 backdrop-blur-sm p-6 text-center">
               <div className="flex size-16 items-center justify-center rounded-full bg-white/10">
                 <Video className="size-8 text-white/60" />

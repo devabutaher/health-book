@@ -149,7 +149,7 @@ export default function ResetPasswordPage() {
           ) : null}
 
           <FieldDescription className="pt-6 text-center text-sm">
-            <Link href="/login" className="font-semibold text-brand-teal hover:underline">
+            <Link href="/login" prefetch={false} className="font-semibold text-brand-teal hover:underline">
               Back to sign in
             </Link>
           </FieldDescription>

@@ -2,15 +2,14 @@
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAppSelector } from "@/hooks";
-import { slideUp } from "@/lib/motion/variants";
 import {
   useAddReelCommentMutation,
   useDeleteReelCommentMutation,
   useGetReelQuery,
 } from "@/redux/api/reelsApi";
 import type { ReelComment } from "@/types/reel";
-import { AnimatePresence, motion } from "framer-motion";
 import { Send, Trash2, X } from "lucide-react";
+import { motion } from "framer-motion";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -50,30 +49,42 @@ export function ReelComments({
     }
   };
 
+  if (!open) return null;
+
   const comments = reel?.comments ?? [];
 
   return (
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          variants={slideUp}
-          initial="initial"
-          animate="animate"
-          exit="exit"
-          className="absolute inset-x-0 bottom-0 z-30 max-h-[50%] rounded-t-2xl border-t border-white/10 bg-black/95 backdrop-blur-xl"
-        >
+    <>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.15 }}
+        className="absolute inset-0 z-40 bg-black/60 backdrop-blur-sm"
+        onClick={onClose}
+      />
+
+      <motion.div
+        initial={{ y: "100%" }}
+        animate={{ y: 0 }}
+        transition={{ type: "spring", damping: 25, stiffness: 300 }}
+        className="absolute inset-x-0 bottom-0 z-50 flex justify-center"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex w-full flex-col rounded-t-2xl bg-[var(--bg-elevated)] shadow-2xl max-h-[50vh]">
           <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-            <h3 className="text-sm font-bold text-white">Comments ({reel?.commentsCount || 0})</h3>
+            <h3 className="text-sm font-bold text-white">
+              Comments ({reel?.commentsCount || 0})
+            </h3>
             <button
               onClick={onClose}
-              className="rounded-full p-2 text-white/60 hover:bg-white/10 hover:text-white"
+              className="rounded-full p-2 text-white/60 hover:bg-white/10 hover:text-white transition-colors"
               aria-label="Close comments"
             >
               <X className="size-4" />
             </button>
           </div>
 
-          <div className="max-h-60 space-y-0 overflow-y-auto px-4">
+          <div className="flex-1 overflow-y-auto px-4">
             {comments.length === 0 ? (
               <p className="py-8 text-center text-xs text-white/40">No comments yet</p>
             ) : (
@@ -101,7 +112,7 @@ export function ReelComments({
                     <button
                       onClick={() => handleDelete(c.id)}
                       disabled={deleting}
-                      className="shrink-0 rounded-full p-1 text-white/30 hover:bg-white/10 hover:text-red-400 transition-colors"
+                      className="shrink-0 rounded-full p-1 text-white/30 transition-colors hover:bg-white/10 hover:text-red-400"
                       aria-label="Delete comment"
                     >
                       <Trash2 className="size-3.5" />
@@ -132,8 +143,8 @@ export function ReelComments({
               <Send className="size-4" />
             </button>
           </form>
-        </motion.div>
-      )}
-    </AnimatePresence>
+        </div>
+      </motion.div>
+    </>
   );
 }

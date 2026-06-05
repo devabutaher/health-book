@@ -746,6 +746,7 @@ model Story {
   duration        Int?     // seconds for video
   textOverlay     String?
   textColor       String?  @map("text_color")
+  textBgColor     String?  @map("text_bg_color") // background/highlight behind text overlay
   textFontSize    Int?     @map("text_font_size")
   textFontWeight  String?  @map("text_font_weight")
   textPosition    String?  @default("center") @map("text_position") // "top" | "center" | "bottom"

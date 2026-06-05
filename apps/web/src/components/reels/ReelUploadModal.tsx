@@ -31,17 +31,20 @@ export function ReelUploadModal({ open, onClose }: { open: boolean; onClose: () 
 
   const handleUpload = async () => {
     if (!videoFile) return;
+    const toastId = toast.loading("Uploading reel...");
     const formData = new FormData();
     formData.append("video", videoFile);
     if (caption.trim()) formData.append("caption", caption.trim());
     try {
       await uploadReel(formData).unwrap();
+      toast.dismiss(toastId);
       toast.success("Reel uploaded!");
       setVideoFile(null);
       setCaption("");
       setPreview("");
       onClose();
     } catch {
+      toast.dismiss(toastId);
       toast.error("Failed to upload reel");
     }
   };

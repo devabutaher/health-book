@@ -113,6 +113,7 @@ export default function GroupMembersPage({ params }: { params: Promise<{ id: str
           <p className="text-[var(--text-secondary)]">Group not found</p>
           <Link
             href="/groups"
+            prefetch={false}
             className="mt-4 inline-block text-sm text-brand-teal hover:underline"
           >
             Back to groups
@@ -129,6 +130,7 @@ export default function GroupMembersPage({ params }: { params: Promise<{ id: str
       <div className="mx-auto max-w-3xl space-y-4 sm:space-y-6">
         <Link
           href={`/groups/${id}`}
+          prefetch={false}
           className="inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
         >
           <ArrowLeft className="size-4" />
@@ -161,6 +163,7 @@ export default function GroupMembersPage({ params }: { params: Promise<{ id: str
                 >
                   <Link
                     href={`/${req.user.username}`}
+                    prefetch={false}
                     className="flex min-w-0 flex-1 items-center gap-3"
                   >
                     <Avatar className="size-9">
@@ -235,7 +238,7 @@ export default function GroupMembersPage({ params }: { params: Promise<{ id: str
                   key={member.userId}
                   className="flex items-center gap-3 p-4 transition-colors hover:bg-[var(--bg-overlay)]"
                 >
-                  <Link href={`/${member.user.username}`}>
+                  <Link href={`/${member.user.username}`} prefetch={false}>
                     <Avatar className="size-10">
                       {member.user.avatar ? (
                         <AvatarImage src={member.user.avatar} alt={member.user.name} />
@@ -248,6 +251,7 @@ export default function GroupMembersPage({ params }: { params: Promise<{ id: str
                   <div className="min-w-0 flex-1">
                     <Link
                       href={`/${member.user.username}`}
+                      prefetch={false}
                       className="text-sm font-semibold hover:underline"
                     >
                       {member.user.name}

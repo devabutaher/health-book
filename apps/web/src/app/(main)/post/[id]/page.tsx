@@ -175,7 +175,7 @@ export default function PostDetailPage() {
               <div className="flex flex-col gap-4">
                 {comments.map((comment: Comment) => (
                   <div key={comment.id} className="flex gap-3">
-                    <Link href={`/${comment.user.username}`}>
+                    <Link href={`/${comment.user.username}`} prefetch={false}>
                       <UserAvatar
                         name={comment.user.name}
                         avatar={comment.user.avatar}
@@ -186,6 +186,7 @@ export default function PostDetailPage() {
                       <div className="rounded-2xl rounded-tl-md border border-[var(--glass-border)] bg-[var(--bg-overlay)] px-3 py-2">
                         <Link
                           href={`/${comment.user.username}`}
+                          prefetch={false}
                           className="text-sm font-semibold hover:underline"
                         >
                           {comment.user.name}
@@ -251,6 +252,7 @@ export default function PostDetailPage() {
                             <div className="rounded-2xl rounded-tl-md border border-[var(--glass-border)] bg-[var(--bg-overlay)] px-3 py-2">
                               <Link
                                 href={`/${reply.user.username}`}
+                                prefetch={false}
                                 className="text-sm font-semibold hover:underline"
                               >
                                 {reply.user.name}

@@ -23,7 +23,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAppSelector } from "@/hooks";
 import { useGetDraftsQuery } from "@/redux/api/postApi";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DraftsDialog } from "@/components/post/DraftsDialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
@@ -83,7 +83,7 @@ export default function BottomNav({ onCreatePost }: { onCreatePost?: () => void 
       <nav
         className={cn(
           "fixed inset-x-0 bottom-0 z-40 md:hidden",
-          "bg-[var(--glass-bg)] backdrop-blur-2xl",
+          "bg-[var(--glass-bg)] backdrop-blur-md md:backdrop-blur-2xl",
           "border-t border-[var(--glass-border)]",
           "pb-safe",
         )}
@@ -152,11 +152,11 @@ export default function BottomNav({ onCreatePost }: { onCreatePost?: () => void 
         </div>
       </nav>
 
-      <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
-        <SheetContent side="bottom" className="rounded-t-3xl pb-8">
-          <SheetHeader>
-            <SheetTitle className="font-display text-center">More</SheetTitle>
-          </SheetHeader>
+      <Dialog open={menuOpen} onOpenChange={setMenuOpen}>
+        <DialogContent showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle className="font-display text-center">More</DialogTitle>
+          </DialogHeader>
           <div className="grid grid-cols-4 gap-4 px-4 pt-4">
             <MenuItem
               href="/groups"
@@ -229,16 +229,16 @@ export default function BottomNav({ onCreatePost }: { onCreatePost?: () => void 
               </span>
             </button>
           </div>
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
 
       <DraftsDialog open={draftsOpen} onClose={() => setDraftsOpen(false)} />
 
-      <Sheet open={quickActionsOpen} onOpenChange={setQuickActionsOpen}>
-        <SheetContent side="bottom" className="rounded-t-3xl pb-8">
-          <SheetHeader>
-            <SheetTitle className="font-display text-center">Quick Create</SheetTitle>
-          </SheetHeader>
+      <Dialog open={quickActionsOpen} onOpenChange={setQuickActionsOpen}>
+        <DialogContent showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle className="font-display text-center">Quick Create</DialogTitle>
+          </DialogHeader>
           <div className="grid grid-cols-4 gap-2 px-4 pt-4">
             <QuickActionButton
               icon={Plus}
@@ -288,8 +288,8 @@ export default function BottomNav({ onCreatePost }: { onCreatePost?: () => void 
               badge={draftCount > 0 ? String(draftCount) : undefined}
             />
           </div>
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

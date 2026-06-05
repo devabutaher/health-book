@@ -96,7 +96,7 @@ export default function FollowingPage() {
                 <motion.div key={u.id} variants={itemVariants}>
                   <GlassCard className="p-4">
                     <div className="flex items-center gap-3">
-                      <Link href={`/${u.username}`} className="shrink-0">
+                      <Link href={`/${u.username}`} prefetch={false} className="shrink-0">
                         <UserAvatar
                           name={u.name}
                           avatar={u.avatar}
@@ -104,7 +104,7 @@ export default function FollowingPage() {
                           size="default"
                         />
                       </Link>
-                      <Link href={`/${u.username}`} className="min-w-0 flex-1">
+                      <Link href={`/${u.username}`} prefetch={false} className="min-w-0 flex-1">
                         <p className="truncate text-sm font-semibold hover:underline">{u.name}</p>
                         <p className="truncate text-xs text-muted-foreground">@{u.username}</p>
                       </Link>
@@ -132,7 +132,7 @@ export default function FollowingPage() {
             <p className="mt-1 text-xs text-muted-foreground/60">
               Explore suggested people to find interesting health enthusiasts.
             </p>
-            <Link href="/suggested">
+            <Link href="/suggested" prefetch={false}>
               <Button variant="gradient" size="sm" className="mt-4">
                 Find people to follow
               </Button>

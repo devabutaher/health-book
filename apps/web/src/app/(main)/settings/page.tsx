@@ -230,6 +230,7 @@ export default function SettingsPage() {
                 <div className="rounded-xl bg-[var(--bg-subtle)] px-4 py-3">
                   <Link
                     href={`/${currentUser?.username || ""}`}
+                    prefetch={false}
                     className="text-xs text-brand-teal hover:underline"
                   >
                     View and edit your public profile →

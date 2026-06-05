@@ -35,9 +35,11 @@ export function ConversationItem({
 
   const displayName = conversation.isGroup
     ? conversation.groupName || "Group"
-    : otherParticipant?.user.name || "Unknown";
+    : otherParticipant?.user.name || conversation.participants[0]?.user.name || "Unknown";
 
-  const avatar = conversation.isGroup ? conversation.groupAvatar : otherParticipant?.user.avatar;
+  const avatar = conversation.isGroup
+    ? conversation.groupAvatar
+    : otherParticipant?.user.avatar || conversation.participants[0]?.user.avatar;
 
   const initials = displayName.slice(0, 2).toUpperCase();
   const lastMessage = conversation.lastMessage?.content || "No messages yet";

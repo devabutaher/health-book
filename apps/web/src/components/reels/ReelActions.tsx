@@ -6,14 +6,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import {
   useDeleteReelMutation,
   useUpdateReelMutation,
 } from "@/redux/api/reelsApi";
 import { Heart, Loader2, MessageCircle, MoreVertical, Pencil, Share2, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 export function ReelActions({
@@ -46,12 +46,15 @@ export function ReelActions({
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState(currentCaption || "");
 
+  useEffect(() => {
+    setLiked(initialLiked);
+    setLikesCount(initialLikesCount);
+  }, [initialLiked, initialLikesCount]);
+
   const handleLike = () => {
-    setLiked((prev) => {
-      const next = !prev;
-      setLikesCount((c) => (next ? c + 1 : c - 1));
-      return next;
-    });
+    const next = !liked;
+    setLiked(next);
+    setLikesCount((c) => (next ? c + 1 : c - 1));
     onLikeToggle?.();
   };
 
@@ -85,11 +88,6 @@ export function ReelActions({
     } catch {
       toast.error("Failed to update caption");
     }
-  };
-
-  const handleCancelEdit = () => {
-    setEditing(false);
-    setEditValue(currentCaption || "");
   };
 
   return (
@@ -154,49 +152,63 @@ export function ReelActions({
         </button>
       </div>
 
-      <Sheet
-        open={editing}
-        onOpenChange={(open) => {
-          if (!open) setEditing(false);
-        }}
-      >
-        <SheetContent
-          side="bottom"
-          className="rounded-t-2xl border-t border-white/10 bg-black/95 backdrop-blur-xl"
-        >
-          <SheetHeader className="px-0 pt-0">
-            <SheetTitle className="text-sm font-bold text-white">Edit caption</SheetTitle>
-          </SheetHeader>
-          <textarea
-            value={editValue}
-            onChange={(e) => setEditValue(e.target.value)}
-            maxLength={2000}
-            rows={3}
-            className="mt-3 w-full resize-none rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/30 focus:border-brand-teal/50 focus:outline-none focus:ring-2 focus:ring-brand-teal/10"
-            placeholder="Edit caption..."
-            autoFocus
+      {editing && (
+        <>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.15 }}
+            className="absolute inset-0 z-40 bg-black/60 backdrop-blur-sm"
+            onClick={() => {
+              setEditing(false);
+              setEditValue(currentCaption || "");
+            }}
           />
-          <div className="mt-2 flex items-center justify-between">
-            <span className="text-[10px] text-white/40">{editValue.length}/2000</span>
-            <div className="flex gap-2">
-              <button
-                onClick={handleCancelEdit}
-                className="rounded-xl px-4 py-1.5 text-xs font-semibold text-white/70 hover:bg-white/10 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSaveEdit}
-                disabled={updating}
-                className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-brand-teal to-brand-green px-4 py-1.5 text-xs font-semibold text-white transition-opacity disabled:opacity-50"
-              >
-                {updating && <Loader2 className="size-3.5 animate-spin" />}
-                {updating ? "Saving..." : "Save"}
-              </button>
+
+          <motion.div
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            className="absolute inset-x-0 bottom-0 z-50 flex justify-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex w-full flex-col rounded-t-2xl bg-[var(--bg-elevated)] p-4 shadow-2xl">
+              <h3 className="text-sm font-bold text-white">Edit caption</h3>
+              <textarea
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+                maxLength={2000}
+                rows={3}
+                className="mt-3 w-full resize-none rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/30 focus:border-brand-teal/50 focus:outline-none focus:ring-2 focus:ring-brand-teal/10"
+                placeholder="Edit caption..."
+                autoFocus
+              />
+              <div className="mt-2 flex items-center justify-between">
+                <span className="text-[10px] text-white/40">{editValue.length}/2000</span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setEditing(false);
+                      setEditValue(currentCaption || "");
+                    }}
+                    className="rounded-xl px-4 py-1.5 text-xs font-semibold text-white/70 hover:bg-white/10 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveEdit}
+                    disabled={updating}
+                    className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-brand-teal to-brand-green px-4 py-1.5 text-xs font-semibold text-white transition-opacity disabled:opacity-50"
+                  >
+                    {updating && <Loader2 className="size-3.5 animate-spin" />}
+                    {updating ? "Saving..." : "Save"}
+                  </button>
+                </div>
+              </div>
             </div>
-          </div>
-        </SheetContent>
-      </Sheet>
+          </motion.div>
+        </>
+      )}
     </>
   );
 }

@@ -71,9 +71,9 @@ export function ConversationHeader({
 
   const displayName = conv?.isGroup
     ? conv.groupName || "Group"
-    : otherParticipant?.user.name || "Chat";
+    : otherParticipant?.user.name || conv?.participants[0]?.user.name || "Chat";
 
-  const avatar = conv?.isGroup ? conv.groupAvatar : otherParticipant?.user.avatar;
+  const avatar = conv?.isGroup ? conv.groupAvatar : otherParticipant?.user.avatar || conv?.participants[0]?.user.avatar;
 
   const initials = displayName.slice(0, 2).toUpperCase();
 

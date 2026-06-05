@@ -272,6 +272,7 @@ export const createStorySchema = z
     duration: z.number().int().positive().optional(),
     textOverlay: z.string().max(200).optional(),
     textColor: z.string().optional(),
+    textBgColor: z.string().optional(),
     textFontSize: z.number().int().min(12).max(72).optional(),
     textFontWeight: z.enum(["normal", "bold"]).optional(),
     textPosition: z.string().optional(), // JSON "{x,y}" or legacy "top"|"center"|"bottom"

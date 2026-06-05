@@ -26,6 +26,7 @@ export const groupsApi = createApi({
       query: ({ cursor }) => (cursor ? `/?cursor=${cursor}` : "/"),
       providesTags: ["Groups"],
       transformResponse: (response: { success: boolean; data: GroupListData }) => response.data,
+      keepUnusedDataFor: 600,
     }),
 
     searchGroups: builder.query<GroupListData, { q: string; cursor?: string }>({
@@ -33,18 +34,21 @@ export const groupsApi = createApi({
         `/search?q=${encodeURIComponent(q)}${cursor ? `&cursor=${cursor}` : ""}`,
       providesTags: ["Groups"],
       transformResponse: (response: { success: boolean; data: GroupListData }) => response.data,
+      keepUnusedDataFor: 600,
     }),
 
     getMyGroups: builder.query<Group[], void>({
       query: () => "/my",
       providesTags: ["MyGroups"],
       transformResponse: (response: { success: boolean; data: Group[] }) => response.data,
+      keepUnusedDataFor: 600,
     }),
 
     getGroup: builder.query<Group, string>({
       query: (id) => `/${id}`,
       providesTags: (_result, _error, id) => [{ type: "Group", id }],
       transformResponse: (response: { success: boolean; data: Group }) => response.data,
+      keepUnusedDataFor: 600,
     }),
 
     createGroup: builder.mutation<
@@ -208,6 +212,7 @@ export const groupsApi = createApi({
       providesTags: (_result, _error, groupId) => [{ type: "GroupJoinRequests", id: groupId }],
       transformResponse: (response: { success: boolean; data: GroupJoinRequest[] }) =>
         response.data,
+      keepUnusedDataFor: 600,
     }),
 
     approveJoinRequest: builder.mutation<void, { groupId: string; userId: string }>({
@@ -245,6 +250,7 @@ export const groupsApi = createApi({
       query: () => "/my/invites",
       providesTags: ["MyInvites"],
       transformResponse: (response: { success: boolean; data: GroupInvite[] }) => response.data,
+      keepUnusedDataFor: 600,
     }),
 
     acceptInvite: builder.mutation<void, string>({
@@ -293,6 +299,7 @@ export const groupsApi = createApi({
       query: (groupId) => `/${groupId}/invites`,
       providesTags: (_result, _error, groupId) => [{ type: "GroupInvites", id: groupId }],
       transformResponse: (response: { success: boolean; data: GroupInvite[] }) => response.data,
+      keepUnusedDataFor: 600,
     }),
 
     uploadGroupMedia: builder.mutation<{ url: string }, FormData>({
@@ -316,6 +323,7 @@ export const groupsApi = createApi({
         success: boolean;
         data: { members: GroupMember[]; nextCursor: string | null; hasMore: boolean };
       }) => response.data,
+      keepUnusedDataFor: 600,
     }),
 
     updateMemberRole: builder.mutation<

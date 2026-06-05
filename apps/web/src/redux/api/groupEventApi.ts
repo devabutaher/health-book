@@ -11,6 +11,7 @@ export const groupEventApi = createApi({
       query: (groupId) => `/${groupId}/events`,
       providesTags: (_result, _error, groupId) => [{ type: "GroupEvents", id: groupId }],
       transformResponse: (response: { success: boolean; data: GroupEvent[] }) => response.data,
+      keepUnusedDataFor: 300,
     }),
     createEvent: builder.mutation<
       GroupEvent,
@@ -29,6 +30,16 @@ export const groupEventApi = createApi({
         body,
       }),
       invalidatesTags: (_result, _error, { groupId }) => [{ type: "GroupEvents", id: groupId }],
+      onQueryStarted: async ({ groupId }, { dispatch, queryFulfilled }) => {
+        try {
+          const { data } = await queryFulfilled;
+          dispatch(
+            groupEventApi.util.updateQueryData("getGroupEvents", groupId, (draft) => {
+              draft.unshift(data);
+            }),
+          );
+        } catch {}
+      },
     }),
     rsvpEvent: builder.mutation<GroupEvent, { groupId: string; eventId: string; status: string }>({
       query: ({ groupId, eventId, status }) => ({
@@ -37,6 +48,29 @@ export const groupEventApi = createApi({
         body: { status },
       }),
       invalidatesTags: (_result, _error, { groupId }) => [{ type: "GroupEvents", id: groupId }],
+      onQueryStarted: async ({ groupId, eventId, status }, { dispatch, queryFulfilled }) => {
+        const patch = dispatch(
+          groupEventApi.util.updateQueryData("getGroupEvents", groupId, (draft) => {
+            const event = draft.find((e) => e.id === eventId) as any;
+            if (!event) return;
+            if (status === "going") {
+              event.attendeeCount = (event.attendeeCount || 0) + 1;
+              if (!event.attendees) event.attendees = [];
+              event.attendees.push({ status: "going" });
+            } else if (status === "maybe") {
+              event.attendeeCount = Math.max(0, (event.attendeeCount || 0) - 1);
+              if (event.attendees) {
+                event.attendees = event.attendees.filter((a: any) => a.userId !== event.userId);
+              }
+            }
+          }),
+        );
+        try {
+          await queryFulfilled;
+        } catch {
+          patch.undo();
+        }
+      },
     }),
     deleteEvent: builder.mutation<void, { eventId: string; groupId: string }>({
       query: ({ eventId, groupId }) => ({

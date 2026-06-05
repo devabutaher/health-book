@@ -50,6 +50,7 @@ export default function HashtagPage() {
                 <Link
                   key={t.tag}
                   href={`/hashtag/${encodeURIComponent(t.tag.replace("#", ""))}`}
+                  prefetch={false}
                   className="inline-flex items-center gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--bg-overlay)] px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:border-brand-teal/30 hover:text-brand-teal"
                 >
                   {t.tag} <span className="text-[10px] opacity-60">{t.count}</span>

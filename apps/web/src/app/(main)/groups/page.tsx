@@ -223,6 +223,7 @@ export default function GroupsPage() {
                         <div key={invite.id} className="flex items-center justify-between gap-3">
                           <Link
                             href={`/groups/${invite.groupId}`}
+                            prefetch={false}
                             className="flex items-center gap-3 min-w-0 flex-1"
                           >
                             <Avatar size="sm" className="size-9 shrink-0">

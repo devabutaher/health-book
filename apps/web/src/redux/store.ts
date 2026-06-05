@@ -101,5 +101,12 @@ export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;
 
 export const resetApiCache = () => {
-  store.dispatch(postApi.util.resetApiState());
+  const apis = [
+    authApi, userApi, postApi, commentApi, healthLogApi,
+    searchApi, notificationApi, periodLogApi, weightLogApi,
+    messagingApi, groupsApi, challengesApi, groupEventApi,
+    groupPollApi, storiesApi, reelsApi, highlightsApi,
+    newsApi,
+  ]
+  apis.forEach((api) => store.dispatch(api.util.resetApiState()))
 };

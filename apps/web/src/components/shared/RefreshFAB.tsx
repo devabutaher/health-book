@@ -18,7 +18,7 @@ export default function RefreshFAB() {
   }, [spinning]);
 
   return (
-    <div className="fixed z-50 bottom-20 lg:bottom-6 right-4">
+    <div className="fixed z-40 max-md:hidden bottom-20 lg:bottom-6 right-4">
       <div className="group relative">
         <button
           onClick={handleRefresh}

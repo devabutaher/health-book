@@ -34,7 +34,6 @@ export const reelsApi = createApi({
         method: "POST",
         body,
       }),
-      invalidatesTags: ["Reels"],
       transformResponse: (response: { success: boolean; data: Reel }) => response.data,
       onQueryStarted: async (_args, { dispatch, queryFulfilled }) => {
         try {
@@ -65,7 +64,6 @@ export const reelsApi = createApi({
           );
         } catch {}
       },
-      invalidatesTags: ["Reels"],
     }),
 
     toggleReelLike: builder.mutation<{ liked: boolean }, string>({
@@ -73,18 +71,28 @@ export const reelsApi = createApi({
         url: `/${reelId}/like`,
         method: "POST",
       }),
-      invalidatesTags: (_result, _error, id) => [{ type: "Reel", id }, "Reels"],
       onQueryStarted: async (reelId, { dispatch, queryFulfilled }) => {
-        const patch = dispatch(
+        // Fix: also update browseReels cache, not just getReel
+        const patchBrowse = dispatch(
+          reelsApi.util.updateQueryData("browseReels", { cursor: undefined }, (draft) => {
+            const reel = draft.reels.find((r) => r.id === reelId);
+            if (reel) {
+              reel.isLiked = !reel.isLiked;
+              reel.likesCount = Math.max(0, reel.likesCount + (reel.isLiked ? 1 : -1));
+            }
+          }),
+        );
+        const patchSingle = dispatch(
           reelsApi.util.updateQueryData("getReel", reelId, (draft) => {
             draft.isLiked = !draft.isLiked;
-            draft.likesCount += draft.isLiked ? 1 : -1;
+            draft.likesCount = Math.max(0, draft.likesCount + (draft.isLiked ? 1 : -1));
           }),
         );
         try {
           await queryFulfilled;
         } catch {
-          patch.undo();
+          patchBrowse.undo();
+          patchSingle.undo();
         }
       },
     }),
@@ -95,17 +103,24 @@ export const reelsApi = createApi({
         method: "POST",
         body,
       }),
-      invalidatesTags: (_result, _error, { reelId }) => [{ type: "Reel", id: reelId }, "Reels"],
+      // Fix: no need to invalidate Reels — only update comment count optimistically
       onQueryStarted: async ({ reelId }, { dispatch, queryFulfilled }) => {
-        const patch = dispatch(
+        const patchSingle = dispatch(
           reelsApi.util.updateQueryData("getReel", reelId, (draft) => {
             draft.commentsCount += 1;
+          }),
+        );
+        const patchBrowse = dispatch(
+          reelsApi.util.updateQueryData("browseReels", { cursor: undefined }, (draft) => {
+            const reel = draft.reels.find((r) => r.id === reelId);
+            if (reel) reel.commentsCount += 1;
           }),
         );
         try {
           await queryFulfilled;
         } catch {
-          patch.undo();
+          patchSingle.undo();
+          patchBrowse.undo();
         }
       },
     }),
@@ -115,17 +130,23 @@ export const reelsApi = createApi({
         url: `/${reelId}/comments/${commentId}`,
         method: "DELETE",
       }),
-      invalidatesTags: (_result, _error, { reelId }) => [{ type: "Reel", id: reelId }, "Reels"],
       onQueryStarted: async ({ reelId }, { dispatch, queryFulfilled }) => {
-        const patch = dispatch(
+        const patchSingle = dispatch(
           reelsApi.util.updateQueryData("getReel", reelId, (draft) => {
             draft.commentsCount = Math.max(0, draft.commentsCount - 1);
+          }),
+        );
+        const patchBrowse = dispatch(
+          reelsApi.util.updateQueryData("browseReels", { cursor: undefined }, (draft) => {
+            const reel = draft.reels.find((r) => r.id === reelId);
+            if (reel) reel.commentsCount = Math.max(0, reel.commentsCount - 1);
           }),
         );
         try {
           await queryFulfilled;
         } catch {
-          patch.undo();
+          patchSingle.undo();
+          patchBrowse.undo();
         }
       },
     }),
@@ -135,7 +156,6 @@ export const reelsApi = createApi({
         url: `/${reelId}`,
         method: "DELETE",
       }),
-      invalidatesTags: ["Reels"],
       onQueryStarted: async (reelId, { dispatch, queryFulfilled }) => {
         const patch = dispatch(
           reelsApi.util.updateQueryData("browseReels", { cursor: undefined }, (draft) => {
@@ -157,7 +177,25 @@ export const reelsApi = createApi({
         body,
       }),
       transformResponse: (response: { success: boolean; data: Reel }) => response.data,
-      invalidatesTags: (_result, _error, { reelId }) => [{ type: "Reel", id: reelId }, "Reels"],
+      onQueryStarted: async ({ reelId, ...body }, { dispatch, queryFulfilled }) => {
+        const patchSingle = dispatch(
+          reelsApi.util.updateQueryData("getReel", reelId, (draft) => {
+            Object.assign(draft, body);
+          }),
+        );
+        const patchBrowse = dispatch(
+          reelsApi.util.updateQueryData("browseReels", { cursor: undefined }, (draft) => {
+            const reel = draft.reels.find((r) => r.id === reelId);
+            if (reel) Object.assign(reel, body);
+          }),
+        );
+        try {
+          await queryFulfilled;
+        } catch {
+          patchSingle.undo();
+          patchBrowse.undo();
+        }
+      },
     }),
   }),
 });

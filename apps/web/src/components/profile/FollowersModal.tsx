@@ -110,6 +110,7 @@ export function FollowersModal({
                     >
                       <Link
                         href={`/${u.username}`}
+                        prefetch={false}
                         className="flex min-w-0 flex-1 items-center gap-3"
                         onClick={onClose}
                       >

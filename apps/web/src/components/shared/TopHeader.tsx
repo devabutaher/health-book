@@ -20,6 +20,7 @@ import SearchBar from "./SearchBar";
 import MobileSearch from "./MobileSearch";
 import MessagesBell from "../messaging/MessagesBell";
 import NotificationBell from "../notifications/NotificationBell";
+import RefreshButton from "./RefreshButton";
 import { ThemeToggle } from "./ThemeToggle";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
@@ -74,7 +75,7 @@ export default function TopHeader() {
     <header
       className={cn(
         "sticky top-0 z-40 w-full",
-        "bg-[var(--glass-bg)] backdrop-blur-2xl",
+        "bg-[var(--glass-bg)] backdrop-blur-md md:backdrop-blur-2xl",
         "border-b border-[var(--glass-border)]",
         "sm:pt-safe",
       )}
@@ -91,8 +92,8 @@ export default function TopHeader() {
           </Link>
         </div>
 
-        <div className="flex flex-1 items-center h-full">
-          <div className="hidden lg:flex items-center gap-3">
+        <div className="flex-1 min-w-0 relative hidden md:flex items-center h-full">
+          <div className="hidden lg:flex items-center gap-3 shrink-0">
             <div className="h-6 w-px bg-gradient-to-b from-brand-teal to-brand-green" />
             {currentPage && (
               <span className="text-sm font-semibold text-muted-foreground">{currentPage}</span>
@@ -105,19 +106,19 @@ export default function TopHeader() {
               <span className="text-xs font-semibold text-brand-teal">{healthScore}%</span>
             </div>
           </div>
+          <div className="absolute left-1/2 -translate-x-1/2 w-full max-w-md">
+            <SearchBar />
+          </div>
         </div>
 
-        <div className="absolute left-1/2 -translate-x-1/2 w-full max-w-md hidden md:block">
-          <SearchBar />
-        </div>
-
-        <div className="ml-auto flex items-center pr-4 xl:w-96 flex-shrink-0">
+        <div className="ml-auto flex items-center pr-4 xl:w-96 shrink-0">
           <div className="hidden xl:block h-6 w-px bg-gradient-to-b from-brand-teal to-brand-green" />
           <div className="flex flex-1 items-center xl:justify-between justify-end gap-1 pl-2">
             <MobileSearch />
 
             <Link
               href="/my-book"
+              prefetch={false}
               aria-label="My Book"
               className="hidden sm:flex size-9 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-[var(--bg-overlay)] hover:text-foreground active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal/40"
             >
@@ -125,6 +126,7 @@ export default function TopHeader() {
             </Link>
             <Link
               href="/groups"
+              prefetch={false}
               aria-label="Groups"
               className="hidden sm:flex size-9 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-[var(--bg-overlay)] hover:text-foreground active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal/40"
             >
@@ -132,6 +134,7 @@ export default function TopHeader() {
             </Link>
             <Link
               href="/challenges"
+              prefetch={false}
               aria-label="Challenges"
               className="hidden sm:flex size-9 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-[var(--bg-overlay)] hover:text-foreground active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal/40"
             >
@@ -140,6 +143,7 @@ export default function TopHeader() {
 
             <MessagesBell />
             <NotificationBell />
+            <span className="md:hidden"><RefreshButton /></span>
 
             <ThemeToggle />
 
@@ -179,7 +183,7 @@ export default function TopHeader() {
                 </div>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link href={`/${user?.username || ""}`} className="cursor-pointer">
+                  <Link href={`/${user?.username || ""}`} prefetch={false} className="cursor-pointer">
                     <UserIcon />
                     Profile
                   </Link>

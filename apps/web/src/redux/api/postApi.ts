@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import type { Post, PostFeedData } from "@/types/post";
 import { createApi } from "@reduxjs/toolkit/query/react";
 import { createBaseQuery } from "../baseQuery";
 import type { RootState } from "../store";
-import type { Post, PostFeedData } from "@/types/post";
 
 export const postApi = createApi({
   reducerPath: "postApi",
@@ -20,6 +20,7 @@ export const postApi = createApi({
         "Posts",
         { type: "Posts", id: `user-${userId}` },
       ],
+      keepUnusedDataFor: 300,
     }),
     getExplore: builder.query({
       query: ({ cursor, category }: { cursor?: string; category?: string } = {}) => {
@@ -30,10 +31,12 @@ export const postApi = createApi({
         return `/explore${qs ? `?${qs}` : ""}`;
       },
       providesTags: ["Posts"],
+      keepUnusedDataFor: 600,
     }),
     getPost: builder.query({
       query: (id: string) => `/${id}`,
       providesTags: (_result, _error, id) => [{ type: "Post", id }],
+      keepUnusedDataFor: 300,
     }),
     createPost: builder.mutation({
       query: (body: {
@@ -51,12 +54,13 @@ export const postApi = createApi({
         method: "POST",
         body,
       }),
+      // Fix: only invalidate group feed if groupId present, not entire Feed
       invalidatesTags: (_result, _error, body) => {
-        const tags: ("Feed" | "Posts" | { type: "Posts"; id: string })[] = ["Feed", "Posts"];
+        const tags: any[] = [];
         if (body.groupId) tags.push({ type: "Posts", id: `group-${body.groupId}` });
         return tags;
       },
-      onQueryStarted: async (_body, { dispatch, queryFulfilled }) => {
+      onQueryStarted: async (body, { dispatch, queryFulfilled }) => {
         try {
           const { data: res } = await queryFulfilled;
           const newPost = (res as any)?.data;
@@ -68,6 +72,19 @@ export const postApi = createApi({
               }
             }),
           );
+          if (body.groupId) {
+            dispatch(
+              postApi.util.updateQueryData(
+                "getGroupFeed",
+                { groupId: body.groupId },
+                (draft: any) => {
+                  if (draft?.data?.posts) {
+                    draft.data.posts.unshift(newPost);
+                  }
+                },
+              ),
+            );
+          }
         } catch {}
       },
     }),
@@ -92,18 +109,47 @@ export const postApi = createApi({
         method: "PUT",
         body,
       }),
-      invalidatesTags: (_result, _error, { id }) => [{ type: "Post", id }, "Feed", "Posts"],
-      onQueryStarted: async ({ id, ...body }, { dispatch, queryFulfilled }) => {
-        const patch = dispatch(
+      // Only invalidate specific post — not entire Feed/Posts
+      invalidatesTags: (_result, _error, { id }) => [{ type: "Post", id }],
+      onQueryStarted: async ({ id, ...body }, { dispatch, getState, queryFulfilled }) => {
+        // Optimistically update single post cache
+        const patchPost = dispatch(
           postApi.util.updateQueryData("getPost", id, (draft: any) => {
             if (!draft) return;
             Object.assign(draft, body);
           }),
         );
+        // Also update in feed cache
+        const patchFeed = dispatch(
+          postApi.util.updateQueryData("getFeed", { cursor: undefined }, (draft: any) => {
+            if (!draft?.data?.posts) return;
+            const idx = draft.data.posts.findIndex((p: any) => p.id === id);
+            if (idx >= 0) Object.assign(draft.data.posts[idx], body);
+          }),
+        );
+        // Look up userId from cached post to also update getUserPosts
+        const patches: ReturnType<typeof dispatch>[] = [patchPost, patchFeed];
         try {
+          const state = getState();
+          const feed = postApi.endpoints.getFeed.select({ cursor: undefined })(state as any)?.data;
+          const postOwnerId = feed?.data?.posts?.find((p: any) => p.id === id)?.userId;
+          if (postOwnerId) {
+            const patchUserPosts = dispatch(
+              postApi.util.updateQueryData(
+                "getUserPosts",
+                { userId: postOwnerId, cursor: undefined },
+                (draft: any) => {
+                  if (!draft?.data?.posts) return;
+                  const idx = draft.data.posts.findIndex((p: any) => p.id === id);
+                  if (idx >= 0) Object.assign(draft.data.posts[idx], body);
+                },
+              ),
+            );
+            patches.push(patchUserPosts);
+          }
           await queryFulfilled;
         } catch {
-          patch.undo();
+          patches.forEach((p) => (p as any).undo?.());
         }
       },
     }),
@@ -112,7 +158,8 @@ export const postApi = createApi({
         url: `/${id}`,
         method: "DELETE",
       }),
-      invalidatesTags: (_result, _error, id) => [{ type: "Post", id }, "Feed", "Posts"],
+      // Fix: only invalidate specific post tag
+      invalidatesTags: (_result, _error, id) => [{ type: "Post", id }],
       onQueryStarted: async (id, { dispatch, queryFulfilled }) => {
         const patches: { undo: () => void }[] = [];
         const apply = (fn: () => void) => {
@@ -161,32 +208,48 @@ export const postApi = createApi({
         method: "POST",
         body: { type },
       }),
-      invalidatesTags: (_result, _error, { postId }) => [
-        { type: "Post", id: postId },
-        "Feed",
-        "Posts",
-      ],
       onQueryStarted: async ({ postId, type }, { dispatch, getState, queryFulfilled }) => {
         const userId = (getState() as RootState).auth.user?.id;
         if (!userId) return;
-        const patch = dispatch(
-          postApi.util.updateQueryData("getPost", postId, (draft) => {
-            const existing =
-              draft.reactions?.findIndex(
-                (r: { userId: string; type: string }) => r.userId === userId,
-              ) ?? -1;
-            if (existing >= 0) {
-              draft.reactions!.splice(existing, 1);
+
+        const updateReactions = (draft: any) => {
+          const reactions = draft?.reactions ?? draft?.data?.reactions;
+          if (!reactions) return;
+          const existing = reactions.findIndex(
+            (r: { userId: string; type: string }) => r.userId === userId,
+          );
+          if (existing >= 0) {
+            if (reactions[existing].type === type) {
+              reactions.splice(existing, 1); // toggle off
             } else {
-              if (!draft.reactions) draft.reactions = [];
-              draft.reactions.push({ userId, type });
+              reactions[existing].type = type; // change type
             }
+          } else {
+            reactions.push({ userId, type });
+          }
+        };
+
+        // Update single post cache
+        const patchPost = dispatch(
+          postApi.util.updateQueryData("getPost", postId, (draft) => {
+            updateReactions(draft);
           }),
         );
+
+        // Fix: also update in feed cache
+        const patchFeed = dispatch(
+          postApi.util.updateQueryData("getFeed", { cursor: undefined }, (draft: any) => {
+            if (!draft?.data?.posts) return;
+            const post = draft.data.posts.find((p: any) => p.id === postId);
+            if (post) updateReactions(post);
+          }),
+        );
+
         try {
           await queryFulfilled;
         } catch {
-          patch.undo();
+          patchPost.undo();
+          patchFeed.undo();
         }
       },
     }),
@@ -195,40 +258,48 @@ export const postApi = createApi({
         url: `/${postId}/save`,
         method: "POST",
       }),
-      invalidatesTags: (_result, _error, postId) => [
-        { type: "Post", id: postId },
-        "Saved",
-        "Posts",
-      ],
+      // Fix: only invalidate Saved list — not Post/Posts
+      invalidatesTags: ["Saved"],
       onQueryStarted: async (postId, { dispatch, queryFulfilled }) => {
-        const patch = dispatch(
+        const patchPost = dispatch(
           postApi.util.updateQueryData("getPost", postId, (draft) => {
             if (!draft) return;
             (draft as any).isSaved = !(draft as any).isSaved;
           }),
         );
+        // Also update in feed
+        const patchFeed = dispatch(
+          postApi.util.updateQueryData("getFeed", { cursor: undefined }, (draft: any) => {
+            if (!draft?.data?.posts) return;
+            const post = draft.data.posts.find((p: any) => p.id === postId);
+            if (post) post.isSaved = !post.isSaved;
+          }),
+        );
         try {
           await queryFulfilled;
         } catch {
-          patch.undo();
+          patchPost.undo();
+          patchFeed.undo();
         }
       },
     }),
     getSaved: builder.query({
       query: ({ cursor }: { cursor?: string } = {}) => `/saved${cursor ? `?cursor=${cursor}` : ""}`,
       providesTags: ["Saved"],
+      keepUnusedDataFor: 300,
     }),
     getDrafts: builder.query<Post[], void>({
       query: () => "/drafts",
       providesTags: ["Posts"],
       transformResponse: (response: { success: boolean; data: Post[] }) => response.data,
+      keepUnusedDataFor: 300,
     }),
     publishDraft: builder.mutation({
       query: (id: string) => ({
         url: `/${id}/publish`,
         method: "POST",
       }),
-      invalidatesTags: (_result, _error, id) => [{ type: "Post", id }, "Feed", "Posts"],
+      invalidatesTags: (_result, _error, id) => [{ type: "Post", id }],
       onQueryStarted: async (id, { dispatch, queryFulfilled }) => {
         try {
           const { data: res } = await queryFulfilled;

@@ -9,12 +9,10 @@ router.use(authenticate);
 router.post("/", storyController.create);
 router.get("/friends", storyController.getFriendsStories);
 router.post("/:id/view", storyController.addView);
-router.post("/:id/like", storyController.toggleLike);
-router.get("/:id/views", storyController.getViews);
 router.delete("/:id", storyController.delete);
 
 router.post("/:id/react", storyController.react);
-router.get("/:id/reactions", storyController.getReactions);
+router.get("/:id/interactions", storyController.getInteractions);
 
 router.post("/:id/vote", storyController.votePoll);
 router.get("/:id/poll-results", storyController.getPollResults);

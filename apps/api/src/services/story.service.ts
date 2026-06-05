@@ -11,6 +11,7 @@ export const storyService = {
     duration?: number;
     textOverlay?: string;
     textColor?: string;
+    textBgColor?: string;
     textFontSize?: number;
     textFontWeight?: string;
     textPosition?: string;
@@ -36,6 +37,7 @@ export const storyService = {
         duration: data.duration,
         textOverlay: data.textOverlay,
         textColor: data.textColor,
+        textBgColor: data.textBgColor,
         textFontSize: data.textFontSize,
         textFontWeight: data.textFontWeight,
         textPosition: data.textPosition,
@@ -60,8 +62,11 @@ export const storyService = {
 
     const stories = await prisma.story.findMany({
       where: {
-        userId: { in: followingIds },
         expiresAt: { gt: now },
+        OR: [
+          { userId: { in: followingIds } },
+          { privacy: "public" },
+        ],
       },
       include: {
         user: { select: { id: true, name: true, username: true, avatar: true } },
@@ -69,15 +74,11 @@ export const storyService = {
           where: { userId },
           select: { viewedAt: true },
         },
-        likes: {
-          where: { userId },
-          select: { createdAt: true },
-        },
         reactions: {
           where: { userId },
           select: { emoji: true },
         },
-        _count: { select: { likes: true, reactions: true } },
+        _count: { select: { reactions: true } },
       },
       orderBy: { createdAt: "desc" },
     });
@@ -86,6 +87,8 @@ export const storyService = {
     for (const story of stories) {
       // Skip private stories from other users
       if (story.privacy === "private" && story.userId !== userId) continue;
+      // Skip friends-only stories from users we don't follow
+      if (story.privacy === "friends" && !followingIds.includes(story.userId)) continue;
 
       if (!grouped[story.userId]) {
         grouped[story.userId] = { user: story.user, stories: [] };
@@ -100,6 +103,7 @@ export const storyService = {
         duration: story.duration,
         textOverlay: story.textOverlay,
         textColor: story.textColor,
+        textBgColor: story.textBgColor,
         textFontSize: story.textFontSize,
         textFontWeight: story.textFontWeight,
         textPosition: story.textPosition,
@@ -108,8 +112,6 @@ export const storyService = {
         expiresAt: story.expiresAt,
         createdAt: story.createdAt,
         viewed: story.views.length > 0,
-        liked: story.likes.length > 0,
-        likeCount: story._count.likes,
         reaction: story.reactions[0]?.emoji ?? null,
         reactionCount: story._count.reactions,
       });
@@ -119,9 +121,7 @@ export const storyService = {
   },
 
   async addView(storyId: string, userId: string) {
-    const story = await prisma.story.findUniqueOrThrow({ where: { id: storyId } });
-
-    if (story.userId === userId) return { viewed: true };
+    await prisma.story.findUniqueOrThrow({ where: { id: storyId } });
 
     await prisma.storyView.upsert({
       where: { storyId_userId: { storyId, userId } },
@@ -131,72 +131,69 @@ export const storyService = {
     return { viewed: true };
   },
 
-  async toggleLike(storyId: string, userId: string) {
-    const story = await prisma.story.findUniqueOrThrow({ where: { id: storyId } });
-
-    const existing = await prisma.storyLike.findUnique({
-      where: { storyId_userId: { storyId, userId } },
-    });
-
-    if (existing) {
-      await prisma.storyLike.delete({ where: { storyId_userId: { storyId, userId } } });
-      return { liked: false };
-    }
-
-    await prisma.storyLike.create({ data: { storyId, userId } });
-    return { liked: true };
-  },
-
   async react(storyId: string, userId: string, emoji: string) {
-    const story = await prisma.story.findUniqueOrThrow({ where: { id: storyId } });
+    const story = await prisma.story.findUniqueOrThrow({ where: { id: storyId } })
 
     const existing = await prisma.storyReaction.findUnique({
       where: { storyId_userId: { storyId, userId } },
-    });
+    })
 
-    if (existing) {
-      if (existing.emoji === emoji) {
-        // Same emoji — remove reaction (toggle off)
-        await prisma.storyReaction.delete({ where: { storyId_userId: { storyId, userId } } });
-        return { reacted: false, emoji: null };
-      }
-      // Different emoji — update
-      await prisma.storyReaction.update({
-        where: { storyId_userId: { storyId, userId } },
-        data: { emoji },
-      });
-      return { reacted: true, emoji };
+    if (existing && existing.emoji === emoji) {
+      // Same emoji — toggle off (use deleteMany to avoid race condition)
+      await prisma.storyReaction.deleteMany({ where: { storyId, userId } });
+      return { reacted: false, emoji: null };
     }
 
-    await prisma.storyReaction.create({ data: { storyId, userId, emoji } });
+    // Create or update atomically — handles race condition
+    await prisma.storyReaction.upsert({
+      where: { storyId_userId: { storyId, userId } },
+      create: { storyId, userId, emoji },
+      update: { emoji },
+    });
     return { reacted: true, emoji };
   },
 
-  async getReactions(storyId: string) {
-    const reactions = await prisma.storyReaction.findMany({
-      where: { storyId },
-      include: {
-        user: { select: { id: true, name: true, username: true, avatar: true } },
-      },
-      orderBy: { createdAt: "desc" },
+  async getInteractions(storyId: string, userId: string) {
+    const story = await prisma.story.findUniqueOrThrow({
+      where: { id: storyId },
+      select: { userId: true },
     });
-    return reactions.map((r) => ({
-      userId: r.userId,
-      user: r.user,
-      emoji: r.emoji,
-      createdAt: r.createdAt,
-    }));
-  },
+    if (story.userId !== userId) throw new AppError(403, "Not your story");
 
-  async getViews(storyId: string) {
-    const views = await prisma.storyView.findMany({
-      where: { storyId },
-      include: {
-        user: { select: { id: true, name: true, username: true, avatar: true } },
-      },
-      orderBy: { viewedAt: "desc" },
-    });
-    return views.map((v) => ({ userId: v.userId, user: v.user, viewedAt: v.viewedAt }));
+    const [views, reactions] = await Promise.all([
+      prisma.storyView.findMany({
+        where: { storyId },
+        include: {
+          user: { select: { id: true, name: true, username: true, avatar: true } },
+        },
+        orderBy: { viewedAt: "desc" },
+      }),
+      prisma.storyReaction.findMany({
+        where: { storyId },
+        include: {
+          user: { select: { id: true, name: true, username: true, avatar: true } },
+        },
+        orderBy: { createdAt: "desc" },
+      }),
+    ]);
+
+    const reactionMap = new Map(reactions.map((r) => [r.userId, r.emoji]));
+    const emojiBreakdown: Record<string, number> = {};
+    for (const r of reactions) {
+      emojiBreakdown[r.emoji] = (emojiBreakdown[r.emoji] ?? 0) + 1;
+    }
+
+    return {
+      totalViews: views.length,
+      totalReactions: reactions.length,
+      emojiBreakdown,
+      items: views.map((v) => ({
+        userId: v.userId,
+        user: v.user,
+        viewedAt: v.viewedAt,
+        reaction: reactionMap.get(v.userId) ?? null,
+      })),
+    };
   },
 
   async delete(storyId: string, userId: string) {

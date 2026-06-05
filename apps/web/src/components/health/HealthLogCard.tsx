@@ -96,7 +96,7 @@ export default function HealthLogCard({
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2.5">
             {ownerName && ownerUsername ? (
-              <Link href={`/${ownerUsername}`} className="flex items-center gap-2.5">
+              <Link href={`/${ownerUsername}`} prefetch={false} className="flex items-center gap-2.5">
                 <UserAvatar
                   name={ownerName}
                   avatar={ownerAvatar ?? null}

@@ -1,44 +1,51 @@
 "use client";
 
-import Image from "next/image";
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useAppSelector } from "@/hooks";
+import { playAdvanceSound, playCommentSound, playLikeSound, playReactionSound } from "@/lib/sounds";
+import { cn } from "@/lib/utils";
+import { useCreateConversationMutation, useSendMessageMutation } from "@/redux/api/messagingApi";
 import {
-  X,
+  useDeleteStoryMutation,
+  useGetStoryInteractionsQuery,
+  useReactToStoryMutation,
+  useViewStoryMutation,
+  useVoteStoryPollMutation,
+} from "@/redux/api/storiesApi";
+import type { StoryGroup } from "@/types/story";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  Check,
   ChevronLeft,
   ChevronRight,
-  Heart,
   Eye,
+  Heart,
   MessageCircle,
+  Pause,
+  Play,
   Send,
-  Check,
   Trash2,
+  X,
   X as XIcon,
-  SmilePlus,
 } from "lucide-react";
-import type { StoryGroup } from "@/types/story";
-import {
-  useViewStoryMutation,
-  useDeleteStoryMutation,
-  useToggleStoryLikeMutation,
-  useGetStoryViewsQuery,
-  useVoteStoryPollMutation,
-  useReactToStoryMutation,
-  useGetStoryReactionsQuery,
-} from "@/redux/api/storiesApi";
-import { useCreateConversationMutation, useSendMessageMutation } from "@/redux/api/messagingApi";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { motion, AnimatePresence } from "framer-motion";
-import { cn } from "@/lib/utils";
+import Image from "next/image";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { useAppSelector } from "@/hooks";
-import { StoryViewsSheet } from "./StoryViewsSheet";
-import { StoryReactionsSheet } from "./StoryReactionsSheet";
-import { playLikeSound, playReactionSound, playCommentSound, playAdvanceSound } from "@/lib/sounds";
+import { StoryInteractionsSheet } from "./StoryInteractionsSheet";
 
 const SPRING_CONFIG = { type: "spring" as const, stiffness: 300, damping: 30 };
-
-const QUICK_REACTIONS = ["❤️", "😂", "🔥"];
 const ALL_REACTIONS = ["❤️", "😂", "😮", "😢", "🔥", "👍"];
+
+// Relative time helper
+function getRelativeTime(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
 
 function HeartBurst({ active }: { active: boolean }) {
   if (!active) return null;
@@ -90,9 +97,7 @@ export function StoryViewer({
   const [paused, setPaused] = useState(false);
   const [progress, setProgress] = useState(0);
   const [[, direction], setActiveIdx] = useState([0, 0]);
-  const [viewsOpen, setViewsOpen] = useState(false);
-  const [reactionsOpen, setReactionsOpen] = useState(false);
-  const [showAllReactions, setShowAllReactions] = useState(false);
+  const [interactionsOpen, setInteractionsOpen] = useState(false);
   const [pollResults, setPollResults] = useState<{
     question?: string;
     options: string[];
@@ -105,12 +110,10 @@ export function StoryViewer({
   const [commentText, setCommentText] = useState("");
   const [likeAnimating, setLikeAnimating] = useState(false);
   const [reactionAnimating, setReactionAnimating] = useState<string | null>(null);
-  const [dragYProgress, setDragYProgress] = useState(1);
 
   const userId = useAppSelector((s) => s.auth.user?.id);
   const [viewStory] = useViewStoryMutation();
   const [deleteStory] = useDeleteStoryMutation();
-  const [toggleLike] = useToggleStoryLikeMutation();
   const [reactToStory] = useReactToStoryMutation();
   const [voteStoryPoll] = useVoteStoryPollMutation();
   const [createConversation] = useCreateConversationMutation();
@@ -119,22 +122,22 @@ export function StoryViewer({
   const elapsedRef = useRef(0);
   const lastTickRef = useRef(0);
   const longPressRef = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const contentRef = useRef<HTMLDivElement>(null);
+  const pausedRef = useRef(paused);
+  useEffect(() => { pausedRef.current = paused; }, [paused]);
+  const lastTapRef = useRef(0);
 
   const group = groups[groupIdx];
   const stories = group?.stories || [];
   const story = stories[storyIdx];
   const isOwner = userId && story?.userId === userId;
-
   const isInteractive = story?.type === "quiz" || story?.type === "poll";
   const isQuiz = story?.type === "quiz";
   const isPoll = story?.type === "poll";
   const isText = story?.type === "text";
   const isMedia = story?.type === "media";
 
-  const { data: viewsData } = useGetStoryViewsQuery(story?.id ?? "", { skip: !isOwner || !story });
-  const { data: reactionsData } = useGetStoryReactionsQuery(story?.id ?? "", {
-    skip: !reactionsOpen || !story,
+  const { data: interactionsData } = useGetStoryInteractionsQuery(story?.id ?? "", {
+    skip: !interactionsOpen || !story,
   });
 
   useEffect(() => {
@@ -145,11 +148,12 @@ export function StoryViewer({
 
   const advance = useCallback(() => {
     if (isInteractive) return;
+    playAdvanceSound();
     if (storyIdx < stories.length - 1) {
-      setActiveIdx([storyIdx + 1, 1]);
+      setActiveIdx(([, d]) => [storyIdx + 1, 1]);
       setStoryIdx((i) => i + 1);
     } else if (groupIdx < groups.length - 1) {
-      setActiveIdx([0, 1]);
+      setActiveIdx(([, d]) => [0, 1]);
       setGroupIdx((i) => i + 1);
       setStoryIdx(0);
     } else {
@@ -166,25 +170,30 @@ export function StoryViewer({
     advanceRef.current = advance;
   }, [advance]);
 
+  // Single unified progress timer — no race condition
   useEffect(() => {
     if (!story) return;
-    elapsedRef.current = 0;
-    lastTickRef.current = Date.now();
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setProgress(0);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [story?.id]);
 
-  useEffect(() => {
-    if (!story || paused || isInteractive) return;
-    const duration = story.duration || (isText ? 8000 : 10000);
-    lastTickRef.current = Date.now();
+    // Always reset on story change
+    elapsedRef.current = 0;
+    setProgress(0);
+
+    const duration = story.duration ? story.duration * 1000 : isText ? 8000 : 10000;
+
+    lastTickRef.current = performance.now();
 
     const id = setInterval(() => {
-      const now = Date.now();
+      const now = performance.now();
+
+      // If paused, just update timestamp to avoid delta spike on resume
+      if (pausedRef.current) {
+        lastTickRef.current = now;
+        return;
+      }
+
       const delta = (now - lastTickRef.current) / duration;
-      elapsedRef.current += delta;
       lastTickRef.current = now;
+      elapsedRef.current += delta;
 
       if (elapsedRef.current >= 1) {
         clearInterval(id);
@@ -194,38 +203,20 @@ export function StoryViewer({
       }
     }, 50);
 
-    return () => {
-      clearInterval(id);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [story?.id, paused, isInteractive, isText]);
+    return () => clearInterval(id);
+  }, [story?.id, isText]);
 
   useEffect(() => {
     if (story && !story.viewed) viewStory(story.id);
-  }, [story, viewStory]);
-
-  // eslint-disable-next-line react-hooks/preserve-manual-memoization
-  const textPos = useMemo(() => {
-    if (!story?.textPosition) return { x: 50, y: 20 };
-    try {
-      const parsed = JSON.parse(story.textPosition);
-      if (typeof parsed.x === "number")
-        return { x: Math.max(0, Math.min(100, parsed.x)), y: Math.max(0, Math.min(100, parsed.y)) };
-    } catch {
-      /* fall through to legacy */
-    }
-    if (story.textPosition === "top") return { x: 50, y: 15 };
-    if (story.textPosition === "bottom") return { x: 50, y: 75 };
-    return { x: 50, y: 40 };
-  }, [story?.textPosition]);
+  }, [story?.id]);
 
   const goBack = useCallback(() => {
     if (storyIdx > 0) {
-      setActiveIdx([storyIdx - 1, -1]);
+      setActiveIdx(([prev]) => [prev, -1]);
       setStoryIdx((i) => i - 1);
     } else if (groupIdx > 0) {
       const prevLen = groups[groupIdx - 1]?.stories?.length || 0;
-      setActiveIdx([prevLen - 1, -1]);
+      setActiveIdx(([prev]) => [prev, -1]);
       setGroupIdx((i) => i - 1);
       setStoryIdx(prevLen - 1);
     }
@@ -237,10 +228,10 @@ export function StoryViewer({
 
   const goNext = useCallback(() => {
     if (storyIdx < stories.length - 1) {
-      setActiveIdx([storyIdx + 1, 1]);
+      setActiveIdx(([prev]) => [prev, 1]);
       setStoryIdx((i) => i + 1);
     } else if (groupIdx < groups.length - 1) {
-      setActiveIdx([0, 1]);
+      setActiveIdx(([prev]) => [prev, 1]);
       setGroupIdx((i) => i + 1);
       setStoryIdx(0);
     } else {
@@ -268,7 +259,6 @@ export function StoryViewer({
     try {
       await deleteStory(story.id).unwrap();
       toast.success("Story deleted");
-      playAdvanceSound();
       goNext();
     } catch {
       toast.error("Failed to delete");
@@ -280,8 +270,7 @@ export function StoryViewer({
     setTimeout(() => setLikeAnimating(false), 700);
     playLikeSound();
     try {
-      await toggleLike(story.id).unwrap();
-      if (!story.liked) toast.success("Liked!");
+      await reactToStory({ storyId: story.id, emoji: "❤️" }).unwrap();
     } catch {
       toast.error("Failed to like story");
     }
@@ -290,6 +279,7 @@ export function StoryViewer({
   const handlePointerDown = () => {
     longPressRef.current = setTimeout(() => setPaused(true), 400);
   };
+
 
   const handlePointerUp = () => {
     clearTimeout(longPressRef.current);
@@ -335,14 +325,6 @@ export function StoryViewer({
     if (!commentText.trim()) return;
     playCommentSound();
 
-    if (story.userId === userId) {
-      toast.success("Wrote on your story!");
-      setCommentText("");
-      setShowComment(false);
-      setPaused(false);
-      return;
-    }
-
     try {
       const conv = await createConversation({ participantIds: [story.userId] }).unwrap();
       await sendMessage({
@@ -356,7 +338,7 @@ export function StoryViewer({
           textOverlay: story.textOverlay ?? undefined,
         },
       });
-      toast.success("Comment sent!");
+      toast.success(story.userId === userId ? "Note saved!" : "Comment sent!");
       setCommentText("");
       setShowComment(false);
       setPaused(false);
@@ -370,8 +352,7 @@ export function StoryViewer({
     setTimeout(() => setReactionAnimating(null), 600);
     playReactionSound();
     try {
-      const result = await reactToStory({ storyId: story.id, emoji }).unwrap();
-      if (result.reacted) toast.success(emoji);
+      await reactToStory({ storyId: story.id, emoji }).unwrap();
     } catch {
       toast.error("Failed to react");
     }
@@ -379,53 +360,69 @@ export function StoryViewer({
 
   const handleContentClick = (e: React.MouseEvent) => {
     if (showComment) return;
+
+    const now = Date.now();
+    if (now - lastTapRef.current < 300) {
+      lastTapRef.current = 0;
+      handleLike();
+      return;
+    }
+    lastTapRef.current = now;
+
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
     if (x < rect.width * 0.3) goBack();
     else if (x > rect.width * 0.7) goNext();
   };
 
+  // Text position from story data
+  const textPos = (() => {
+    if (!story?.textPosition) return { x: 50, y: 20 };
+    try {
+      const parsed = JSON.parse(story.textPosition);
+      if (typeof parsed.x === "number")
+        return {
+          x: Math.max(0, Math.min(100, parsed.x)),
+          y: Math.max(0, Math.min(100, parsed.y)),
+        };
+    } catch {
+      /* fall through */
+    }
+    if (story.textPosition === "top") return { x: 50, y: 15 };
+    if (story.textPosition === "bottom") return { x: 50, y: 75 };
+    return { x: 50, y: 40 };
+  })();
+
+  const userVoteIdx = pollResults?.userVote?.optionIndex;
+  const isCorrectAnswer =
+    userVoteIdx !== undefined && pollResults?.correctOptionIndex === userVoteIdx;
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-lg select-none"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 select-none"
+      style={{ touchAction: "none" }}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <motion.div
-        drag="y"
-        dragConstraints={{ top: 0, bottom: 0 }}
-        dragElastic={0.3}
-        onDrag={(_, info) => {
-          setDragYProgress(Math.max(0, 1 - Math.abs(info.offset.y) / 300));
-        }}
-        onDragEnd={(_, info) => {
-          if (info.offset.y > 100) onClose();
-          setDragYProgress(1);
-        }}
-        style={{ opacity: dragYProgress, scale: 0.9 + dragYProgress * 0.1 }}
+      <div
         className="relative aspect-[9/16] h-full max-h-[90vh] w-full max-w-sm overflow-hidden rounded-2xl bg-gradient-to-b from-[#1a1a1a] to-[#0d0d0d]"
       >
-        {/* Progress Bar */}
+        {/* Progress Bars */}
         <div className="absolute inset-x-0 top-2 z-10 flex gap-1 px-2">
           {stories.map((s, i) => (
             <div key={s.id} className="h-1 flex-1 overflow-hidden rounded-full bg-white/20">
               <div
-                className={cn(
-                  "h-full rounded-full bg-white transition-all duration-75 ease-linear shadow-glow-teal",
-                  i < storyIdx
-                    ? "w-full"
-                    : i === storyIdx && !isInteractive
-                      ? ""
-                      : i === storyIdx
-                        ? "w-0"
-                        : "w-0",
-                )}
+                className="h-full rounded-full bg-white transition-none"
                 style={
-                  i === storyIdx && !isInteractive ? { width: `${progress * 100}%` } : undefined
+                    i < storyIdx
+                    ? { width: "100%" }
+                    : i === storyIdx
+                      ? { width: `${progress * 100}%` }
+                      : { width: "0%" }
                 }
               />
             </div>
@@ -433,7 +430,7 @@ export function StoryViewer({
         </div>
 
         {/* Top Bar */}
-        <div className="absolute inset-x-0 top-3 z-10 flex items-center gap-2 px-3">
+        <div className="absolute inset-x-0 top-5 z-20 flex items-center gap-2 px-3">
           <Avatar size="sm" className="size-8">
             {group.user.avatar ? (
               <AvatarImage src={group.user.avatar} alt={group.user.name} />
@@ -443,14 +440,15 @@ export function StoryViewer({
             </AvatarFallback>
           </Avatar>
           <span className="text-sm font-semibold text-white">{group.user.name}</span>
-          <span className="text-xs text-white/60">
-            {new Date(story.createdAt).toLocaleTimeString()}
-          </span>
-          <div className="ml-auto flex gap-2">
+          <span className="text-xs text-white/50">{getRelativeTime(story.createdAt)}</span>
+          <div className="ml-auto flex gap-1">
             {isOwner && (
               <>
                 <button
-                  onClick={() => setViewsOpen(true)}
+                  onClick={() => {
+                    setInteractionsOpen(true);
+                    setPaused(true);
+                  }}
                   className="rounded-full p-2 text-white/70 hover:bg-white/10 hover:text-white"
                 >
                   <Eye className="size-4" />
@@ -463,35 +461,28 @@ export function StoryViewer({
                 </button>
               </>
             )}
-            <button
-              onClick={onClose}
-              className="rounded-full p-2 text-white/70 hover:bg-white/10 hover:text-white"
-            >
-              <X className="size-4" />
-            </button>
+              <button
+                onClick={() => setPaused((p) => !p)}
+                className="rounded-full p-2 text-white/70 hover:bg-white/10 hover:text-white"
+              >
+                {paused ? <Play className="size-4" /> : <Pause className="size-4" />}
+              </button>
+              <button
+                onClick={onClose}
+                className="rounded-full p-2 text-white/70 hover:bg-white/10 hover:text-white"
+              >
+                <X className="size-7" />
+              </button>
           </div>
         </div>
 
-        {/* Story Content with AnimatePresence */}
+        {/* Story Content */}
         <div
-          ref={contentRef}
           className="relative h-full w-full overflow-hidden"
           onPointerDown={handlePointerDown}
           onPointerUp={handlePointerUp}
         >
-          <motion.div
-            drag="x"
-            dragConstraints={{ left: 0, right: 0 }}
-            dragElastic={0.15}
-            onDragEnd={(_, info) => {
-              if (info.offset.x > 60) {
-                goBack();
-              } else if (info.offset.x < -60) {
-                goNext();
-              }
-            }}
-            className="h-full w-full"
-          >
+          <div className="h-full w-full">
             <AnimatePresence mode="wait" custom={direction}>
               <motion.div
                 key={story?.id || "empty"}
@@ -504,10 +495,7 @@ export function StoryViewer({
                 className="absolute inset-0"
               >
                 <div
-                  className={cn(
-                    "relative flex h-full w-full items-center justify-center",
-                    !isMedia && "h-full",
-                  )}
+                  className={cn("relative flex h-full w-full items-center justify-center")}
                   style={
                     !isMedia && story.backgroundColor
                       ? { backgroundColor: story.backgroundColor }
@@ -534,7 +522,7 @@ export function StoryViewer({
                   ) : null}
                 </div>
 
-                {/* Text Overlay (media + text stories) */}
+                {/* Text Overlay */}
                 {story.textOverlay && (isMedia || isText) && (
                   <div
                     className="pointer-events-none absolute z-10 select-none text-center drop-shadow-lg"
@@ -542,144 +530,205 @@ export function StoryViewer({
                       left: `${textPos.x}%`,
                       top: `${textPos.y}%`,
                       transform: "translate(-50%, 0)",
-                      color: story.textColor || "#ffffff",
-                      fontSize: story.textFontSize ? `${story.textFontSize}px` : "24px",
-                      fontWeight: story.textFontWeight || "bold",
-                      textShadow: "0 2px 8px rgba(0,0,0,0.5)",
                     }}
                   >
-                    {story.textOverlay}
+                    {story.textBgColor && story.textBgColor !== "transparent" && (
+                      <span
+                        className="absolute inset-0 -inset-x-2 -inset-y-1 rounded-lg"
+                        style={{ backgroundColor: story.textBgColor }}
+                      />
+                    )}
+                    <span
+                      className="relative"
+                      style={{
+                        color: story.textColor || "#ffffff",
+                        fontSize: story.textFontSize ? `${story.textFontSize}px` : "24px",
+                        fontWeight: story.textFontWeight || "bold",
+                        textShadow: "0 2px 8px rgba(0,0,0,0.5)",
+                      }}
+                    >
+                      {story.textOverlay}
+                    </span>
                   </div>
                 )}
 
-                {/* Quiz / Poll Content */}
+                {/* Quiz / Poll Content — improved layout */}
                 {(isQuiz || isPoll) && story.stickerData && (
-                  <div className="absolute inset-0 z-10 flex flex-col items-center justify-center px-6">
-                    {story.stickerData.question && (
-                      <motion.p
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.1 }}
-                        className="absolute text-center drop-shadow-2xl"
-                        style={{
-                          left: `${textPos.x}%`,
-                          top: `${textPos.y}%`,
-                          transform: "translate(-50%, 0)",
-                          color: story.textColor || "#ffffff",
-                          fontSize: story.textFontSize ? `${story.textFontSize}px` : "22px",
-                          fontWeight: story.textFontWeight || "bold",
-                          textShadow: "0 2px 8px rgba(0,0,0,0.5)",
-                        }}
-                      >
-                        {story.stickerData.question}
-                      </motion.p>
-                    )}
-                    <div className="w-full space-y-2.5">
-                      {(story.stickerData.options || []).map((opt: string, idx: number) => {
-                        const voted = pollResults?.userVote?.optionIndex === idx;
-                        const isCorrect = pollResults?.correctOptionIndex === idx;
-                        const isWrong =
-                          voted &&
-                          isQuiz &&
-                          pollResults?.correctOptionIndex !== undefined &&
-                          pollResults.userVote?.optionIndex !== pollResults.correctOptionIndex;
+                  <>
+                    {/* Left/right tap zones for navigation */}
+                    <div
+                      className="absolute inset-y-0 left-0 z-20"
+                      style={{ width: "20%" }}
+                      onClick={(e) => { e.stopPropagation(); goBack(); }}
+                    />
+                    <div
+                      className="absolute inset-y-0 right-0 z-20"
+                      style={{ width: "20%" }}
+                      onClick={(e) => { e.stopPropagation(); goNext(); }}
+                    />
+                    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 px-5">
+                      {/* Question card */}
+                      {story.stickerData.question && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -16 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.1 }}
+                          className="w-full rounded-2xl bg-black/50 px-5 py-4 text-center backdrop-blur-sm"
+                        >
+                          <p
+                            className="font-bold leading-snug drop-shadow-lg"
+                            style={{
+                              color: story.textColor || "#ffffff",
+                              fontSize: story.textFontSize ? `${story.textFontSize}px` : "20px",
+                              fontWeight: story.textFontWeight || "bold",
+                            }}
+                          >
+                            {story.stickerData.question}
+                          </p>
+                        </motion.div>
+                      )}
 
-                        if (pollResults) {
-                          const voteCount =
-                            pollResults.votes.find((v) => v.optionIndex === idx)?.count ?? 0;
-                          const percentage =
-                            pollResults.totalVotes > 0
-                              ? Math.round((voteCount / pollResults.totalVotes) * 100)
-                              : 0;
+                      {/* Options */}
+                      <div className="w-full space-y-2.5">
+                        {(story.stickerData.options || []).map((opt: string, idx: number) => {
+                          const voted = pollResults?.userVote?.optionIndex === idx;
+                          const isCorrect = pollResults?.correctOptionIndex === idx;
+                          const isWrong =
+                            voted &&
+                            isQuiz &&
+                            pollResults?.correctOptionIndex !== undefined &&
+                            !isCorrectAnswer;
+
+                          if (pollResults) {
+                            const voteCount =
+                              pollResults.votes.find((v) => v.optionIndex === idx)?.count ?? 0;
+                            const percentage =
+                              pollResults.totalVotes > 0
+                                ? Math.round((voteCount / pollResults.totalVotes) * 100)
+                                : 0;
+
+                            return (
+                              <motion.div
+                                key={idx}
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: idx * 0.05 }}
+                                className="relative overflow-hidden rounded-2xl bg-white/10 px-4 py-3 backdrop-blur-sm"
+                              >
+                                <motion.div
+                                  className={cn(
+                                    "absolute inset-y-0 left-0 rounded-2xl",
+                                    isCorrect
+                                      ? "bg-brand-green/50"
+                                      : voted
+                                        ? "bg-red-500/40"
+                                        : "bg-brand-teal/25",
+                                  )}
+                                  initial={{ width: 0 }}
+                                  animate={{ width: `${percentage}%` }}
+                                  transition={{ duration: 0.35, ease: "easeOut", delay: idx * 0.05 }}
+                                />
+                                <div className="relative flex items-center justify-between gap-3">
+                                  <span className="text-sm font-medium text-white">{opt}</span>
+                                  <div className="flex shrink-0 items-center gap-1.5">
+                                    <span className="text-xs font-bold text-white">
+                                      {percentage}%
+                                    </span>
+                                    {isCorrect && (
+                                      <motion.div
+                                        initial={{ scale: 0 }}
+                                        animate={{ scale: 1 }}
+                                        transition={{
+                                          type: "spring",
+                                          stiffness: 400,
+                                          damping: 15,
+                                          delay: 0.3,
+                                        }}
+                                        className="flex size-5 items-center justify-center rounded-full bg-brand-green"
+                                      >
+                                        <Check className="size-3 text-white" />
+                                      </motion.div>
+                                    )}
+                                    {isWrong && (
+                                      <motion.div
+                                        initial={{ scale: 0 }}
+                                        animate={{ scale: 1 }}
+                                        transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                                        className="flex size-5 items-center justify-center rounded-full bg-red-500"
+                                      >
+                                        <XIcon className="size-3 text-white" />
+                                      </motion.div>
+                                    )}
+                                  </div>
+                                </div>
+                              </motion.div>
+                            );
+                          }
 
                           return (
-                            <motion.div
+                            <motion.button
                               key={idx}
-                              initial={{ opacity: 0, scale: 0.9 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              transition={{ delay: idx * 0.05 }}
-                              className="relative overflow-hidden rounded-xl bg-white/10 px-3 py-2.5"
+                              initial={{ opacity: 0, x: -16 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: idx * 0.08 }}
+                              whileTap={{ scale: 0.97 }}
+                              onClick={() => handleVote(idx)}
+                              className="w-full rounded-2xl border border-white/20 bg-white/15 px-5 py-3.5 text-left text-sm font-semibold text-white backdrop-blur-sm transition-colors hover:bg-white/25 active:bg-white/30"
                             >
-                              <motion.div
-                                className={cn(
-                                  "absolute inset-y-0 left-0 rounded-xl",
-                                  isCorrect
-                                    ? "bg-brand-green/40"
-                                    : voted
-                                      ? "bg-red-500/40"
-                                      : "bg-brand-teal/30",
-                                )}
-                                initial={{ width: 0 }}
-                                animate={{ width: `${percentage}%` }}
-                                transition={{ duration: 0.5, ease: "easeOut" }}
-                              />
-                              <div className="relative flex items-center justify-between">
-                                <span className="text-sm text-white">{opt}</span>
-                                <div className="flex items-center gap-2">
-                                  <span className="text-xs font-semibold text-white/80">
-                                    {percentage}%
-                                  </span>
-                                  {isCorrect && <Check className="size-4 text-brand-green" />}
-                                  {isWrong && <XIcon className="size-4 text-red-400" />}
-                                </div>
-                              </div>
-                            </motion.div>
+                              {opt}
+                            </motion.button>
                           );
-                        }
+                        })}
+                      </div>
 
-                        return (
-                          <motion.button
-                            key={idx}
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: idx * 0.08 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => handleVote(idx)}
-                            className="w-full rounded-xl border border-white/20 px-4 py-3 text-left text-sm text-white/90 transition-colors hover:bg-white/10"
+                      {/* Vote count */}
+                      {pollResults && (
+                        <motion.p
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          className="text-center text-xs text-white/50"
+                        >
+                          {pollResults.totalVotes} vote{pollResults.totalVotes !== 1 ? "s" : ""}
+                        </motion.p>
+                      )}
+
+                      {/* Quiz result feedback */}
+                      {pollResults && isQuiz && (
+                        <motion.div
+                          initial={{ scale: 0, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          transition={{ type: "spring", stiffness: 300, damping: 20, delay: 0.4 }}
+                          className={cn(
+                            "flex items-center gap-2 rounded-2xl border px-4 py-2.5",
+                            isCorrectAnswer
+                              ? "border-brand-green/30 bg-brand-green/20"
+                              : "border-red-500/30 bg-red-500/20",
+                          )}
+                        >
+                          <span className="text-lg">{isCorrectAnswer ? "🎉" : "😅"}</span>
+                          <span
+                            className={cn(
+                              "text-sm font-bold",
+                              isCorrectAnswer ? "text-brand-green" : "text-red-400",
+                            )}
                           >
-                            {opt}
-                          </motion.button>
-                        );
-                      })}
+                            {isCorrectAnswer ? "Correct!" : "Wrong answer"}
+                          </span>
+                        </motion.div>
+                      )}
                     </div>
-                    {pollResults && (
-                      <motion.p
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="mt-3 text-center text-[10px] text-white/60"
-                      >
-                        {pollResults.totalVotes} vote{pollResults.totalVotes !== 1 ? "s" : ""}
-                      </motion.p>
-                    )}
-                  </div>
+                  </>
                 )}
               </motion.div>
             </AnimatePresence>
 
             {/* Heart Burst */}
             <HeartBurst active={likeAnimating} />
-
-            {/* Double-tap hint on first open */}
-            {story.likeCount === 0 &&
-              !story.liked &&
-              groupIdx === initialIndex &&
-              storyIdx === 0 && (
-                <motion.div
-                  initial={{ opacity: 1, y: 0 }}
-                  animate={{ opacity: 0, y: -20 }}
-                  transition={{ delay: 2, duration: 0.5 }}
-                  className="pointer-events-none absolute bottom-40 left-1/2 z-20 -translate-x-1/2 text-center"
-                >
-                  <p className="text-xs text-white/40">Tap to navigate</p>
-                </motion.div>
-              )}
-            {/* close swipe wrapper */}
-          </motion.div>
+          </div>
         </div>
 
         {/* Comment Input */}
-        <AnimatePresence>
-          {showComment && (
+        {showComment && (
             <motion.div
               initial={{ y: 100, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
@@ -706,8 +755,7 @@ export function StoryViewer({
                   type="submit"
                   disabled={!commentText.trim()}
                   whileTap={{ scale: 1.2 }}
-                  whileHover={{ scale: 1.05 }}
-                  className="flex size-9 items-center justify-center rounded-full bg-gradient-to-r from-brand-teal to-brand-green text-white transition-all disabled:opacity-50"
+                  className="flex size-9 items-center justify-center rounded-full bg-gradient-to-r from-brand-teal to-brand-green text-white disabled:opacity-50"
                 >
                   <Send className="size-4" />
                 </motion.button>
@@ -720,34 +768,30 @@ export function StoryViewer({
                   }}
                   className="flex size-9 items-center justify-center rounded-full bg-white/10 text-white/70 hover:bg-white/20"
                 >
-                  <X className="size-4" />
+<X className="size-7" />
                 </button>
               </form>
             </motion.div>
           )}
-        </AnimatePresence>
 
         {/* Reaction animation overlay */}
-        <AnimatePresence>
-          {reactionAnimating && (
-            <motion.div
-              key={reactionAnimating}
-              initial={{ scale: 0, opacity: 1, y: 0 }}
-              animate={{ scale: 2, opacity: 0, y: -120 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.6 }}
-              className="pointer-events-none absolute bottom-28 left-1/2 z-30 -translate-x-1/2 text-3xl"
-            >
-              {reactionAnimating}
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {reactionAnimating && (
+          <motion.div
+            key={reactionAnimating}
+            initial={{ scale: 0, opacity: 1, y: 0 }}
+            animate={{ scale: 2, opacity: 0, y: -120 }}
+            transition={{ duration: 0.6 }}
+            className="pointer-events-none absolute bottom-28 left-1/2 z-30 -translate-x-1/2 text-3xl"
+          >
+            {reactionAnimating}
+          </motion.div>
+        )}
 
         {/* Chevron Navigation */}
         <button
           onClick={goBack}
           className={cn(
-            "absolute left-1 top-1/2 -translate-y-1/2 rounded-full p-4 text-white/50 hover:bg-white/10 hover:text-white",
+            "absolute left-1 top-1/2 -translate-y-1/2 z-20 rounded-full p-4 text-white/50 hover:bg-white/10 hover:text-white",
             storyIdx === 0 && groupIdx === 0 && "hidden",
           )}
         >
@@ -756,38 +800,21 @@ export function StoryViewer({
         <button
           onClick={goNext}
           className={cn(
-            "absolute right-1 top-1/2 -translate-y-1/2 rounded-full p-4 text-white/50 hover:bg-white/10 hover:text-white",
+            "absolute right-1 top-1/2 -translate-y-1/2 z-20 rounded-full p-4 text-white/50 hover:bg-white/10 hover:text-white",
             storyIdx === stories.length - 1 && groupIdx === groups.length - 1 && "hidden",
           )}
         >
           <ChevronRight className="size-5" />
         </button>
 
-        {/* Bottom Bar: Like + Quick Reactions + Comment */}
+        {/* Bottom Bar */}
         {!showComment && (
-          <div className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-black/80 via-black/40 to-transparent pb-2 pt-10">
-            <div className="flex items-center justify-around px-4">
-              {/* Like */}
-              <motion.button
-                onClick={handleLike}
-                whileTap={{ scale: 1.2 }}
-                className="flex flex-col items-center gap-0.5"
-              >
-                <Heart
-                  className={cn(
-                    "size-6 transition-colors",
-                    story.liked ? "fill-red-500 text-red-500" : "text-white",
-                  )}
-                />
-                {story.likeCount > 0 && (
-                  <span className="text-[10px] font-semibold text-white/80">{story.likeCount}</span>
-                )}
-              </motion.button>
-
-              {/* Quick Reactions */}
+          <div className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-black/80 via-black/40 to-transparent pb-3 pt-10">
+            <div className="flex items-center justify-between px-4">
+              {/* All 6 reactions inline */}
               {!isInteractive && (
-                <div className="flex items-center gap-2">
-                  {QUICK_REACTIONS.map((emoji) => (
+                <div className="flex items-center gap-1.5">
+                  {ALL_REACTIONS.map((emoji) => (
                     <motion.button
                       key={emoji}
                       onClick={() => handleReaction(emoji)}
@@ -803,29 +830,7 @@ export function StoryViewer({
                       {emoji}
                     </motion.button>
                   ))}
-                  <motion.button
-                    onClick={() => setShowAllReactions(!showAllReactions)}
-                    whileTap={{ scale: 0.9 }}
-                    className="flex size-9 items-center justify-center rounded-full bg-black/30 text-white/80 hover:bg-white/20"
-                  >
-                    <SmilePlus className="size-4" />
-                  </motion.button>
                 </div>
-              )}
-
-              {/* Reaction count (tap to see who reacted) */}
-              {(story.reactionCount ?? 0) > 0 && (
-                <motion.button
-                  onClick={() => {
-                    setReactionsOpen(true);
-                    setPaused(true);
-                  }}
-                  whileTap={{ scale: 1.1 }}
-                  className="flex items-center gap-1 rounded-full bg-black/30 px-2.5 py-1"
-                >
-                  <SmilePlus className="size-3.5 text-white/80" />
-                  <span className="text-xs font-semibold text-white/90">{story.reactionCount}</span>
-                </motion.button>
               )}
 
               {/* Comment */}
@@ -840,49 +845,18 @@ export function StoryViewer({
                 <MessageCircle className="size-6 text-white" />
               </motion.button>
             </div>
-
-            {/* Expanded reactions picker */}
-            <AnimatePresence>
-              {showAllReactions && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  className="overflow-hidden"
-                >
-                  <div className="flex justify-center gap-2 px-4 pb-2 pt-3">
-                    {ALL_REACTIONS.map((emoji) => (
-                      <motion.button
-                        key={emoji}
-                        onClick={() => {
-                          handleReaction(emoji);
-                          setShowAllReactions(false);
-                        }}
-                        whileHover={{ scale: 1.3 }}
-                        whileTap={{ scale: 0.9 }}
-                        className={cn(
-                          "flex size-10 items-center justify-center rounded-full text-xl transition-all",
-                          story.reaction === emoji
-                            ? "bg-white/20 ring-2 ring-brand-teal"
-                            : "bg-black/30 hover:bg-white/20",
-                        )}
-                      >
-                        {emoji}
-                      </motion.button>
-                    ))}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
           </div>
         )}
-      </motion.div>
+      </div>
 
-      {viewsOpen && viewsData && (
-        <StoryViewsSheet views={viewsData} onClose={() => setViewsOpen(false)} />
-      )}
-      {reactionsOpen && reactionsData && (
-        <StoryReactionsSheet reactions={reactionsData} onClose={() => setReactionsOpen(false)} />
+      {interactionsOpen && interactionsData && (
+        <StoryInteractionsSheet
+          data={interactionsData}
+          onClose={() => {
+            setInteractionsOpen(false);
+            setPaused(false);
+          }}
+        />
       )}
     </motion.div>
   );

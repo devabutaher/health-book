@@ -33,15 +33,6 @@ export const storyController = {
     }
   },
 
-  async toggleLike(req: Request<P>, res: Response, next: NextFunction) {
-    try {
-      const result = await storyService.toggleLike(req.params.id, req.user!.id);
-      res.json({ success: true, data: result });
-    } catch (err) {
-      next(err);
-    }
-  },
-
   async react(req: Request<P>, res: Response, next: NextFunction) {
     try {
       const { emoji } = reactStorySchema.parse(req.body);
@@ -52,19 +43,10 @@ export const storyController = {
     }
   },
 
-  async getReactions(req: Request<P>, res: Response, next: NextFunction) {
+  async getInteractions(req: Request<P>, res: Response, next: NextFunction) {
     try {
-      const reactions = await storyService.getReactions(req.params.id);
-      res.json({ success: true, data: reactions });
-    } catch (err) {
-      next(err);
-    }
-  },
-
-  async getViews(req: Request<P>, res: Response, next: NextFunction) {
-    try {
-      const views = await storyService.getViews(req.params.id);
-      res.json({ success: true, data: views });
+      const result = await storyService.getInteractions(req.params.id, req.user!.id);
+      res.json({ success: true, data: result });
     } catch (err) {
       next(err);
     }

@@ -1,6 +1,6 @@
+import type { StoryGroup, StoryInteractions } from "@/types/story";
 import { createApi } from "@reduxjs/toolkit/query/react";
 import { createBaseQuery } from "../baseQuery";
-import type { StoryGroup, StoryReaction, StoryView } from "@/types/story";
 
 export interface PollResults {
   question?: string;
@@ -14,7 +14,7 @@ export interface PollResults {
 export const storiesApi = createApi({
   reducerPath: "storiesApi",
   baseQuery: createBaseQuery(`${process.env["NEXT_PUBLIC_API_URL"]}/api/stories`),
-  tagTypes: ["Stories", "StoryViews"],
+  tagTypes: ["Stories"],
   endpoints: (builder) => ({
     getFriendsStories: builder.query<StoryGroup[], void>({
       query: () => "/friends",
@@ -35,6 +35,7 @@ export const storiesApi = createApi({
         textFontSize?: number;
         textFontWeight?: string;
         textPosition?: string;
+        textBgColor?: string;
         backgroundColor?: string;
         stickerData?: {
           type: "quiz" | "poll";
@@ -45,48 +46,22 @@ export const storiesApi = createApi({
         };
       }
     >({
-      query: (body) => ({
-        url: "/",
-        method: "POST",
-        body,
-      }),
+      query: (body) => ({ url: "/", method: "POST", body }),
       invalidatesTags: ["Stories"],
       transformResponse: (response: {
         success: boolean;
         data: { id: string } & Record<string, unknown>;
       }) => response.data,
-      /* eslint-disable @typescript-eslint/no-explicit-any */
-      onQueryStarted: async (_args, { dispatch, queryFulfilled }) => {
+      onQueryStarted: async (_body, { dispatch, queryFulfilled }) => {
         try {
-          const { data: newStory } = await queryFulfilled;
-          const s = newStory as Record<string, unknown>;
-          const userId = (s.userId ?? (s.user as Record<string, unknown>)?.id) as string | undefined;
-          if (!userId) return;
-          const userEntry = s.user as { id: string; name: string; username: string; avatar: string | null } | undefined;
-          dispatch(
-            storiesApi.util.updateQueryData("getFriendsStories", undefined, (draft) => {
-              const me = draft.find((g) => g.user.id === userId);
-              if (me) {
-                me.stories.unshift(newStory as any);
-              } else {
-                draft.unshift({
-                  user: userEntry ?? { id: userId, name: "", username: "", avatar: null },
-                  stories: [newStory] as any,
-                });
-              }
-            }),
-          );
+          await queryFulfilled;
         } catch {}
       },
-      /* eslint-enable @typescript-eslint/no-explicit-any */
     }),
 
     viewStory: builder.mutation<{ viewed: boolean }, string>({
-      query: (storyId) => ({
-        url: `/${storyId}/view`,
-        method: "POST",
-      }),
-      invalidatesTags: ["Stories"],
+      query: (storyId) => ({ url: `/${storyId}/view`, method: "POST" }),
+      // No invalidateTags — optimistic only, no refetch needed
       onQueryStarted: async (storyId, { dispatch, queryFulfilled }) => {
         const patch = dispatch(
           storiesApi.util.updateQueryData("getFriendsStories", undefined, (draft) => {
@@ -107,45 +82,12 @@ export const storiesApi = createApi({
       },
     }),
 
-    toggleStoryLike: builder.mutation<{ liked: boolean }, string>({
-      query: (storyId) => ({
-        url: `/${storyId}/like`,
-        method: "POST",
-      }),
-      invalidatesTags: ["Stories"],
-      transformResponse: (response: { success: boolean; data: { liked: boolean } }) =>
-        response.data,
-      onQueryStarted: async (storyId, { dispatch, queryFulfilled }) => {
-        const patch = dispatch(
-          storiesApi.util.updateQueryData("getFriendsStories", undefined, (draft) => {
-            for (const group of draft) {
-              const story = group.stories?.find((s) => s.id === storyId);
-              if (story) {
-                story.liked = !story.liked;
-                story.likeCount = (story.likeCount || 0) + (story.liked ? 1 : -1);
-                break;
-              }
-            }
-          }),
-        );
-        try {
-          await queryFulfilled;
-        } catch {
-          patch.undo();
-        }
-      },
-    }),
-
     reactToStory: builder.mutation<
       { reacted: boolean; emoji: string | null },
       { storyId: string; emoji: string }
     >({
-      query: ({ storyId, ...body }) => ({
-        url: `/${storyId}/react`,
-        method: "POST",
-        body,
-      }),
-      invalidatesTags: ["Stories"],
+      query: ({ storyId, ...body }) => ({ url: `/${storyId}/react`, method: "POST", body }),
+      // No invalidateTags — optimistic handles it
       onQueryStarted: async ({ storyId, emoji }, { dispatch, queryFulfilled }) => {
         const patch = dispatch(
           storiesApi.util.updateQueryData("getFriendsStories", undefined, (draft) => {
@@ -154,7 +96,7 @@ export const storiesApi = createApi({
               if (story) {
                 const wasSame = story.reaction === emoji;
                 story.reaction = wasSame ? null : emoji;
-                story.reactionCount = (story.reactionCount || 0) + (wasSame ? -1 : 1);
+                story.reactionCount = Math.max(0, (story.reactionCount || 0) + (wasSame ? -1 : 1));
                 break;
               }
             }
@@ -168,31 +110,25 @@ export const storiesApi = createApi({
       },
     }),
 
-    getStoryReactions: builder.query<StoryReaction[], string>({
-      query: (storyId) => `/${storyId}/reactions`,
-      providesTags: (_result, _error, storyId) => [{ type: "StoryViews", id: storyId }],
-      transformResponse: (response: { success: boolean; data: StoryReaction[] }) => response.data,
-    }),
-
-    getStoryViews: builder.query<StoryView[], string>({
-      query: (storyId) => `/${storyId}/views`,
-      providesTags: (_result, _error, storyId) => [{ type: "StoryViews", id: storyId }],
-      transformResponse: (response: { success: boolean; data: StoryView[] }) => response.data,
+    getStoryInteractions: builder.query<StoryInteractions, string>({
+      query: (storyId) => `/${storyId}/interactions`,
+      transformResponse: (response: { success: boolean; data: StoryInteractions }) => response.data,
     }),
 
     deleteStory: builder.mutation<void, string>({
-      query: (storyId) => ({
-        url: `/${storyId}`,
-        method: "DELETE",
-      }),
-      invalidatesTags: ["Stories"],
+      query: (storyId) => ({ url: `/${storyId}`, method: "DELETE" }),
+      // No invalidateTags — optimistic handles it
       onQueryStarted: async (storyId, { dispatch, queryFulfilled }) => {
         const patch = dispatch(
           storiesApi.util.updateQueryData("getFriendsStories", undefined, (draft) => {
-            for (const group of draft) {
+            for (let i = 0; i < draft.length; i++) {
+              const group = draft[i];
               const idx = group.stories?.findIndex((s) => s.id === storyId);
               if (idx !== undefined && idx >= 0) {
                 group.stories.splice(idx, 1);
+                if (group.stories.length === 0) {
+                  draft.splice(i, 1);
+                }
                 break;
               }
             }
@@ -207,33 +143,35 @@ export const storiesApi = createApi({
     }),
 
     voteStoryPoll: builder.mutation<PollResults, { storyId: string; optionIndex: number }>({
-      query: ({ storyId, ...body }) => ({
-        url: `/${storyId}/vote`,
-        method: "POST",
-        body,
-      }),
-      invalidatesTags: ["Stories"],
+      query: ({ storyId, ...body }) => ({ url: `/${storyId}/vote`, method: "POST", body }),
       transformResponse: (response: { success: boolean; data: PollResults }) => response.data,
-      /* eslint-disable @typescript-eslint/no-explicit-any */
-      onQueryStarted: async ({ storyId }, { dispatch, queryFulfilled }) => {
-        try {
-          const { data: results } = await queryFulfilled;
-          if (!results) return;
-          dispatch(
-            storiesApi.util.updateQueryData("getFriendsStories", undefined, (draft) => {
-              for (const group of draft) {
-                const story = group.stories?.find((s) => s.id === storyId);
-                if (story) {
-                  (story as any).pollResults = results;
-                  (story as any).pollVoted = true;
-                  break;
-                }
+      onQueryStarted: async ({ storyId, optionIndex }, { dispatch, queryFulfilled }) => {
+        const patch = dispatch(
+          storiesApi.util.updateQueryData("getStoryPollResults", storyId, (draft) => {
+            if (!draft) return;
+            const option = draft.options[optionIndex];
+            if (!option) return;
+            if (draft.userVote) {
+              const prevIdx = draft.userVote.optionIndex;
+              if (draft.options[prevIdx]) {
+                draft.votes = draft.votes.map((v) =>
+                  v.optionIndex === prevIdx ? { ...v, count: Math.max(0, v.count - 1) } : v,
+                );
               }
-            }),
-          );
-        } catch {}
+            }
+            draft.votes = draft.votes.map((v) =>
+              v.optionIndex === optionIndex ? { ...v, count: v.count + 1 } : v,
+            );
+            draft.totalVotes += draft.userVote ? 0 : 1;
+            draft.userVote = { optionIndex };
+          }),
+        );
+        try {
+          await queryFulfilled;
+        } catch {
+          patch.undo();
+        }
       },
-      /* eslint-enable @typescript-eslint/no-explicit-any */
     }),
 
     getStoryPollResults: builder.query<PollResults, string>({
@@ -248,10 +186,9 @@ export const {
   useGetFriendsStoriesQuery,
   useCreateStoryMutation,
   useViewStoryMutation,
-  useToggleStoryLikeMutation,
   useReactToStoryMutation,
-  useGetStoryReactionsQuery,
-  useGetStoryViewsQuery,
+
+  useGetStoryInteractionsQuery,
   useDeleteStoryMutation,
   useVoteStoryPollMutation,
   useGetStoryPollResultsQuery,

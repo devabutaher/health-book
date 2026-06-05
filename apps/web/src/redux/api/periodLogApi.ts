@@ -26,6 +26,7 @@ export const periodLogApi = createApi({
         return `/?${search.toString()}`;
       },
       providesTags: ["PeriodLogs"],
+      keepUnusedDataFor: 300,
     }),
     createPeriodLog: builder.mutation({
       query: (body: {

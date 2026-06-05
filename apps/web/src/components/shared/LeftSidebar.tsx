@@ -80,7 +80,7 @@ export default function LeftSidebar({
     <aside
       className={cn(
         "hidden lg:flex fixed left-0 top-14 bottom-0 w-60 flex-col",
-        "bg-[var(--glass-bg)] backdrop-blur-2xl",
+        "bg-[var(--glass-bg)] backdrop-blur-md md:backdrop-blur-2xl",
         "border-r border-[var(--glass-border)]",
         "p-4",
       )}
@@ -158,6 +158,7 @@ export default function LeftSidebar({
 
       <Link
         href={`/${user?.username || ""}`}
+        prefetch={false}
         className="mt-2 flex items-center gap-3 rounded-2xl border border-[var(--glass-border)] bg-[var(--bg-overlay)] px-3 py-2.5 text-sm transition-colors hover:bg-[var(--bg-subtle)]"
       >
         <div className="relative">

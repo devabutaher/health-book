@@ -273,7 +273,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
       <ProtectedRoute>
         <div className="flex flex-col items-center py-20 text-center">
           <p className="text-[var(--text-secondary)]">Group not found</p>
-          <Link href="/groups" className="mt-4 text-sm text-brand-teal hover:underline">
+          <Link href="/groups" prefetch={false} className="mt-4 text-sm text-brand-teal hover:underline">
             Back to groups
           </Link>
         </div>
@@ -461,6 +461,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                               >
                                 <Link
                                   href={`/${req.user.username}`}
+                                  prefetch={false}
                                   className="flex min-w-0 flex-1 items-center gap-3"
                                 >
                                   <Avatar className="size-8">

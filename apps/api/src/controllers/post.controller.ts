@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { createPostSchema, updatePostSchema, reactionSchema } from "../utils/validators";
 import { postService } from "../services/post.service";
-import { uploadImage } from "../services/cloudinary";
+import { uploadImage, uploadVideo } from "../services/cloudinary";
 
 interface MulterFile {
   fieldname: string;
@@ -183,8 +183,13 @@ export const postController = {
       if (!req.file) {
         return res.status(400).json({ success: false, message: "No file provided" });
       }
-      const url = await uploadImage(req.file.path, "posts");
-      res.json({ success: true, data: { url } });
+      if (req.file.mimetype.startsWith("video/")) {
+        const result = await uploadVideo(req.file.path, "posts");
+        res.json({ success: true, data: { url: result.url, thumbnailUrl: result.thumbnailUrl } });
+      } else {
+        const url = await uploadImage(req.file.path, "posts");
+        res.json({ success: true, data: { url } });
+      }
     } catch (err) {
       next(err);
     }

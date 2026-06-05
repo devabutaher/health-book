@@ -214,6 +214,7 @@ function ActiveChallengesSection() {
         </h2>
         <Link
           href="/challenges"
+          prefetch={false}
           className="text-xs font-semibold text-brand-teal hover:text-brand-teal/80 transition-colors"
         >
           View all &rarr;
@@ -229,7 +230,7 @@ function ActiveChallengesSection() {
               key={c.id}
               className="group relative overflow-hidden rounded-2xl border border-[var(--border-default)] bg-[var(--bg-elevated)] transition-all duration-300 hover:border-brand-teal/30 hover:shadow-[var(--shadow-lg)]"
             >
-              <Link href={`/challenges/${c.id}`} className="block p-4">
+              <Link href={`/challenges/${c.id}`} prefetch={false} className="block p-4">
                 <div className="flex items-start justify-between gap-2">
                   <h3 className="truncate text-sm font-semibold text-[var(--text-primary)]">
                     {c.title}

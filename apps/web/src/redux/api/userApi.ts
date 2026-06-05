@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createApi } from "@reduxjs/toolkit/query/react";
 import { createBaseQuery } from "../baseQuery";
 import type { RootState } from "../store";
@@ -18,6 +19,7 @@ export const userApi = createApi({
     getProfile: builder.query({
       query: (username: string) => `/${username}`,
       providesTags: (_result, _error, username) => [{ type: "Profile", id: username }],
+      keepUnusedDataFor: 300,
     }),
     updateProfile: builder.mutation({
       query: (body: { name?: string; bio?: string; isPrivate?: boolean }) => ({
@@ -32,19 +34,63 @@ export const userApi = createApi({
         url: `/${userId}/follow`,
         method: "POST",
       }),
-      invalidatesTags: ["Profile", "Followers", "Following", "Suggested", "Reels"],
+      // Fix: only invalidate specific tags — not Reels
+      invalidatesTags: ["Suggested"],
       onQueryStarted: async (userId, { dispatch, getState, queryFulfilled }) => {
-        const currentUser = (getState() as RootState).auth.user;
+        const state = getState() as RootState;
+        const currentUser = state.auth.user;
         if (!currentUser) return;
-        const profilePatch = dispatch(
-          userApi.util.updateQueryData("getProfile", currentUser.username, (draft) => {
-            if (draft.isFollowing === false) draft.isFollowing = true;
+
+        const patches: { undo: () => void }[] = [];
+
+        // Fix: find the target user's username from cached profiles
+        // Try all cached profile queries to find this userId
+        const allQueries = (state as any).userApi?.queries ?? {};
+        let targetUsername: string | null = null;
+        for (const key of Object.keys(allQueries)) {
+          const entry = allQueries[key];
+          if (entry?.data?.id === userId) {
+            targetUsername = entry.data.username;
+            break;
+          }
+        }
+
+        // Update target user's profile — isFollowing: true, follower count +1
+        if (targetUsername) {
+          const p1 = dispatch(
+            userApi.util.updateQueryData("getProfile", targetUsername, (draft: any) => {
+              draft.isFollowing = true;
+              if (draft._count?.followers !== undefined) {
+                draft._count.followers += 1;
+              }
+            }),
+          );
+          patches.push(p1);
+        }
+
+        // Update current user's following count
+        const p2 = dispatch(
+          userApi.util.updateQueryData("getProfile", currentUser.username, (draft: any) => {
+            if (draft._count?.following !== undefined) {
+              draft._count.following += 1;
+            }
           }),
         );
+        patches.push(p2);
+
+        // Update suggested users list
+        const p3 = dispatch(
+          userApi.util.updateQueryData("getSuggested", undefined, (draft) => {
+            const user = draft.find((u) => u.id === userId);
+            if (user) (user as any).isFollowing = true;
+          }),
+        );
+        patches.push(p3);
+
         try {
           await queryFulfilled;
         } catch {
-          profilePatch.undo();
+          patches.forEach((p) => p.undo());
         }
       },
     }),
@@ -53,19 +99,62 @@ export const userApi = createApi({
         url: `/${userId}/follow`,
         method: "DELETE",
       }),
-      invalidatesTags: ["Profile", "Followers", "Following", "Suggested", "Reels"],
+      // Fix: only invalidate specific tags — not Reels
+      invalidatesTags: ["Suggested"],
       onQueryStarted: async (userId, { dispatch, getState, queryFulfilled }) => {
-        const currentUser = (getState() as RootState).auth.user;
+        const state = getState() as RootState;
+        const currentUser = state.auth.user;
         if (!currentUser) return;
-        const profilePatch = dispatch(
-          userApi.util.updateQueryData("getProfile", currentUser.username, (draft) => {
-            if (draft.isFollowing === true) draft.isFollowing = false;
+
+        const patches: { undo: () => void }[] = [];
+
+        // Find target user's username from cached profiles
+        const allQueries = (state as any).userApi?.queries ?? {};
+        let targetUsername: string | null = null;
+        for (const key of Object.keys(allQueries)) {
+          const entry = allQueries[key];
+          if (entry?.data?.id === userId) {
+            targetUsername = entry.data.username;
+            break;
+          }
+        }
+
+        // Update target user's profile — isFollowing: false, follower count -1
+        if (targetUsername) {
+          const p1 = dispatch(
+            userApi.util.updateQueryData("getProfile", targetUsername, (draft: any) => {
+              draft.isFollowing = false;
+              if (draft._count?.followers !== undefined) {
+                draft._count.followers = Math.max(0, draft._count.followers - 1);
+              }
+            }),
+          );
+          patches.push(p1);
+        }
+
+        // Update current user's following count
+        const p2 = dispatch(
+          userApi.util.updateQueryData("getProfile", currentUser.username, (draft: any) => {
+            if (draft._count?.following !== undefined) {
+              draft._count.following = Math.max(0, draft._count.following - 1);
+            }
           }),
         );
+        patches.push(p2);
+
+        // Update suggested users list
+        const p3 = dispatch(
+          userApi.util.updateQueryData("getSuggested", undefined, (draft) => {
+            const user = draft.find((u) => u.id === userId);
+            if (user) (user as any).isFollowing = false;
+          }),
+        );
+        patches.push(p3);
+
         try {
           await queryFulfilled;
         } catch {
-          profilePatch.undo();
+          patches.forEach((p) => p.undo());
         }
       },
     }),
@@ -88,17 +177,20 @@ export const userApi = createApi({
     getFollowers: builder.query({
       query: ({ userId, cursor }: { userId: string; cursor?: string }) =>
         `/${userId}/followers${cursor ? `?cursor=${cursor}` : ""}`,
-      providesTags: ["Followers"],
+      providesTags: [{ type: "Followers" as const, id: "LIST" }],
+      keepUnusedDataFor: 300,
     }),
     getFollowing: builder.query({
       query: ({ userId, cursor }: { userId: string; cursor?: string }) =>
         `/${userId}/following${cursor ? `?cursor=${cursor}` : ""}`,
-      providesTags: ["Following"],
+      providesTags: [{ type: "Following" as const, id: "LIST" }],
+      keepUnusedDataFor: 300,
     }),
     getSuggested: builder.query<SuggestedUser[], void>({
       query: () => "/suggested",
       providesTags: ["Suggested"],
       transformResponse: (response: { success: boolean; data: SuggestedUser[] }) => response.data,
+      keepUnusedDataFor: 300,
     }),
   }),
 });

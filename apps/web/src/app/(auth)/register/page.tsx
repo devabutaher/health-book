@@ -222,7 +222,7 @@ export default function RegisterPage() {
 
           <FieldDescription className="pt-6 text-center text-sm">
             Already have an account?{" "}
-            <Link href="/login" className="font-semibold text-brand-teal hover:underline">
+            <Link href="/login" prefetch={false} className="font-semibold text-brand-teal hover:underline">
               Sign in
             </Link>
           </FieldDescription>

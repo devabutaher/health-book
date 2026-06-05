@@ -1,7 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import type { Conversation, Message } from "@/types/conversation";
 import { createApi } from "@reduxjs/toolkit/query/react";
 import { createBaseQuery } from "../baseQuery";
 import type { RootState } from "../store";
-import type { Conversation, Message } from "@/types/conversation";
 
 export const messagingApi = createApi({
   reducerPath: "messagingApi",
@@ -29,7 +30,6 @@ export const messagingApi = createApi({
         method: "POST",
         body,
       }),
-      invalidatesTags: ["Conversations"],
       transformResponse: (response: { success: boolean; data: Conversation }) => response.data,
       onQueryStarted: async (_args, { dispatch, queryFulfilled }) => {
         try {
@@ -37,6 +37,7 @@ export const messagingApi = createApi({
           if (!conv) return;
           dispatch(
             messagingApi.util.updateQueryData("getConversations", undefined, (draft) => {
+              if (!draft) return;
               const exists = draft.find((c) => c.id === conv.id);
               if (!exists) draft.unshift(conv);
             }),
@@ -82,30 +83,46 @@ export const messagingApi = createApi({
         const user = (getState() as RootState).auth.user;
         if (!user) return;
         const tempId = `temp-${Date.now()}`;
-        const patch = dispatch(
-          messagingApi.util.updateQueryData("getConversation", { id: conversationId }, (draft) => {
-            const optimistic: Message = {
-              id: tempId,
-              conversationId,
-              senderId: user.id,
-              sender: {
-                id: user.id,
-                name: user.name,
-                username: user.username,
-                avatar: user.avatar,
-              },
-              content: content || null,
-              mediaUrl: mediaUrl || null,
-              sharedPostId: (sharedPostId as string | null) || null,
-              messageType: messageType || "text",
-              storyId: storyId || undefined,
-              storyReplyData: storyReplyData as Record<string, unknown> | undefined,
-              isDeleted: false,
-              createdAt: new Date().toISOString(),
-            };
-            draft.messages.push(optimistic);
+
+        const patchMessages = dispatch(
+          messagingApi.util.updateQueryData(
+            "getConversation",
+            { id: conversationId },
+            (draft) => {
+              if (!draft) return;
+              const optimistic: Message & { messageType: string } = {
+                id: tempId,
+                conversationId,
+                senderId: user.id,
+                sender: { id: user.id, name: user.name, username: user.username, avatar: user.avatar },
+                content: content || null,
+                mediaUrl: mediaUrl || null,
+                sharedPostId: (sharedPostId as string | null) || null,
+                messageType: messageType || "text",
+                storyId: storyId || undefined,
+                storyReplyData: storyReplyData as Record<string, unknown> | undefined,
+                isDeleted: false,
+                createdAt: new Date().toISOString(),
+              };
+              draft.messages.push(optimistic);
+            },
+          ),
+        );
+
+        // Also update conversation list preview
+        const patchConvList = dispatch(
+          messagingApi.util.updateQueryData("getConversations", undefined, (draft) => {
+            if (!draft) return;
+            const conv = draft.find((c) => c.id === conversationId);
+            if (conv) {
+              (conv as any).lastMessage = {
+                content: content || null,
+                createdAt: new Date().toISOString(),
+              };
+            }
           }),
         );
+
         try {
           const result = await queryFulfilled;
           const msg = result.data as { id: string };
@@ -115,6 +132,7 @@ export const messagingApi = createApi({
                 "getConversation",
                 { id: conversationId },
                 (draft) => {
+                  if (!draft) return;
                   const idx = draft.messages.findIndex((m) => m.id === tempId);
                   if (idx >= 0) draft.messages[idx].id = msg.id;
                 },
@@ -122,7 +140,8 @@ export const messagingApi = createApi({
             );
           }
         } catch {
-          patch.undo();
+          patchMessages.undo();
+          patchConvList.undo();
         }
       },
     }),
@@ -135,10 +154,10 @@ export const messagingApi = createApi({
         url: "/messages/" + messageId + (forAll ? "?forAll=true" : ""),
         method: "DELETE",
       }),
-      invalidatesTags: ["Conversations"],
       onQueryStarted: async ({ messageId, conversationId }, { dispatch, queryFulfilled }) => {
         const patch = dispatch(
           messagingApi.util.updateQueryData("getConversation", { id: conversationId }, (draft) => {
+            if (!draft) return;
             const idx = draft.messages.findIndex((m) => m.id === messageId);
             if (idx >= 0) draft.messages[idx].isDeleted = true;
           }),
@@ -156,10 +175,10 @@ export const messagingApi = createApi({
         url: "/conversations/" + conversationId + "/mute",
         method: "POST",
       }),
-      invalidatesTags: ["Conversations"],
       onQueryStarted: async (conversationId, { dispatch, queryFulfilled }) => {
         const patch = dispatch(
           messagingApi.util.updateQueryData("getConversations", undefined, (draft) => {
+            if (!draft) return;
             const conv = draft.find((c) => c.id === conversationId);
             if (!conv) return;
             conv.isMuted = !conv.isMuted;
@@ -178,13 +197,47 @@ export const messagingApi = createApi({
         url: "/conversations/" + conversationId + "/read",
         method: "POST",
       }),
-      invalidatesTags: ["Conversations"],
       onQueryStarted: async (conversationId, { dispatch, queryFulfilled }) => {
-        const patch = dispatch(
+        const patchConv = dispatch(
           messagingApi.util.updateQueryData("getConversations", undefined, (draft) => {
+            if (!draft) return;
             const conv = draft.find((c) => c.id === conversationId);
             if (!conv) return;
-            conv.unreadCount = 0;
+            const prevUnread = (conv as any).unreadCount || 0;
+            (conv as any).unreadCount = 0;
+            return prevUnread; // return for use below if needed
+          }),
+        );
+        // Also update global unread count
+        const patchUnread = dispatch(
+          messagingApi.util.updateQueryData("getUnreadCount", undefined, (draft) => {
+            if (draft.count > 0) draft.count = Math.max(0, draft.count - 1);
+          }),
+        );
+        try {
+          await queryFulfilled;
+        } catch {
+          patchConv.undo();
+          patchUnread.undo();
+        }
+      },
+    }),
+
+    deleteConversation: builder.mutation<void, { conversationId: string; forEveryone?: boolean }>({
+      query: ({ conversationId, forEveryone }) => ({
+        url: "/conversations/" + conversationId + (forEveryone ? "?forEveryone=true" : ""),
+        method: "DELETE",
+      }),
+      // Fix: only invalidate specific conversation
+      invalidatesTags: (_result, _error, { conversationId }) => [
+        { type: "Conversation", id: conversationId },
+      ],
+      onQueryStarted: async ({ conversationId }, { dispatch, queryFulfilled }) => {
+        const patch = dispatch(
+          messagingApi.util.updateQueryData("getConversations", undefined, (draft) => {
+            if (!draft) return;
+            const idx = draft.findIndex((c) => c.id === conversationId);
+            if (idx >= 0) draft.splice(idx, 1);
           }),
         );
         try {
@@ -195,21 +248,12 @@ export const messagingApi = createApi({
       },
     }),
 
-    deleteConversation: builder.mutation<void, { conversationId: string; forEveryone?: boolean }>({
-      query: ({ conversationId, forEveryone }) => ({
-        url: "/conversations/" + conversationId + (forEveryone ? "?forEveryone=true" : ""),
-        method: "DELETE",
-      }),
-      invalidatesTags: ["Conversations"],
-    }),
-
     clearMessages: builder.mutation<void, string>({
       query: (conversationId) => ({
         url: "/conversations/" + conversationId + "/messages",
         method: "DELETE",
       }),
       invalidatesTags: (_result, _error, conversationId) => [
-        "Conversations",
         { type: "Conversation", id: conversationId },
       ],
     }),
@@ -224,7 +268,6 @@ export const messagingApi = createApi({
         body: { userId },
       }),
       invalidatesTags: (_result, _error, { conversationId }) => [
-        "Conversations",
         { type: "Conversation", id: conversationId },
       ],
     }),
@@ -235,7 +278,6 @@ export const messagingApi = createApi({
         method: "DELETE",
       }),
       invalidatesTags: (_result, _error, { conversationId }) => [
-        "Conversations",
         { type: "Conversation", id: conversationId },
       ],
     }),
@@ -246,7 +288,6 @@ export const messagingApi = createApi({
         method: "POST",
       }),
       invalidatesTags: (_result, _error, { conversationId }) => [
-        "Conversations",
         { type: "Conversation", id: conversationId },
       ],
     }),
@@ -261,7 +302,6 @@ export const messagingApi = createApi({
         body,
       }),
       invalidatesTags: (_result, _error, { conversationId }) => [
-        "Conversations",
         { type: "Conversation", id: conversationId },
       ],
     }),

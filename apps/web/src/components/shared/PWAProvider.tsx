@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { X } from "lucide-react";
 import { useAppSelector } from "@/hooks";
 import {
@@ -35,6 +35,13 @@ export default function PWAProvider({ children }: { children: React.ReactNode })
   const [installPrompt, setInstallPrompt] = useState<Event | null>(null);
   const [showInstallBanner, setShowInstallBanner] = useState(false);
   const [dismissed, setDismissed] = useState(false);
+  const dismissedUntil = useRef(() => {
+    try {
+      return parseInt(localStorage.getItem("pwa-install-dismissed-at") ?? "", 10) || 0;
+    } catch {
+      return 0;
+    }
+  }).current();
   const user = useAppSelector((s) => s.auth.user);
   const [subscribe] = useSubscribePushMutation();
   const [unsubscribe] = useUnsubscribePushMutation();
@@ -52,7 +59,9 @@ export default function PWAProvider({ children }: { children: React.ReactNode })
     const handler = (e: Event) => {
       e.preventDefault();
       setInstallPrompt(e);
-      setShowInstallBanner(true);
+      if (Date.now() - dismissedUntil > 86400000) {
+        setShowInstallBanner(true);
+      }
     };
     window.addEventListener("beforeinstallprompt", handler);
     return () => window.removeEventListener("beforeinstallprompt", handler);
@@ -143,6 +152,9 @@ export default function PWAProvider({ children }: { children: React.ReactNode })
   const handleDismiss = useCallback(() => {
     setShowInstallBanner(false);
     setDismissed(true);
+    try {
+      localStorage.setItem("pwa-install-dismissed-at", String(Date.now()));
+    } catch {}
   }, []);
 
   return (

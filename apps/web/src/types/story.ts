@@ -17,6 +17,7 @@ export interface Story {
   duration: number | null;
   textOverlay: string | null;
   textColor?: string;
+  textBgColor?: string;
   textFontSize?: number;
   textFontWeight?: string;
   textPosition?: string; // JSON string "{ x: number, y: number }" or legacy "top"|"center"|"bottom"
@@ -25,8 +26,6 @@ export interface Story {
   expiresAt: string;
   createdAt: string;
   viewed: boolean;
-  liked: boolean;
-  likeCount: number;
   reaction?: string | null;
   reactionCount?: number;
 }
@@ -36,17 +35,18 @@ export interface StoryGroup {
   stories: Story[];
 }
 
-export interface StoryReaction {
-  userId: string;
-  user: { id: string; name: string; username: string; avatar: string | null };
-  emoji: string;
-  createdAt: string;
-}
-
-export interface StoryView {
+export interface StoryInteractionItem {
   userId: string;
   user: { id: string; name: string; username: string; avatar: string | null };
   viewedAt: string;
+  reaction: string | null;
+}
+
+export interface StoryInteractions {
+  totalViews: number;
+  totalReactions: number;
+  emojiBreakdown: Record<string, number>;
+  items: StoryInteractionItem[];
 }
 
 export interface StoryHighlight {

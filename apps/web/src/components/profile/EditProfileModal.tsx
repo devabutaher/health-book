@@ -76,20 +76,32 @@ export function EditProfileModal({ open, onClose }: { open: boolean; onClose: ()
 
     try {
       if (avatarFile) {
-        const fdAvatar = new FormData();
-        fdAvatar.append("avatar", avatarFile);
-        const result = await uploadAvatar(fdAvatar).unwrap();
-        newAvatar = result.data?.avatar ?? newAvatar;
+        const avatarToastId = toast.loading("Updating avatar...");
+        try {
+          const fdAvatar = new FormData();
+          fdAvatar.append("avatar", avatarFile);
+          const result = await uploadAvatar(fdAvatar).unwrap();
+          newAvatar = result.data?.avatar ?? newAvatar;
+        } finally {
+          toast.dismiss(avatarToastId);
+        }
       }
       if (coverFile) {
-        const fdCover = new FormData();
-        fdCover.append("cover", coverFile);
-        const result = await uploadCover(fdCover).unwrap();
-        newCover = result.data?.coverPhoto ?? newCover;
+        const coverToastId = toast.loading("Updating cover...");
+        try {
+          const fdCover = new FormData();
+          fdCover.append("cover", coverFile);
+          const result = await uploadCover(fdCover).unwrap();
+          newCover = result.data?.coverPhoto ?? newCover;
+        } finally {
+          toast.dismiss(coverToastId);
+        }
       }
       await update({ name, bio: bio || undefined }).unwrap();
 
-      dispatch(setUser({ ...user, name, bio: bio || null, avatar: newAvatar, coverPhoto: newCover }));
+      dispatch(
+        setUser({ ...user, name, bio: bio || null, avatar: newAvatar, coverPhoto: newCover }),
+      );
 
       if (avatarPreview) URL.revokeObjectURL(avatarPreview);
       if (coverPreview) URL.revokeObjectURL(coverPreview);
@@ -142,7 +154,7 @@ export function EditProfileModal({ open, onClose }: { open: boolean; onClose: ()
             <button
               type="button"
               onClick={() => avatarRef.current?.click()}
-              className="group absolute -bottom-8 left-6 size-24 overflow-hidden rounded-full ring-4 ring-[var(--bg-elevated)] transition-all hover:ring-brand-teal/50 cursor-pointer"
+              className="group absolute bottom-4 left-4 size-24 overflow-hidden rounded-full ring-4 ring-[var(--bg-elevated)] transition-all hover:ring-brand-teal/50 cursor-pointer"
               disabled={saving}
             >
               {displayAvatar ? (

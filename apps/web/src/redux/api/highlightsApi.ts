@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createApi } from "@reduxjs/toolkit/query/react";
 import { createBaseQuery } from "../baseQuery";
 import type { StoryHighlight } from "@/types/story";
@@ -11,6 +12,7 @@ export const highlightsApi = createApi({
       query: () => "/",
       providesTags: ["Highlights"],
       transformResponse: (response: { success: boolean; data: StoryHighlight[] }) => response.data,
+      keepUnusedDataFor: 300,
     }),
 
     createHighlight: builder.mutation<StoryHighlight, { title: string; coverUrl?: string }>({
@@ -19,7 +21,16 @@ export const highlightsApi = createApi({
         method: "POST",
         body,
       }),
-      invalidatesTags: ["Highlights"],
+      onQueryStarted: async (_args, { dispatch, queryFulfilled }) => {
+        try {
+          const { data: newHighlight } = await queryFulfilled;
+          dispatch(
+            highlightsApi.util.updateQueryData("getHighlights", undefined, (draft) => {
+              draft.push(newHighlight);
+            }),
+          );
+        } catch {}
+      },
     }),
 
     updateHighlight: builder.mutation<
@@ -31,7 +42,20 @@ export const highlightsApi = createApi({
         method: "PUT",
         body,
       }),
-      invalidatesTags: ["Highlights"],
+      // Fix: optimistic update instead of invalidate
+      onQueryStarted: async ({ id, ...body }, { dispatch, queryFulfilled }) => {
+        const patch = dispatch(
+          highlightsApi.util.updateQueryData("getHighlights", undefined, (draft) => {
+            const hl = draft.find((h) => h.id === id);
+            if (hl) Object.assign(hl, body);
+          }),
+        );
+        try {
+          await queryFulfilled;
+        } catch {
+          patch.undo();
+        }
+      },
     }),
 
     deleteHighlight: builder.mutation<void, string>({
@@ -39,7 +63,19 @@ export const highlightsApi = createApi({
         url: `/${id}`,
         method: "DELETE",
       }),
-      invalidatesTags: ["Highlights"],
+      onQueryStarted: async (id, { dispatch, queryFulfilled }) => {
+        const patch = dispatch(
+          highlightsApi.util.updateQueryData("getHighlights", undefined, (draft) => {
+            const idx = draft.findIndex((h) => h.id === id);
+            if (idx >= 0) draft.splice(idx, 1);
+          }),
+        );
+        try {
+          await queryFulfilled;
+        } catch {
+          patch.undo();
+        }
+      },
     }),
 
     addHighlightItem: builder.mutation<void, { highlightId: string; storyId: string }>({
@@ -56,7 +92,21 @@ export const highlightsApi = createApi({
         url: `/${highlightId}/items/${itemId}`,
         method: "DELETE",
       }),
-      invalidatesTags: ["Highlights"],
+      onQueryStarted: async ({ highlightId, itemId }, { dispatch, queryFulfilled }) => {
+        const patch = dispatch(
+          highlightsApi.util.updateQueryData("getHighlights", undefined, (draft) => {
+            const hl = draft.find((h) => h.id === highlightId);
+            if (hl && (hl as any).items) {
+              (hl as any).items = (hl as any).items.filter((item: any) => item.id !== itemId);
+            }
+          }),
+        );
+        try {
+          await queryFulfilled;
+        } catch {
+          patch.undo();
+        }
+      },
     }),
   }),
 });

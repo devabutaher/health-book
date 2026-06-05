@@ -2,7 +2,7 @@
 
 import { Plus } from "lucide-react";
 import { useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { StoryCreationDialog } from "./StoryCreationDialog";
 import { StoryCreationPicker } from "./StoryCreationPicker";
 import { StoryMediaEditor } from "./StoryMediaEditor";
 import { StoryTextEditor } from "./StoryTextEditor";
@@ -58,38 +58,33 @@ export function StoryCreateButton({ onStoryCreated }: { onStoryCreated?: () => v
         onChange={handleFileChange}
       />
 
-      {showPicker &&
-        createPortal(
-          <StoryCreationPicker
-            onSelect={handlePickerSelect}
-            onClose={() => setShowPicker(false)}
-          />,
-          document.body,
-        )}
+      {showPicker && (
+        <StoryCreationPicker onSelect={handlePickerSelect} onClose={() => setShowPicker(false)} />
+      )}
 
-      {pendingFile &&
-        createPortal(
-          <StoryMediaEditor file={pendingFile} onClose={handleClose} onCreated={onStoryCreated} />,
-          document.body,
-        )}
+      {pendingFile && (
+        <StoryCreationDialog open onClose={handleClose} showClose>
+          <StoryMediaEditor file={pendingFile} onClose={handleClose} onCreated={onStoryCreated} />
+        </StoryCreationDialog>
+      )}
 
-      {pendingType === "text" &&
-        createPortal(
-          <StoryTextEditor onClose={handleClose} onCreated={onStoryCreated} />,
-          document.body,
-        )}
+      {pendingType === "text" && (
+        <StoryCreationDialog open onClose={handleClose} showClose>
+          <StoryTextEditor onClose={handleClose} onCreated={onStoryCreated} />
+        </StoryCreationDialog>
+      )}
 
-      {pendingType === "quiz" &&
-        createPortal(
-          <StoryQuizEditor onClose={handleClose} onCreated={onStoryCreated} />,
-          document.body,
-        )}
+      {pendingType === "quiz" && (
+        <StoryCreationDialog open onClose={handleClose} showClose>
+          <StoryQuizEditor onClose={handleClose} onCreated={onStoryCreated} />
+        </StoryCreationDialog>
+      )}
 
-      {pendingType === "poll" &&
-        createPortal(
-          <StoryPollEditor onClose={handleClose} onCreated={onStoryCreated} />,
-          document.body,
-        )}
+      {pendingType === "poll" && (
+        <StoryCreationDialog open onClose={handleClose} showClose>
+          <StoryPollEditor onClose={handleClose} onCreated={onStoryCreated} />
+        </StoryCreationDialog>
+      )}
     </div>
   );
 }

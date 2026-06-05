@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { memo, useState } from "react";
 import Link from "next/link";
 import { Trophy, Users, Target, Plus, CheckCircle, Bookmark, Flame, Swords } from "lucide-react";
 import type { Challenge } from "@/types/challenge";
@@ -29,7 +29,7 @@ const categoryColors: Record<string, string> = {
   GENERAL: "bg-gray-500/10 text-gray-400",
 };
 
-export function ChallengeCard({
+export const ChallengeCard = memo(function ChallengeCard({
   challenge,
   onLogProgress,
   onToggleSave,
@@ -58,7 +58,7 @@ export function ChallengeCard({
         )}
       />
 
-      <Link href={`/challenges/${challenge.id}`} className="block p-3 sm:p-4 pt-3">
+      <Link href={`/challenges/${challenge.id}`} prefetch={false} className="block p-3 sm:p-4 pt-3">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
@@ -208,4 +208,4 @@ export function ChallengeCard({
       </div>
     </div>
   );
-}
+});

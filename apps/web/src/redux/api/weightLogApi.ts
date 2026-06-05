@@ -28,10 +28,12 @@ export const weightLogApi = createApi({
         return `/?${search.toString()}`;
       },
       providesTags: ["WeightLogs"],
+      keepUnusedDataFor: 300,
     }),
     getWeightHistory: builder.query({
       query: ({ days }: { days?: number } = {}) => `/history${days ? `?days=${days}` : ""}`,
       providesTags: ["WeightLogs"],
+      keepUnusedDataFor: 300,
     }),
     createWeightLog: builder.mutation({
       query: (body: {

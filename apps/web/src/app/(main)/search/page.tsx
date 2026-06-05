@@ -87,6 +87,7 @@ export default function SearchPage() {
                   <Link
                     key={s}
                     href={`/search?q=${encodeURIComponent(s)}`}
+                    prefetch={false}
                     className="rounded-full border border-[var(--border-default)] bg-[var(--bg-elevated)] px-3 py-1.5 text-sm transition-colors hover:border-brand-teal/30 hover:bg-[var(--bg-overlay)]"
                   >
                     {s}
@@ -160,6 +161,7 @@ export default function SearchPage() {
                 <Link
                   key={u.id}
                   href={`/${u.username}`}
+                  prefetch={false}
                   className="flex items-center gap-3 rounded-2xl border border-[var(--border-default)] bg-[var(--bg-elevated)] p-3 transition-colors hover:border-brand-teal/30 hover:bg-[var(--bg-overlay)]"
                 >
                   <UserAvatar
@@ -231,6 +233,7 @@ export default function SearchPage() {
                 <Link
                   key={g.id}
                   href={`/groups/${g.id}`}
+                  prefetch={false}
                   className="flex items-center gap-3 rounded-2xl border border-[var(--border-default)] bg-[var(--bg-elevated)] p-3 transition-colors hover:border-brand-teal/30 hover:bg-[var(--bg-overlay)]"
                 >
                   <Avatar className="size-10">
@@ -276,6 +279,7 @@ export default function SearchPage() {
                 <Link
                   key={c.id}
                   href={`/challenges/${c.id}`}
+                  prefetch={false}
                   className="flex items-center gap-3 rounded-2xl border border-[var(--border-default)] bg-[var(--bg-elevated)] p-3 transition-colors hover:border-brand-teal/30 hover:bg-[var(--bg-overlay)]"
                 >
                   <div className="flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-brand-amber/15 to-brand-coral/15 text-brand-amber">
@@ -318,6 +322,7 @@ export default function SearchPage() {
                 <Link
                   key={t.tag}
                   href={`/hashtag/${encodeURIComponent(t.tag.replace("#", ""))}`}
+                  prefetch={false}
                   className="flex items-center justify-between rounded-2xl border border-[var(--border-default)] bg-[var(--bg-elevated)] p-3 transition-colors hover:border-brand-teal/30 hover:bg-[var(--bg-overlay)]"
                 >
                   <span className="font-medium text-brand-teal">{t.tag}</span>

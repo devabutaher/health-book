@@ -86,10 +86,7 @@ export const commentApi = createApi({
         body: { content },
       }),
       invalidatesTags: ["Comments", "Feed"],
-      onQueryStarted: async (
-        { commentId, content },
-        { dispatch, queryFulfilled, getState },
-      ) => {
+      onQueryStarted: async ({ commentId, content }, { dispatch, queryFulfilled, getState }) => {
         const state = getState() as RootState;
         const queries = (state as any).commentApi?.queries ?? {};
         let patch: { undo: () => void } | undefined;
@@ -98,17 +95,11 @@ export const commentApi = createApi({
           if (entry?.data?.data?.comments?.some((c: any) => c.id === commentId)) {
             try {
               patch = dispatch(
-                commentApi.util.updateQueryData(
-                  "getComments",
-                  entry.arg,
-                  (draft: any) => {
-                    if (!draft?.data?.comments) return;
-                    const idx = draft.data.comments.findIndex(
-                      (c: any) => c.id === commentId,
-                    );
-                    if (idx >= 0) draft.data.comments[idx].content = content;
-                  },
-                ),
+                commentApi.util.updateQueryData("getComments", entry.arg, (draft: any) => {
+                  if (!draft?.data?.comments) return;
+                  const idx = draft.data.comments.findIndex((c: any) => c.id === commentId);
+                  if (idx >= 0) draft.data.comments[idx].content = content;
+                }),
               );
             } catch {}
             break;
@@ -136,16 +127,10 @@ export const commentApi = createApi({
           if (entry?.data?.data?.comments?.some((c: any) => c.id === commentId)) {
             try {
               patch = dispatch(
-                commentApi.util.updateQueryData(
-                  "getComments",
-                  entry.arg,
-                  (draft: any) => {
-                    if (!draft?.data?.comments) return;
-                    draft.data.comments = draft.data.comments.filter(
-                      (c: any) => c.id !== commentId,
-                    );
-                  },
-                ),
+                commentApi.util.updateQueryData("getComments", entry.arg, (draft: any) => {
+                  if (!draft?.data?.comments) return;
+                  draft.data.comments = draft.data.comments.filter((c: any) => c.id !== commentId);
+                }),
               );
             } catch {}
             break;
@@ -173,19 +158,12 @@ export const commentApi = createApi({
           if (entry?.data?.data?.comments?.some((c: any) => c.id === commentId)) {
             try {
               patch = dispatch(
-                commentApi.util.updateQueryData(
-                  "getComments",
-                  entry.arg,
-                  (draft: any) => {
-                    if (!draft?.data?.comments) return;
-                    const idx = draft.data.comments.findIndex(
-                      (c: any) => c.id === commentId,
-                    );
-                    if (idx >= 0)
-                      draft.data.comments[idx].isPinned =
-                        !draft.data.comments[idx].isPinned;
-                  },
-                ),
+                commentApi.util.updateQueryData("getComments", entry.arg, (draft: any) => {
+                  if (!draft?.data?.comments) return;
+                  const idx = draft.data.comments.findIndex((c: any) => c.id === commentId);
+                  if (idx >= 0)
+                    draft.data.comments[idx].isPinned = !draft.data.comments[idx].isPinned;
+                }),
               );
             } catch {}
             break;

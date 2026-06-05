@@ -100,6 +100,7 @@ export default function LoginPage() {
                   </FieldLabel>
                   <Link
                     href="/forgot-password"
+                    prefetch={false}
                     className="text-xs font-medium text-brand-teal hover:underline"
                   >
                     Forgot?
@@ -174,7 +175,7 @@ export default function LoginPage() {
 
           <FieldDescription className="pt-4 text-center text-sm">
             Don&apos;t have an account?{" "}
-            <Link href="/register" className="font-semibold text-brand-teal hover:underline">
+            <Link href="/register" prefetch={false} className="font-semibold text-brand-teal hover:underline">
               Create one
             </Link>
           </FieldDescription>

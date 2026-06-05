@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { memo, useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -92,7 +92,7 @@ const fallbackConfig = {
   color: "from-brand-indigo to-brand-purple",
 };
 
-export default function NotificationItem({ notif }: { notif: Notification }) {
+const NotificationItem = memo(function NotificationItem({ notif }: { notif: Notification }) {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteNotification, { isLoading: isDeleting }] = useDeleteNotificationMutation();
   const [markRead] = useMarkReadMutation();
@@ -211,4 +211,6 @@ export default function NotificationItem({ notif }: { notif: Notification }) {
       </AlertDialog>
     </div>
   );
-}
+});
+
+export default NotificationItem;

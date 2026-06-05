@@ -78,6 +78,7 @@ function StatsSection() {
           <Link
             key={item.label}
             href="/my-book"
+            prefetch={false}
             className="flex items-center gap-3 rounded-xl px-2 py-1.5 transition-colors hover:bg-[var(--bg-overlay)]"
           >
             <div
@@ -102,6 +103,7 @@ function StatsSection() {
       })}
       <Link
         href="/my-book"
+        prefetch={false}
         className="mt-1 flex items-center justify-center gap-1 text-[10px] font-medium text-brand-teal transition-colors hover:text-brand-green"
       >
         View full dashboard
@@ -148,13 +150,19 @@ function SuggestedSection() {
     );
   }
 
-  if (users.length === 0) return null;
+  if (users.length === 0) {
+    return (
+      <div className="flex flex-col items-center gap-2 px-3 py-4 text-center">
+        <p className="text-xs text-muted-foreground">No suggested yet.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-1 px-3">
       {users.slice(0, 6).map((u) => (
         <div key={u.id} className="flex items-center gap-3 rounded-xl px-2 py-1.5">
-          <Link href={`/${u.username}`} className="shrink-0">
+          <Link href={`/${u.username}`} prefetch={false} className="shrink-0">
             <UserAvatar
               name={u.name}
               avatar={u.avatar}
@@ -162,7 +170,7 @@ function SuggestedSection() {
               size="sm"
             />
           </Link>
-          <Link href={`/${u.username}`} className="min-w-0 flex-1">
+          <Link href={`/${u.username}`} prefetch={false} className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium hover:underline">{u.name}</p>
             <p className="truncate text-[10px] text-muted-foreground">@{u.username}</p>
           </Link>
@@ -179,6 +187,7 @@ function SuggestedSection() {
       ))}
       <Link
         href="/suggested"
+        prefetch={false}
         className="mt-1 text-center text-[10px] font-medium text-brand-teal transition-colors hover:text-brand-green"
       >
         View all
@@ -204,7 +213,7 @@ function TrendingSection() {
 
   if (isEmpty) {
     return (
-      <div className="flex flex-col gap-2 px-3">
+      <div className="flex flex-col items-center gap-2 px-3 py-4 text-center">
         <p className="text-xs text-muted-foreground px-2">No challenges yet.</p>
       </div>
     );
@@ -216,6 +225,7 @@ function TrendingSection() {
         <Link
           key={c.id}
           href={`/challenges/${c.id}`}
+          prefetch={false}
           className="group flex items-center gap-3 rounded-xl px-2 py-1.5 transition-colors hover:bg-[var(--bg-overlay)]"
         >
           <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-amber-500/20 to-orange-500/20">
@@ -235,6 +245,7 @@ function TrendingSection() {
       ))}
       <Link
         href="/challenges"
+        prefetch={false}
         className="mt-1 text-center text-[10px] font-medium text-brand-teal transition-colors hover:text-brand-green"
       >
         View all challenges
@@ -250,6 +261,7 @@ function TagsSection() {
         <Link
           key={tag}
           href={`/hashtag/${tag}`}
+          prefetch={false}
           className="inline-flex items-center rounded-full border border-[var(--glass-border)] bg-[var(--bg-overlay)] px-2 py-0.5 text-[10px] font-medium text-muted-foreground transition-colors hover:border-brand-teal/40 hover:bg-brand-teal/10 hover:text-brand-teal"
         >
           #{tag}
@@ -261,7 +273,7 @@ function TagsSection() {
 
 export default function RightSidebar() {
   return (
-    <aside className="hidden xl:flex fixed right-0 top-14 bottom-0 w-96 flex-col bg-[var(--glass-bg)] backdrop-blur-2xl border-l border-[var(--glass-border)] p-4">
+    <aside className="hidden xl:flex fixed right-0 top-14 bottom-0 w-96 flex-col bg-[var(--glass-bg)] backdrop-blur-md md:backdrop-blur-2xl border-l border-[var(--glass-border)] p-4">
       <nav className="flex flex-1 flex-col gap-2 overflow-y-auto scrollbar-none">
         <SectionLabel>Stats</SectionLabel>
         <StatsSection />

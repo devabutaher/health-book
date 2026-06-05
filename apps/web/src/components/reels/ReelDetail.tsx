@@ -57,7 +57,7 @@ export function ReelDetail({ id: reelId }: { id: string }) {
 
             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent p-4 pt-12">
               <div className="flex items-center gap-2">
-                <Link href={`/${reel.user.username}`}>
+                <Link href={`/${reel.user.username}`} prefetch={false}>
                   <Avatar size="sm" className="size-8 ring-2 ring-white/30 cursor-pointer">
                     {reel.user.avatar ? (
                       <AvatarImage src={reel.user.avatar} alt={reel.user.name} />
@@ -69,6 +69,7 @@ export function ReelDetail({ id: reelId }: { id: string }) {
                 </Link>
                 <Link
                   href={`/${reel.user.username}`}
+                  prefetch={false}
                   className="text-sm font-semibold text-white hover:underline"
                 >
                   {reel.user.name}

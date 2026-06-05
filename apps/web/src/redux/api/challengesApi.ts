@@ -55,6 +55,7 @@ export const challengesApi = createApi({
         return qs ? `/?${qs}` : "/";
       },
       providesTags: ["Challenges"],
+      keepUnusedDataFor: 600,
       transformResponse: (response: {
         success: boolean;
         data: { challenges: Challenge[]; nextCursor: string | null; hasMore: boolean };
@@ -104,6 +105,7 @@ export const challengesApi = createApi({
         return `/search?${params}`;
       },
       providesTags: ["Challenges"],
+      keepUnusedDataFor: 600,
       transformResponse: (response: {
         success: boolean;
         data: { challenges: Challenge[]; nextCursor: string | null; hasMore: boolean };
@@ -135,6 +137,7 @@ export const challengesApi = createApi({
       query: (id) => `/${id}`,
       providesTags: (_result, _error, id) => [{ type: "Challenge", id }],
       transformResponse: (response: { success: boolean; data: Challenge }) => response.data,
+      keepUnusedDataFor: 600,
     }),
 
     createChallenge: builder.mutation<
@@ -342,12 +345,14 @@ export const challengesApi = createApi({
       query: (challengeId) => `/${challengeId}/calendar`,
       providesTags: (_result, _error, challengeId) => [{ type: "Challenge", id: challengeId }],
       transformResponse: (response: { success: boolean; data: ChallengeCalendar }) => response.data,
+      keepUnusedDataFor: 600,
     }),
 
     getBeforeAfter: builder.query<BeforeAfter, string>({
       query: (challengeId) => `/${challengeId}/before-after`,
       providesTags: (_result, _error, challengeId) => [{ type: "Challenge", id: challengeId }],
       transformResponse: (response: { success: boolean; data: BeforeAfter }) => response.data,
+      keepUnusedDataFor: 600,
     }),
 
     getActivityFeed: builder.query<
@@ -361,6 +366,7 @@ export const challengesApi = createApi({
         return `/${challengeId}/activity${qs ? `?${qs}` : ""}`;
       },
       providesTags: (_result, _error, { challengeId }) => [{ type: "Activities", id: challengeId }],
+      keepUnusedDataFor: 600,
       transformResponse: (response: {
         success: boolean;
         data: { activities: ChallengeActivity[]; nextCursor: string | null; hasMore: boolean };
@@ -393,18 +399,21 @@ export const challengesApi = createApi({
       providesTags: (_result, _error, challengeId) => [{ type: "Leaderboard", id: challengeId }],
       transformResponse: (response: { success: boolean; data: LeaderboardEntry[] }) =>
         response.data,
+      keepUnusedDataFor: 600,
     }),
 
     getMyChallenges: builder.query<Challenge[], void>({
       query: () => "/mine",
       providesTags: ["Challenges"],
       transformResponse: (response: { success: boolean; data: Challenge[] }) => response.data,
+      keepUnusedDataFor: 600,
     }),
 
     getSavedChallenges: builder.query<Challenge[], void>({
       query: () => "/saved",
       providesTags: ["Challenges"],
       transformResponse: (response: { success: boolean; data: Challenge[] }) => response.data,
+      keepUnusedDataFor: 600,
     }),
 
     toggleSaveChallenge: builder.mutation<{ saved: boolean }, string>({
@@ -440,6 +449,7 @@ export const challengesApi = createApi({
         return `/${challengeId}/comments${qs ? `?${qs}` : ""}`;
       },
       providesTags: (_result, _error, { challengeId }) => [{ type: "Comments", id: challengeId }],
+      keepUnusedDataFor: 600,
       transformResponse: (response: {
         success: boolean;
         data: { comments: ChallengeComment[]; nextCursor: string | null; hasMore: boolean };
@@ -560,6 +570,7 @@ export const challengesApi = createApi({
       query: () => "/invites/mine",
       providesTags: ["Invites"],
       transformResponse: (response: { success: boolean; data: ChallengeInvite[] }) => response.data,
+      keepUnusedDataFor: 600,
     }),
 
     respondToInvite: builder.mutation<void, { inviteId: string; accept: boolean }>({
@@ -579,6 +590,7 @@ export const challengesApi = createApi({
         providesTags: ["Templates"],
         transformResponse: (response: { success: boolean; data: ChallengeTemplate[] }) =>
           response.data,
+        keepUnusedDataFor: 600,
       },
     ),
 
@@ -586,6 +598,7 @@ export const challengesApi = createApi({
       query: (userId) => (userId ? `/stats/${userId}` : "/stats"),
       providesTags: ["Stats"],
       transformResponse: (response: { success: boolean; data: ChallengeStats }) => response.data,
+      keepUnusedDataFor: 600,
     }),
 
     createDuel: builder.mutation<
@@ -610,6 +623,7 @@ export const challengesApi = createApi({
       query: (id) => `/${id}/duel`,
       providesTags: (_result, _error, id) => [{ type: "Challenge", id }],
       transformResponse: (response: { success: boolean; data: Duel }) => response.data,
+      keepUnusedDataFor: 600,
     }),
   }),
 });

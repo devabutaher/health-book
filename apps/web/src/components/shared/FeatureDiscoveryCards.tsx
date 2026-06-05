@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRef, useState, useEffect, useCallback } from "react";
 import { Trophy, Users, BookOpen, Video, Compass, ArrowRight } from "lucide-react";
 
 interface Feature {
@@ -50,13 +51,35 @@ const FEATURES: Feature[] = [
 ];
 
 export function FeatureDiscoveryCards() {
+  const [showShadow, setShowShadow] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const checkShadow = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const hasOverflow = el.scrollWidth > el.clientWidth;
+    const hasMoreContent = el.scrollLeft + el.clientWidth < el.scrollWidth - 1;
+    setShowShadow(hasOverflow && hasMoreContent);
+  }, []);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    checkShadow();
+    const observer = new ResizeObserver(checkShadow);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [checkShadow]);
+
   return (
     <div
+      ref={scrollRef}
+      onScroll={checkShadow}
       className="mb-6 flex gap-3 overflow-x-auto scrollbar-none sm:grid sm:grid-cols-5 sm:gap-3"
-      style={{
+      style={showShadow ? {
         maskImage: "linear-gradient(to right, black 90%, transparent)",
         WebkitMaskImage: "linear-gradient(to right, black 90%, transparent)",
-      }}
+      } : undefined}
     >
       {FEATURES.map((feature) => (
         <Link
