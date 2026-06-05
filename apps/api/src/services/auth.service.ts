@@ -60,7 +60,10 @@ export const authService = {
       email_confirm: true,
     });
 
-    if (authError) throw authError;
+    if (authError) {
+      console.error("[Auth] Registration error:", authError);
+      throw new AppError(400, "Registration failed. Please check your information.");
+    }
 
     const user = await prisma.user.create({
       data: {
@@ -79,7 +82,10 @@ export const authService = {
 
   async login(email: string, password: string) {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
+    if (error) {
+      console.error("[Auth] Login error:", error);
+      throw new AppError(401, "Invalid email or password");
+    }
 
     const profile = await ensureUser(data.user);
 

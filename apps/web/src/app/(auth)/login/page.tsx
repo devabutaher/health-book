@@ -48,6 +48,7 @@ export default function LoginPage() {
           refreshToken: result.data.refreshToken,
         }),
       );
+      new Audio("/sounds/badge-earned.mp3").play().catch(() => {});
       router.push("/feed");
     } catch (err: unknown) {
       const msg = (err as { data?: { message?: string } })?.data?.message || "Login failed";
@@ -62,7 +63,7 @@ export default function LoginPage() {
         initial={{ opacity: 0, y: 12, scale: 0.96 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.3, ease: "easeOut" }}
-        className="relative w-full max-w-sm"
+        className="relative w-full max-w-md"
       >
         <GlassCard variant="noise" className="p-8">
           <div className="mb-6 flex flex-col items-center gap-2 text-center">
@@ -176,7 +177,11 @@ export default function LoginPage() {
 
           <FieldDescription className="pt-4 text-center text-sm">
             Don&apos;t have an account?{" "}
-            <Link href="/register" prefetch={false} className="font-semibold text-brand-teal hover:underline">
+            <Link
+              href="/register"
+              prefetch={false}
+              className="font-semibold text-brand-teal hover:underline"
+            >
               Create one
             </Link>
           </FieldDescription>

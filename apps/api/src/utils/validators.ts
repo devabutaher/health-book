@@ -6,9 +6,9 @@ export const registerSchema = z.object({
   password: z.string().min(8, "Password must be at least 8 characters"),
   username: z
     .string()
-    .min(3, "Username must be at least 3 characters")
+    .min(3, "Invalid username")
     .max(30)
-    .regex(/^[a-zA-Z0-9_]+$/, "Username can only contain letters, numbers, and underscores"),
+    .regex(/^[a-zA-Z0-9_]+$/, "Invalid username"),
   gender: z.enum(["male", "female"], { error: "Gender is required" }),
 });
 

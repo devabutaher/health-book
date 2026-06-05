@@ -25,7 +25,12 @@ export interface AuthState {
 
 const STORAGE_KEY = "hb_auth";
 
+function isBrowser(): boolean {
+  return typeof sessionStorage !== "undefined";
+}
+
 function loadFromStorage(): { accessToken: string | null; refreshToken: string | null } {
+  if (!isBrowser()) return { accessToken: null, refreshToken: null };
   try {
     const raw = sessionStorage.getItem(STORAGE_KEY);
     if (raw) {
@@ -36,12 +41,13 @@ function loadFromStorage(): { accessToken: string | null; refreshToken: string |
       };
     }
   } catch {
-    sessionStorage.removeItem(STORAGE_KEY);
+    /* browser-only — ignore SSR */
   }
   return { accessToken: null, refreshToken: null };
 }
 
 function saveToStorage(accessToken: string | null, refreshToken: string | null) {
+  if (!isBrowser()) return;
   try {
     if (accessToken && refreshToken) {
       sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ accessToken, refreshToken }));
@@ -49,7 +55,7 @@ function saveToStorage(accessToken: string | null, refreshToken: string | null) 
       sessionStorage.removeItem(STORAGE_KEY);
     }
   } catch {
-    sessionStorage.removeItem(STORAGE_KEY);
+    /* quota exceeded or blocked — ignore */
   }
 }
 
