@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import type { ChallengeCategory, ChallengeDifficulty } from "@/types/challenge";
 import { cn } from "@/lib/utils";
+import { useSound } from "@/hooks/useSound";
 
 const difficulties: { value: ChallengeDifficulty; label: string; class: string }[] = [
   { value: "BEGINNER", label: "Beginner", class: "text-green-500" },
@@ -53,8 +54,9 @@ export function CreateChallengeModal({
   const [goalTarget, setGoalTarget] = useState("");
   const [goalUnit, setGoalUnit] = useState("");
   const [createChallenge, { isLoading }] = useCreateChallengeMutation();
-  useBrowseGroupsQuery({}, { skip: type !== "GROUP" });
+  const { data: groupsData } = useBrowseGroupsQuery({}, { skip: type !== "GROUP" });
   const { data: templates, isLoading: templatesLoading } = useGetChallengeTemplatesQuery({});
+  const { play } = useSound();
   const [view, setView] = useState<"create" | "templates">(showTemplates ? "templates" : "create");
 
   const officialTemplates = (templates || []).filter((t) => t.isOfficial);
@@ -80,12 +82,14 @@ export function CreateChallengeModal({
         goalUnit: goalUnit.trim() || undefined,
         milestones: defaultMilestones,
       }).unwrap();
+      play("success");
       toast.success("Challenge created!");
       const challengeId = (result as { data?: { id: string } }).data?.id;
       onClose();
       if (challengeId) router.push(`/challenges/${challengeId}`);
       resetForm();
     } catch {
+      play("error");
       toast.error("Failed to create challenge");
     }
   };
@@ -115,12 +119,14 @@ export function CreateChallengeModal({
         milestones: template.milestones || defaultMilestones,
         templateId: template.id,
       }).unwrap();
+      play("success");
       toast.success(`"${template.title}" created!`);
       const challengeId = (result as { data?: { id: string } }).data?.id;
       onClose();
       onCloseTemplates?.();
       if (challengeId) router.push(`/challenges/${challengeId}`);
     } catch {
+      play("error");
       toast.error("Failed to create from template");
     }
   };
@@ -338,6 +344,26 @@ export function CreateChallengeModal({
                     })}
                   </div>
                 </div>
+
+                {type === "GROUP" && (
+                  <div>
+                    <label className="mb-1.5 block text-xs font-semibold text-[var(--text-secondary)]">
+                      Group
+                    </label>
+                    <select
+                      value={groupId}
+                      onChange={(e) => setGroupId(e.target.value)}
+                      className="w-full rounded-xl border border-[var(--border-default)] bg-[var(--bg-subtle)] px-4 py-2.5 text-sm text-[var(--text-primary)] focus:border-brand-teal/50 focus:outline-none focus:ring-2 focus:ring-brand-teal/10"
+                    >
+                      <option value="">Select a group...</option>
+                      {(groupsData?.groups || []).map((g) => (
+                        <option key={g.id} value={g.id}>
+                          {g.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[var(--text-secondary)]">

@@ -50,13 +50,6 @@ export function ChallengeProgress({
         />
       </div>
 
-      <div className="mt-1 flex justify-between text-[10px] text-[var(--text-muted)]">
-        <span>{Math.round(pct)}% complete</span>
-        <span>
-          Day {score} / {goal}
-        </span>
-      </div>
-
       {hasQuantitativeGoal && (
         <div className="mt-3 rounded-lg bg-[var(--bg-subtle)] p-3">
           <div className="mb-1 flex items-center justify-between">

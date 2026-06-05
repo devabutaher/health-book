@@ -49,6 +49,7 @@ import { useAppSelector } from "@/hooks";
 import { useChallengeRealtime } from "@/hooks/useChallengeRealtime";
 import { useSound } from "@/hooks/useSound";
 import { cn } from "@/lib/utils";
+import { getChallengeDayElapsed } from "@/lib/getChallengeDay";
 
 export default function ChallengeDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -74,12 +75,8 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
   const streak = challenge?.myProgress?.streak ?? 0;
   const isCreator = challenge?.createdById === currentUserId;
   const isPastEndDate = challenge ? new Date(challenge.endDate) < new Date() : false;
-  const [now] = useState(() => Date.now());
   const today = challenge
-    ? Math.min(
-        Math.max(1, Math.ceil((now - new Date(challenge.startDate).getTime()) / 86400000)),
-        challenge.dayCount || 30,
-      )
+    ? Math.min(getChallengeDayElapsed(challenge.startDate), challenge.dayCount || 30)
     : 1;
   const todayEntry = calendar?.days.find((d) => d.dayNumber === today);
   const todayCheckedIn = todayEntry?.completed === true;
@@ -411,7 +408,13 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
 
         <ChallengeComments challengeId={id} />
 
-        <ChallengeLeaderboard entries={leaderboard || []} isDuel={challenge.type === "DUEL"} />
+        <ChallengeLeaderboard
+          entries={leaderboard || []}
+          isDuel={challenge.type === "DUEL"}
+          dayCount={challenge.dayCount || 30}
+          goalTarget={challenge.goalTarget}
+          goalUnit={challenge.goalUnit}
+        />
       </div>
 
       {checkInDay && challenge && (

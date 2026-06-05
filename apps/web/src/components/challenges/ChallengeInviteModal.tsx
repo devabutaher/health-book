@@ -10,6 +10,7 @@ import { scaleIn } from "@/lib/motion/variants";
 import { toast } from "sonner";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useSearchUsersQuery } from "@/redux/api/searchApi";
+import { useSound } from "@/hooks/useSound";
 
 export function ChallengeInviteModal({
   challengeId,
@@ -24,14 +25,17 @@ export function ChallengeInviteModal({
   const debounced = useDebounce(query, 300);
   const { data: results } = useSearchUsersQuery(debounced, { skip: debounced.length < 2 });
   const [invite, { isLoading }] = useInviteToChallengeMutation();
+  const { play } = useSound();
 
   const users = results || [];
 
   const handleInvite = async (userId: string) => {
     try {
       await invite({ challengeId, userId }).unwrap();
+      play("success");
       toast.success("Invitation sent!");
     } catch {
+      play("error");
       toast.error("Failed to invite");
     }
   };

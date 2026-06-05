@@ -5,6 +5,7 @@ import { Camera, Share2, Trophy, Calendar, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GlassCard } from "@/components/ui/glass-card";
 import { toast } from "sonner";
+import { useSound } from "@/hooks/useSound";
 import { useShareChallengeMutation } from "@/redux/api/challengesApi";
 import type { BeforeAfter } from "@/types/challenge";
 
@@ -16,6 +17,7 @@ export function BeforeAfterSection({
   challengeId: string;
 }) {
   const [shareChallenge] = useShareChallengeMutation();
+  const { play } = useSound();
 
   const handleShare = async () => {
     try {
@@ -24,8 +26,10 @@ export function BeforeAfterSection({
           ? `My before & after! Started day ${data.firstDay} → now day ${data.lastDay}`
           : `Check out my progress!`;
       await shareChallenge({ id: challengeId, content }).unwrap();
+      play("success");
       toast.success("Shared to feed!");
     } catch {
+      play("error");
       toast.error("Failed to share");
     }
   };

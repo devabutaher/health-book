@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { scaleIn } from "@/lib/motion/variants";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { useSound } from "@/hooks/useSound";
 
 export function DuelCreationModal({
   open,
@@ -27,6 +28,7 @@ export function DuelCreationModal({
   const [goalTarget, setGoalTarget] = useState("");
   const [goalUnit, setGoalUnit] = useState("");
   const [createDuel, { isLoading }] = useCreateDuelMutation();
+  const { play } = useSound();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,12 +49,14 @@ export function DuelCreationModal({
         goalUnit: goalUnit.trim() || undefined,
         dayCount: Number(dayCount) || 7,
       }).unwrap();
+      play("success");
       toast.success(`Duel challenge created!`);
       const challengeId =
         (result as { data?: { id: string } })?.data?.id || (result as { id?: string })?.id;
       onClose();
       if (challengeId) router.push(`/challenges/${challengeId}`);
     } catch {
+      play("error");
       toast.error("Failed to create duel");
     }
   };

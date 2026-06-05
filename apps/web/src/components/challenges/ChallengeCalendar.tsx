@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { Check, Circle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getChallengeDayElapsed } from "@/lib/getChallengeDay";
 
 export function ChallengeCalendar({
   days,
@@ -22,11 +22,7 @@ export function ChallengeCalendar({
   startDate: string;
   onDayClick?: (dayNumber: number) => void;
 }) {
-  const [now] = useState(() => Date.now());
-  const today = Math.min(
-    Math.max(1, Math.ceil((now - new Date(startDate).getTime()) / 86400000)),
-    dayCount,
-  );
+  const today = Math.min(getChallengeDayElapsed(startDate), dayCount);
 
   const dayMap = new Map(days.map((d) => [d.dayNumber, d]));
 

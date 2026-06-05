@@ -12,6 +12,7 @@ import { useAppSelector } from "@/hooks";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { useSound } from "@/hooks/useSound";
 import { GlassCard } from "@/components/ui/glass-card";
 import { cn } from "@/lib/utils";
 import type { ChallengeCommentReaction } from "@/types/challenge";
@@ -85,6 +86,7 @@ export function ChallengeComments({ challengeId }: { challengeId: string }) {
   const { data, isLoading, isFetching } = useGetChallengeCommentsQuery({ challengeId, cursor });
   const [addComment, { isLoading: adding }] = useAddChallengeCommentMutation();
   const [deleteComment] = useDeleteChallengeCommentMutation();
+  const { play } = useSound();
 
   const comments = data?.comments || [];
 
@@ -103,8 +105,10 @@ export function ChallengeComments({ challengeId }: { challengeId: string }) {
       }).unwrap();
       setContent("");
       setReplyTo(null);
+      play("success");
       toast.success("Comment added!");
     } catch {
+      play("error");
       toast.error("Failed to add comment");
     }
   };
@@ -112,8 +116,10 @@ export function ChallengeComments({ challengeId }: { challengeId: string }) {
   const handleDelete = async (commentId: string) => {
     try {
       await deleteComment(commentId).unwrap();
+      play("success");
       toast.success("Comment deleted");
     } catch {
+      play("error");
       toast.error("Failed to delete");
     }
   };

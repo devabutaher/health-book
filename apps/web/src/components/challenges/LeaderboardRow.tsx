@@ -5,7 +5,20 @@ import { cn } from "@/lib/utils";
 
 const rankIcons = ["🥇", "🥈", "🥉"];
 
-export function LeaderboardRow({ entry }: { entry: LeaderboardEntry }) {
+export function LeaderboardRow({
+  entry,
+  dayCount,
+  goalTarget,
+  goalUnit,
+}: {
+  entry: LeaderboardEntry;
+  dayCount?: number;
+  goalTarget?: number | null;
+  goalUnit?: string | null;
+}) {
+  const showDayProgress = dayCount != null;
+  const showQuantProgress = goalTarget != null && goalUnit != null;
+
   return (
     <div
       className={cn(
@@ -31,13 +44,18 @@ export function LeaderboardRow({ entry }: { entry: LeaderboardEntry }) {
           <p className="truncate text-sm font-semibold text-[var(--text-primary)]">
             {entry.user.name}
           </p>
+          <p className="text-[10px] text-[var(--text-muted)]">
+            {showDayProgress && `${entry.score} / ${dayCount}d`}
+            {showDayProgress && showQuantProgress && " · "}
+            {showQuantProgress && `${entry.totalValue ?? 0} / ${goalTarget} ${goalUnit}`}
+          </p>
           {entry.completed && entry.completedAt && (
-            <p className="text-[10px] text-brand-teal">🏆 Completed</p>
+            <p className="text-[10px] text-brand-teal">Completed</p>
           )}
         </div>
       </div>
       <div className="flex shrink-0 items-center gap-2">
-        {entry.totalValue != null && entry.totalValue > 0 && (
+        {entry.totalValue != null && entry.totalValue > 0 && entry.completed && (
           <span className="text-[10px] text-[var(--text-muted)]">{entry.totalValue}</span>
         )}
         <span

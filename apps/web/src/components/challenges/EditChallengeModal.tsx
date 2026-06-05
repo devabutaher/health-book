@@ -16,12 +16,14 @@ import {
   Swords,
 } from "lucide-react";
 import { useUpdateChallengeMutation } from "@/redux/api/challengesApi";
+import { useBrowseGroupsQuery } from "@/redux/api/groupsApi";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { scaleIn } from "@/lib/motion/variants";
 import { toast } from "sonner";
 import type { Challenge, ChallengeMilestone, ChallengeDifficulty } from "@/types/challenge";
 import { cn } from "@/lib/utils";
+import { useSound } from "@/hooks/useSound";
 
 const types = [
   { value: "SOLO", label: "Solo", icon: Target, desc: "Personal goal, just you" },
@@ -76,7 +78,10 @@ export function EditChallengeModal({
           { name: "Gold", threshold: 75, icon: "🥇" },
         ],
   );
+  const [groupId, setGroupId] = useState(challenge.groupId || "");
   const [updateChallenge, { isLoading }] = useUpdateChallengeMutation();
+  const { data: groupsData } = useBrowseGroupsQuery({}, { skip: type !== "GROUP" });
+  const { play } = useSound();
 
   const handleMilestoneChange = (
     index: number,
@@ -107,6 +112,7 @@ export function EditChallengeModal({
         category,
         difficulty: difficulty as ChallengeDifficulty,
         dayCount: dayCount ? Number(dayCount) : undefined,
+        groupId: type === "GROUP" ? groupId || null : null,
         startDate: new Date(startDate).toISOString(),
         endDate: new Date(endDate).toISOString(),
         prize: prize.trim() || null,
@@ -115,9 +121,11 @@ export function EditChallengeModal({
         goalUnit: goalUnit.trim() || null,
         milestones,
       }).unwrap();
+      play("success");
       toast.success("Challenge updated!");
       onClose();
     } catch {
+      play("error");
       toast.error("Failed to update challenge");
     }
   };
@@ -285,6 +293,26 @@ export function EditChallengeModal({
                 ))}
               </div>
             </div>
+
+            {type === "GROUP" && (
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-[var(--text-secondary)]">
+                  Group
+                </label>
+                <select
+                  value={groupId}
+                  onChange={(e) => setGroupId(e.target.value)}
+                  className="w-full rounded-xl border border-[var(--border-default)] bg-[var(--bg-subtle)] px-4 py-2.5 text-sm text-[var(--text-primary)] focus:border-brand-teal/50 focus:outline-none focus:ring-2 focus:ring-brand-teal/10"
+                >
+                  <option value="">Select a group...</option>
+                  {(groupsData?.groups || []).map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-3">
               <div>

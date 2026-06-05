@@ -4,10 +4,11 @@ import Image from "next/image";
 import { useState, useRef } from "react";
 import { X, Check, Camera, Upload } from "lucide-react";
 import { useCheckInMutation } from "@/redux/api/challengesApi";
+import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { scaleIn } from "@/lib/motion/variants";
-import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { useSound } from "@/hooks/useSound";
 import { cn } from "@/lib/utils";
 export function CheckInModal({
   challengeId,
@@ -34,6 +35,7 @@ export function CheckInModal({
   const [sharedToFeed, setSharedToFeed] = useState(false);
   const [value, setValue] = useState<number | "">("");
   const [checkIn, { isLoading }] = useCheckInMutation();
+  const { play } = useSound();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
 
@@ -84,6 +86,7 @@ export function CheckInModal({
         sharedToFeed: sharedToFeed && completed,
         value: value !== "" ? Number(value) : undefined,
       }).unwrap();
+      play("success");
       toast.success(completed ? `Day ${dayNumber} checked in!` : "Progress updated");
       setNotes("");
       setMediaUrls([]);
@@ -91,6 +94,7 @@ export function CheckInModal({
       setValue("");
       onClose();
     } catch {
+      play("error");
       toast.error("Failed to check in");
     }
   };

@@ -199,6 +199,20 @@ export const challengeService = {
     if (difficulty) where.difficulty = difficulty;
     if (groupId) where.groupId = groupId;
 
+    // GROUP challenges only visible to group members
+    if (!groupId) {
+      const userGroups = userId
+        ? (await prisma.groupMember.findMany({
+            where: { userId },
+            select: { groupId: true },
+          })).map((g) => g.groupId)
+        : [];
+      where.OR = [
+        { type: { not: "GROUP" } },
+        { type: "GROUP", groupId: { in: userGroups } },
+      ];
+    }
+
     const challenges = await prisma.challenge.findMany({
       where,
       take: limit + 1,
@@ -289,11 +303,21 @@ export const challengeService = {
           ? {
               where: { userId },
               orderBy: { dayNumber: "asc" },
-              select: { id: true, dayNumber: true, completed: true, mediaUrls: true },
+              select: { id: true, dayNumber: true, completed: true, mediaUrls: true, value: true },
             }
           : false,
       },
     });
+
+    // GROUP challenges only visible to group members
+    if (challenge.type === "GROUP" && challenge.groupId && userId) {
+      const membership = await prisma.groupMember.findUnique({
+        where: { groupId_userId: { groupId: challenge.groupId, userId } },
+      });
+      if (!membership && challenge.createdById !== userId) {
+        throw new AppError(403, "Only group members can view this challenge");
+      }
+    }
 
     const myParticipation = Array.isArray(challenge.participants)
       ? challenge.participants[0]
@@ -365,7 +389,7 @@ export const challengeService = {
     const start = new Date(data.startDate);
     const end = new Date(data.endDate);
     const calculatedDays = Math.max(1, Math.round((end.getTime() - start.getTime()) / 86400000));
-    const dayCount = data.dayCount || calculatedDays;
+    const dayCount = data.dayCount ?? calculatedDays;
 
     const challenge = await prisma.challenge.create({
       data: {
@@ -422,6 +446,18 @@ export const challengeService = {
     if (challenge.createdById !== userId)
       throw new AppError(403, "Only the creator can edit this challenge");
 
+    const startDate = data.startDate !== undefined ? new Date(data.startDate) : undefined;
+    const endDate = data.endDate !== undefined ? new Date(data.endDate) : undefined;
+
+    let dayCount = data.dayCount;
+    if (dayCount === undefined && (startDate || endDate)) {
+      const s = startDate || challenge.startDate;
+      const e = endDate || challenge.endDate;
+      if (s && e) {
+        dayCount = Math.max(1, Math.round((e.getTime() - s.getTime()) / 86400000));
+      }
+    }
+
     return prisma.challenge.update({
       where: { id: challengeId },
       data: {
@@ -429,15 +465,15 @@ export const challengeService = {
         ...(data.description !== undefined ? { description: data.description } : {}),
         ...(data.type !== undefined ? { type: data.type } : {}),
         ...(data.groupId !== undefined ? { groupId: data.groupId } : {}),
-        ...(data.startDate !== undefined ? { startDate: new Date(data.startDate) } : {}),
-        ...(data.endDate !== undefined ? { endDate: new Date(data.endDate) } : {}),
+        ...(startDate !== undefined ? { startDate } : {}),
+        ...(endDate !== undefined ? { endDate } : {}),
         ...(data.entryFee !== undefined ? { entryFee: data.entryFee } : {}),
         ...(data.prize !== undefined ? { prize: data.prize } : {}),
         ...(data.goalTarget !== undefined ? { goalTarget: data.goalTarget } : {}),
         ...(data.goalUnit !== undefined ? { goalUnit: data.goalUnit } : {}),
         ...(data.category !== undefined ? { category: data.category } : {}),
         ...(data.difficulty !== undefined ? { difficulty: data.difficulty } : {}),
-        ...(data.dayCount !== undefined ? { dayCount: data.dayCount } : {}),
+        ...(dayCount !== undefined ? { dayCount } : {}),
         ...(data.milestones !== undefined
           ? { milestones: data.milestones as Prisma.InputJsonValue }
           : {}),
@@ -453,8 +489,28 @@ export const challengeService = {
 
     const challenge = await prisma.challenge.findUniqueOrThrow({
       where: { id: challengeId },
-      select: { type: true, createdById: true, title: true, dayCount: true },
+      select: {
+        type: true, createdById: true, title: true, dayCount: true,
+        groupId: true, startDate: true, endDate: true,
+      },
     });
+
+    const now = new Date();
+    if (challenge.startDate && now < challenge.startDate) {
+      throw new AppError(400, "This challenge hasn't started yet");
+    }
+    if (challenge.endDate && now > challenge.endDate) {
+      throw new AppError(400, "This challenge has already ended");
+    }
+
+    if (challenge.type === "GROUP" && challenge.groupId) {
+      const membership = await prisma.groupMember.findUnique({
+        where: { groupId_userId: { groupId: challenge.groupId, userId } },
+      });
+      if (!membership) {
+        throw new AppError(403, "You must join the group first to participate in this challenge");
+      }
+    }
 
     if (challenge.type === "DUEL") {
       const participantCount = await prisma.challengeParticipant.count({ where: { challengeId } });
@@ -529,14 +585,31 @@ export const challengeService = {
             milestones: true,
             goalTarget: true,
             goalUnit: true,
+            startDate: true,
+            endDate: true,
           },
         },
       },
     });
 
+    const now = new Date();
+    const { startDate, endDate } = participant.challenge;
+    if (startDate && now < startDate) {
+      throw new AppError(400, "This challenge hasn't started yet");
+    }
+    if (endDate && now > endDate) {
+      throw new AppError(400, "This challenge has already ended");
+    }
+
     const dayCount = participant.challenge.dayCount || DEFAULT_DAY_COUNT;
     if (data.dayNumber < 1 || data.dayNumber > dayCount) {
       throw new AppError(400, `Day number must be between 1 and ${dayCount}`);
+    }
+
+    // Prevent checking in for future days beyond today's elapsed day
+    const todayDay = Math.max(1, Math.floor((now.getTime() - new Date(startDate).getTime()) / 86400000) + 1);
+    if (data.dayNumber > todayDay) {
+      throw new AppError(400, `Cannot check in for day ${data.dayNumber} yet (today is day ${todayDay})`);
     }
 
     const existingEntry = await prisma.challengeDayEntry.findUnique({
@@ -1128,7 +1201,7 @@ export const challengeService = {
         goalUnit: data.goalUnit,
         category: data.category,
         difficulty: "INTERMEDIATE",
-        dayCount: data.dayCount || calculatedDays,
+        dayCount: data.dayCount ?? calculatedDays,
         createdById: data.createdById,
       },
     });

@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Empty, EmptyDescription, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { staggerContainer } from "@/lib/motion/variants";
 import { FeatureDiscoveryCards } from "@/components/shared/FeatureDiscoveryCards";
+import { MobilePeoplePanel } from "@/components/shared/MobilePeoplePanel";
 
 export default function FeedPage() {
   const [createOpen, setCreateOpen] = useState(false);
@@ -100,6 +101,8 @@ export default function FeedPage() {
         <div className="mb-4 sm:mb-6">
           <StoryRow />
         </div>
+
+        <MobilePeoplePanel />
 
         <FeatureDiscoveryCards />
 

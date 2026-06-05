@@ -6,9 +6,15 @@ import { GlassCard } from "@/components/ui/glass-card";
 export function ChallengeLeaderboard({
   entries,
   isDuel,
+  dayCount,
+  goalTarget,
+  goalUnit,
 }: {
   entries: LeaderboardEntry[];
   isDuel?: boolean;
+  dayCount?: number;
+  goalTarget?: number | null;
+  goalUnit?: string | null;
 }) {
   return (
     <GlassCard variant="elevated" className="p-4 sm:p-5">
@@ -28,7 +34,13 @@ export function ChallengeLeaderboard({
       ) : (
         <div className="space-y-1">
           {entries.map((entry) => (
-            <LeaderboardRow key={entry.userId} entry={entry} />
+            <LeaderboardRow
+              key={entry.userId}
+              entry={entry}
+              dayCount={dayCount}
+              goalTarget={goalTarget}
+              goalUnit={goalUnit}
+            />
           ))}
         </div>
       )}

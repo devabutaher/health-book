@@ -177,6 +177,12 @@ export default function BottomNav({ onCreatePost }: { onCreatePost?: () => void 
               onClick={() => setMenuOpen(false)}
             />
             <MenuItem
+              href="/suggested"
+              icon={Users}
+              label="Find People"
+              onClick={() => setMenuOpen(false)}
+            />
+            <MenuItem
               href="/notifications"
               icon={Bell}
               label="Alerts"
