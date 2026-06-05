@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { ImagePlus, Save, X } from "lucide-react";
 import {
@@ -40,6 +40,7 @@ export function EditProfileModal({ open, onClose }: { open: boolean; onClose: ()
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [gender, setGender] = useState(user?.gender ?? "");
 
   const handleAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -97,10 +98,10 @@ export function EditProfileModal({ open, onClose }: { open: boolean; onClose: ()
           toast.dismiss(coverToastId);
         }
       }
-      await update({ name, bio: bio || undefined }).unwrap();
+      await update({ name, bio: bio || undefined, gender: gender || undefined }).unwrap();
 
       dispatch(
-        setUser({ ...user, name, bio: bio || null, avatar: newAvatar, coverPhoto: newCover }),
+        setUser({ ...user, name, bio: bio || null, avatar: newAvatar, coverPhoto: newCover, gender: gender || null }),
       );
 
       if (avatarPreview) URL.revokeObjectURL(avatarPreview);
@@ -118,6 +119,10 @@ export function EditProfileModal({ open, onClose }: { open: boolean; onClose: ()
   const isBusy = saving || isLoading;
   const displayAvatar = avatarPreview ?? user?.avatar ?? null;
   const displayCover = coverPreview ?? user?.coverPhoto ?? null;
+
+  useEffect(() => {
+    setGender(user?.gender ?? "");
+  }, [user]);
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -202,6 +207,33 @@ export function EditProfileModal({ open, onClose }: { open: boolean; onClose: ()
                   maxLength={500}
                   placeholder="Tell us about your health journey..."
                 />
+              </Field>
+              <Field>
+                <FieldLabel className="text-sm font-medium">Gender</FieldLabel>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setGender("male")}
+                    className={`flex-1 rounded-xl border px-4 py-2 text-sm font-medium transition-colors ${
+                      gender === "male"
+                        ? "border-brand-teal bg-brand-teal/10 text-brand-teal"
+                        : "border-[var(--border-default)] text-muted-foreground hover:border-brand-teal/30"
+                    }`}
+                  >
+                    Male
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setGender("female")}
+                    className={`flex-1 rounded-xl border px-4 py-2 text-sm font-medium transition-colors ${
+                      gender === "female"
+                        ? "border-brand-teal bg-brand-teal/10 text-brand-teal"
+                        : "border-[var(--border-default)] text-muted-foreground hover:border-brand-teal/30"
+                    }`}
+                  >
+                    Female
+                  </button>
+                </div>
               </Field>
             </FieldGroup>
           </div>

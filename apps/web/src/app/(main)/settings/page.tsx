@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import {
@@ -31,7 +31,6 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { UserAvatar } from "@/components/shared/UserAvatar";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,6 +42,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useAppDispatch, useAppSelector } from "@/hooks";
+import { setUser } from "@/redux/slices/authSlice";
 import {
   setThemePreference,
   toggleSound,
@@ -66,11 +66,18 @@ export default function SettingsPage() {
 
   const [updateProfile, { isLoading: isUpdating }] = useUpdateProfileMutation();
 
-  const [name, setName] = useState(currentUser?.name || "");
-  const [bio, setBio] = useState(currentUser?.bio || "");
-  const [gender, setGender] = useState(currentUser?.gender || "");
-  const [isPrivate, setIsPrivate] = useState(currentUser?.isPrivate || false);
+  const [name, setName] = useState("");
+  const [bio, setBio] = useState("");
+  const [gender, setGender] = useState("");
+  const [isPrivate, setIsPrivate] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+
+  useEffect(() => {
+    setName(currentUser?.name || "");
+    setBio(currentUser?.bio || "");
+    setGender(currentUser?.gender || "");
+    setIsPrivate(currentUser?.isPrivate || false);
+  }, [currentUser]);
 
   const handleThemeChange = (value: string) => {
     if (!value) return;
@@ -81,7 +88,8 @@ export default function SettingsPage() {
 
   const handleSaveProfile = async () => {
     try {
-      await updateProfile({ name: name.trim(), bio: bio.trim() || undefined, isPrivate, gender: gender || undefined }).unwrap();
+      const result = await updateProfile({ name: name.trim(), bio: bio.trim() || undefined, isPrivate, gender: gender || undefined }).unwrap();
+      if (result.data) dispatch(setUser(result.data));
       toast.success("Profile updated");
     } catch {
       toast.error("Failed to update profile");
@@ -118,13 +126,6 @@ export default function SettingsPage() {
               </div>
 
               <FieldGroup className="gap-5">
-                <UserAvatar
-                  name={currentUser?.name || ""}
-                  avatar={currentUser?.avatar || null}
-                  ring={currentUser?.isVerified ? "premium" : "default"}
-                  size="xl"
-                  className="self-center sm:self-auto"
-                />
 
                 <Separator />
 
