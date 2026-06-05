@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import {
@@ -18,7 +18,6 @@ import {
   Settings as SettingsIcon,
   Sparkles,
   User,
-  Camera,
   Globe,
   Lock,
   AlertTriangle,
@@ -52,11 +51,7 @@ import {
   setReducedMotion,
   type ThemePreference,
 } from "@/redux/slices/settingsSlice";
-import {
-  useUpdateProfileMutation,
-  useUploadAvatarMutation,
-  useUploadCoverMutation,
-} from "@/redux/api/userApi";
+import { useUpdateProfileMutation } from "@/redux/api/userApi";
 import { useTheme } from "@/hooks/useTheme";
 import { staggerContainer, staggerItem } from "@/lib/motion/variants";
 import { toast } from "sonner";
@@ -70,17 +65,12 @@ export default function SettingsPage() {
     useAppSelector((s) => s.settings);
 
   const [updateProfile, { isLoading: isUpdating }] = useUpdateProfileMutation();
-  const [uploadAvatar] = useUploadAvatarMutation();
-  const [uploadCover] = useUploadCoverMutation();
 
   const [name, setName] = useState(currentUser?.name || "");
   const [bio, setBio] = useState(currentUser?.bio || "");
   const [gender, setGender] = useState(currentUser?.gender || "");
   const [isPrivate, setIsPrivate] = useState(currentUser?.isPrivate || false);
   const [deleteOpen, setDeleteOpen] = useState(false);
-
-  const avatarRef = useRef<HTMLInputElement>(null);
-  const coverRef = useRef<HTMLInputElement>(null);
 
   const handleThemeChange = (value: string) => {
     if (!value) return;
@@ -95,32 +85,6 @@ export default function SettingsPage() {
       toast.success("Profile updated");
     } catch {
       toast.error("Failed to update profile");
-    }
-  };
-
-  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const formData = new FormData();
-    formData.append("file", file);
-    try {
-      await uploadAvatar(formData).unwrap();
-      toast.success("Avatar updated");
-    } catch {
-      toast.error("Failed to upload avatar");
-    }
-  };
-
-  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const formData = new FormData();
-    formData.append("file", file);
-    try {
-      await uploadCover(formData).unwrap();
-      toast.success("Cover photo updated");
-    } catch {
-      toast.error("Failed to upload cover photo");
     }
   };
 
@@ -154,42 +118,13 @@ export default function SettingsPage() {
               </div>
 
               <FieldGroup className="gap-5">
-                <div className="flex flex-col items-center gap-3 sm:flex-row">
-                  <div
-                    className="relative cursor-pointer group"
-                    onClick={() => avatarRef.current?.click()}
-                  >
-                    <UserAvatar
-                      name={currentUser?.name || ""}
-                      avatar={currentUser?.avatar || null}
-                      ring={currentUser?.isVerified ? "premium" : "default"}
-                      size="xl"
-                    />
-                    <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
-                      <Camera className="size-5 text-white" />
-                    </div>
-                    <input
-                      ref={avatarRef}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handleAvatarUpload}
-                    />
-                  </div>
-                  <button
-                    onClick={() => coverRef.current?.click()}
-                    className="rounded-xl border border-dashed border-[var(--border-default)] px-4 py-2 text-xs text-muted-foreground transition-colors hover:border-brand-teal/30 hover:text-foreground"
-                  >
-                    Upload cover photo
-                  </button>
-                  <input
-                    ref={coverRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleCoverUpload}
-                  />
-                </div>
+                <UserAvatar
+                  name={currentUser?.name || ""}
+                  avatar={currentUser?.avatar || null}
+                  ring={currentUser?.isVerified ? "premium" : "default"}
+                  size="xl"
+                  className="self-center sm:self-auto"
+                />
 
                 <Separator />
 
