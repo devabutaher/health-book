@@ -87,6 +87,16 @@ export function CreatePostModal({
     setPreviews((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = Array.from(e.target.files || []);
+    if (selected.length === 0) return;
+    const remaining = 10 - files.length;
+    const allowed = selected.slice(0, remaining);
+    setFiles((prev) => [...prev, ...allowed]);
+    setPreviews((prev) => [...prev, ...allowed.map((f) => URL.createObjectURL(f))]);
+    e.target.value = "";
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (
@@ -586,6 +596,14 @@ export function CreatePostModal({
                 </button>
               </div>
             ) : null}
+            <input
+              ref={inputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={handleFileSelect}
+            />
             {showSchedule ? (
               <div className="flex items-center gap-2 rounded-lg border border-[var(--glass-border)] bg-[var(--bg-overlay)] p-3">
                 <CalendarClock className="size-4 shrink-0 text-muted-foreground" />
