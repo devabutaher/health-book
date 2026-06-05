@@ -70,7 +70,7 @@ export const userService = {
     };
   },
 
-  async updateProfile(userId: string, data: { name?: string; bio?: string; isPrivate?: boolean }) {
+  async updateProfile(userId: string, data: { name?: string; bio?: string; isPrivate?: boolean; gender?: string }) {
     return prisma.user.update({
       where: { id: userId },
       data,
@@ -85,6 +85,7 @@ export const userService = {
         role: true,
         isVerified: true,
         isPrivate: true,
+        gender: true,
         createdAt: true,
       },
     });

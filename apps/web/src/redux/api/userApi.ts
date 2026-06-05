@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createApi } from "@reduxjs/toolkit/query/react";
 import { createBaseQuery } from "../baseQuery";
+import { reelsApi } from "./reelsApi";
 import type { RootState } from "../store";
 
 export interface SuggestedUser {
@@ -22,7 +23,7 @@ export const userApi = createApi({
       keepUnusedDataFor: 300,
     }),
     updateProfile: builder.mutation({
-      query: (body: { name?: string; bio?: string; isPrivate?: boolean }) => ({
+      query: (body: { name?: string; bio?: string; isPrivate?: boolean; gender?: string }) => ({
         url: "/me",
         method: "PUT",
         body,
@@ -87,6 +88,22 @@ export const userApi = createApi({
         );
         patches.push(p3);
 
+        // Patch browseReels caches (all cursor variants)
+        const reelsQueries = (state as any).reelsApi?.queries ?? {};
+        for (const key of Object.keys(reelsQueries)) {
+          const q = reelsQueries[key];
+          if (q?.endpointName === "browseReels" && q?.status === "fulfilled") {
+            const p = dispatch(
+              reelsApi.util.updateQueryData("browseReels", q.originalArgs, (draft: any) => {
+                draft.reels.forEach((reel: any) => {
+                  if (reel.user.id === userId) reel.user.isFollowing = true;
+                });
+              }),
+            );
+            patches.push(p);
+          }
+        }
+
         try {
           await queryFulfilled;
         } catch {
@@ -150,6 +167,22 @@ export const userApi = createApi({
           }),
         );
         patches.push(p3);
+
+        // Patch browseReels caches (all cursor variants)
+        const reelsQueries2 = (state as any).reelsApi?.queries ?? {};
+        for (const key of Object.keys(reelsQueries2)) {
+          const q = reelsQueries2[key];
+          if (q?.endpointName === "browseReels" && q?.status === "fulfilled") {
+            const p = dispatch(
+              reelsApi.util.updateQueryData("browseReels", q.originalArgs, (draft: any) => {
+                draft.reels.forEach((reel: any) => {
+                  if (reel.user.id === userId) reel.user.isFollowing = false;
+                });
+              }),
+            );
+            patches.push(p);
+          }
+        }
 
         try {
           await queryFulfilled;

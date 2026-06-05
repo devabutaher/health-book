@@ -1,11 +1,9 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import {
-  ArrowLeft,
   Volume2,
   VolumeX,
   Sun,
@@ -64,7 +62,7 @@ import { staggerContainer, staggerItem } from "@/lib/motion/variants";
 import { toast } from "sonner";
 
 export default function SettingsPage() {
-  const router = useRouter();
+
   const dispatch = useAppDispatch();
   const { setTheme } = useTheme();
   const currentUser = useAppSelector((s) => s.auth.user);
@@ -77,6 +75,7 @@ export default function SettingsPage() {
 
   const [name, setName] = useState(currentUser?.name || "");
   const [bio, setBio] = useState(currentUser?.bio || "");
+  const [gender, setGender] = useState(currentUser?.gender || "");
   const [isPrivate, setIsPrivate] = useState(currentUser?.isPrivate || false);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
@@ -92,7 +91,7 @@ export default function SettingsPage() {
 
   const handleSaveProfile = async () => {
     try {
-      await updateProfile({ name: name.trim(), bio: bio.trim() || undefined, isPrivate }).unwrap();
+      await updateProfile({ name: name.trim(), bio: bio.trim() || undefined, isPrivate, gender: gender || undefined }).unwrap();
       toast.success("Profile updated");
     } catch {
       toast.error("Failed to update profile");
@@ -127,21 +126,13 @@ export default function SettingsPage() {
 
   return (
     <ProtectedRoute>
-      <div className="mx-auto max-w-[600px]">
+      <div className="mx-auto max-w-[700px]">
         <motion.div
           variants={staggerContainer}
           initial="initial"
           animate="animate"
           className="flex flex-col gap-4 sm:gap-6"
         >
-          <div className="mb-2">
-            <button
-              onClick={() => router.back()}
-              className="inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <ArrowLeft className="size-4" /> Back
-            </button>
-          </div>
           <motion.div variants={staggerItem} className="flex items-center gap-3">
             <div className="flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-teal/15 to-brand-blue/15 text-brand-teal">
               <SettingsIcon className="size-6" />
@@ -164,19 +155,19 @@ export default function SettingsPage() {
 
               <FieldGroup className="gap-5">
                 <div className="flex flex-col items-center gap-3 sm:flex-row">
-                  <div className="relative">
+                  <div
+                    className="relative cursor-pointer group"
+                    onClick={() => avatarRef.current?.click()}
+                  >
                     <UserAvatar
                       name={currentUser?.name || ""}
                       avatar={currentUser?.avatar || null}
                       ring={currentUser?.isVerified ? "premium" : "default"}
                       size="xl"
                     />
-                    <button
-                      onClick={() => avatarRef.current?.click()}
-                      className="absolute -bottom-1 -right-1 flex size-7 items-center justify-center rounded-full bg-brand-teal text-white shadow-md transition-colors hover:bg-brand-teal/90"
-                    >
-                      <Camera className="size-3.5" />
-                    </button>
+                    <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                      <Camera className="size-5 text-white" />
+                    </div>
                     <input
                       ref={avatarRef}
                       type="file"
@@ -216,6 +207,34 @@ export default function SettingsPage() {
                     maxLength={500}
                     className="w-full resize-none rounded-xl border border-[var(--border-default)] bg-[var(--bg-subtle)] px-4 py-2.5 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-brand-teal/50 focus:outline-none focus:ring-2 focus:ring-brand-teal/10"
                   />
+                </Field>
+
+                <Field>
+                  <FieldLabel className="text-sm font-medium">Gender</FieldLabel>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setGender("male")}
+                      className={`flex-1 rounded-xl border px-4 py-2 text-sm font-medium transition-colors ${
+                        gender === "male"
+                          ? "border-brand-teal bg-brand-teal/10 text-brand-teal"
+                          : "border-[var(--border-default)] text-muted-foreground hover:border-brand-teal/30"
+                      }`}
+                    >
+                      Male
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setGender("female")}
+                      className={`flex-1 rounded-xl border px-4 py-2 text-sm font-medium transition-colors ${
+                        gender === "female"
+                          ? "border-brand-teal bg-brand-teal/10 text-brand-teal"
+                          : "border-[var(--border-default)] text-muted-foreground hover:border-brand-teal/30"
+                      }`}
+                    >
+                      Female
+                    </button>
+                  </div>
                 </Field>
 
                 <Button
