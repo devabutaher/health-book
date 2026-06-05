@@ -1,10 +1,10 @@
 import rateLimit from "express-rate-limit";
 
-const isDev = process.env["NODE_ENV"] !== "production";
+const isDev = process.env["NODE_ENV"] !== "production" || process.env["RENDER"] !== "true";
 
 export const rateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: isDev ? 1000 : 100,
+  max: isDev ? 1000 : 300,
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, message: "Too many requests, slow down." },
@@ -12,7 +12,7 @@ export const rateLimiter = rateLimit({
 
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: isDev ? 100 : 10,
+  max: isDev ? 100 : 30,
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, message: "Too many login attempts. Try again in 15 minutes." },
@@ -20,7 +20,23 @@ export const authLimiter = rateLimit({
 
 export const postLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
-  max: isDev ? 500 : 20,
+  max: isDev ? 500 : 50,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: "Post limit reached. Try again later." },
+});
+
+export const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: isDev ? 100 : 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: "Too many login attempts. Try again in 15 minutes." },
+});
+
+export const postLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: isDev ? 500 : 50,
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, message: "Post limit reached. Try again later." },
