@@ -16,7 +16,7 @@ import { ReelComments } from "./ReelComments";
 import { ReelPlayer } from "./ReelPlayer";
 import { ReelSkeleton } from "./ReelSkeleton";
 
-export function ReelsFeed({ onUploadClick }: { onUploadClick?: () => void }) {
+export function ReelsFeed({ onUploadClick, refreshFlag }: { onUploadClick?: () => void; refreshFlag?: number }) {
   const [cursor, setCursor] = useState<string | undefined>(undefined);
   const [allReels, setAllReels] = useState<Reel[]>([]);
   const [activeIdx, setActiveIdx] = useState(0);
@@ -29,6 +29,13 @@ export function ReelsFeed({ onUploadClick }: { onUploadClick?: () => void }) {
   const [toggleLike] = useToggleReelLikeMutation();
   const [followUser] = useFollowMutation();
   const [unfollowUser] = useUnfollowMutation();
+
+  useEffect(() => {
+    if (!refreshFlag) return;
+    setCursor(undefined);
+    setAllReels([]);
+    seenIds.current = new Set();
+  }, [refreshFlag]);
 
   useEffect(() => {
     if (data?.reels) {
@@ -154,8 +161,8 @@ export function ReelsFeed({ onUploadClick }: { onUploadClick?: () => void }) {
           <AlertCircle className="size-8 text-red-400" />
         </div>
         <div>
-          <p className="text-sm font-semibold text-white">Something went wrong</p>
-          <p className="mt-1 text-xs text-white/50">{errorMsg}</p>
+          <p className="text-sm font-semibold text-foreground">Something went wrong</p>
+          <p className="mt-1 text-xs text-muted-foreground">{errorMsg}</p>
         </div>
         <Button variant="secondary" size="sm" onClick={() => refetch()} className="gap-2">
           <RefreshCw className="size-3.5" />
@@ -191,7 +198,7 @@ export function ReelsFeed({ onUploadClick }: { onUploadClick?: () => void }) {
         className="h-full snap-y snap-mandatory overflow-y-auto scrollbar-none"
       >
         {displayReels.map((reel, index) => (
-          <div key={reel.id} className="relative h-full snap-start my-2">
+          <div key={reel.id} className="relative h-full snap-start snap-always my-0">
             <div className="relative mx-auto h-full w-full max-w-md">
               <div className="h-full flex items-center justify-center">
                 <div className="relative w-full aspect-[9/16] max-h-full rounded-2xl overflow-hidden">
@@ -276,14 +283,14 @@ export function ReelsFeed({ onUploadClick }: { onUploadClick?: () => void }) {
         ))}
 
         {!data?.hasMore && displayReels.length > 0 && !isFetching && (
-          <div className="relative h-full snap-start my-0">
-            <div className="relative mx-auto flex h-full w-full max-w-md flex-col items-center justify-center gap-4 rounded-2xl bg-white/5 backdrop-blur-sm p-6 text-center">
-              <div className="flex size-16 items-center justify-center rounded-full bg-white/10">
-                <Video className="size-8 text-white/60" />
+          <div className="relative h-full snap-start snap-always my-0">
+            <div className="relative mx-auto flex h-full w-full max-w-md flex-col items-center justify-center gap-4 rounded-2xl bg-background/80 backdrop-blur-sm p-6 text-center">
+              <div className="flex size-16 items-center justify-center rounded-full bg-muted">
+                <Video className="size-8 text-muted-foreground" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-white">You&apos;ve seen all reels</p>
-                <p className="mt-1 text-xs text-white/50">Upload a new reel to inspire others</p>
+                <p className="text-sm font-semibold text-foreground">You&apos;ve seen all reels</p>
+                <p className="mt-1 text-xs text-muted-foreground">Upload a new reel to inspire others</p>
               </div>
               <Button variant="gradient" size="sm" onClick={onUploadClick} className="gap-1.5">
                 <Plus className="size-4" />
@@ -295,7 +302,7 @@ export function ReelsFeed({ onUploadClick }: { onUploadClick?: () => void }) {
 
         {isFetching && (
           <div className="flex items-center justify-center py-4">
-            <Loader2 className="size-6 animate-spin text-white/50" />
+            <Loader2 className="size-6 animate-spin text-muted-foreground" />
           </div>
         )}
       </div>

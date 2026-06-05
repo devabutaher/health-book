@@ -31,7 +31,7 @@ export function BeforeAfterSection({
   };
 
   return (
-    <GlassCard variant="elevated" className="p-5">
+    <GlassCard variant="elevated" className="p-4 sm:p-5">
       <h2 className="mb-4 flex items-center gap-2 font-display text-base font-bold text-[var(--text-primary)]">
         <Camera className="size-4 text-brand-teal" />
         Before & After

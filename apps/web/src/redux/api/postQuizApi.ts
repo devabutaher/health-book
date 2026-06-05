@@ -18,7 +18,7 @@ export const postQuizApi = createApi({
         const patch = dispatch(
           postQuizApi.util.updateQueryData("getQuizResults", postId, (draft) => {
             if (!draft) return;
-            (draft as any).userAnswer = selectedIndex;
+            (draft as PostQuizResults & { userAnswer: number }).userAnswer = selectedIndex;
             draft.totalAnswers = (draft.totalAnswers ?? 0) + 1;
           }),
         );

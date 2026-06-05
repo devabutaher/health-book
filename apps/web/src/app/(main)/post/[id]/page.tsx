@@ -1,8 +1,8 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, MessageCircleX, Send, Trash2, AlertTriangle } from "lucide-react";
+import { MessageCircleX, Send, Trash2, AlertTriangle } from "lucide-react";
 import { ProtectedRoute } from "@/components/shared/ProtectedRoute";
 import { PostCard } from "@/components/post/PostCard";
 import { useGetPostQuery } from "@/redux/api/postApi";
@@ -38,7 +38,6 @@ import type { Comment } from "@/types/comment";
 
 export default function PostDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const router = useRouter();
   const user = useAppSelector((s) => s.auth.user);
   const { data, isLoading, error } = useGetPostQuery(id);
   const { data: commentsData, isLoading: commentsLoading } = useGetCommentsQuery(
@@ -115,12 +114,6 @@ export default function PostDetailPage() {
     return (
       <ProtectedRoute>
         <div className="mx-auto max-w-[600px]">
-          <Link
-            href="/feed"
-            className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <ArrowLeft className="size-4" /> Back to feed
-          </Link>
           <Alert variant="destructive">
             <MessageCircleX />
             <AlertTitle>Post not found</AlertTitle>
@@ -128,9 +121,6 @@ export default function PostDetailPage() {
               This post may have been deleted or you don&apos;t have access.
             </AlertDescription>
           </Alert>
-          <Button variant="outline" onClick={() => router.back()} className="mt-4">
-            Go back
-          </Button>
         </div>
       </ProtectedRoute>
     );
@@ -139,13 +129,6 @@ export default function PostDetailPage() {
   return (
     <ProtectedRoute>
       <div className="mx-auto max-w-[600px]">
-        <Link
-          href="/feed"
-          className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
-        >
-          <ArrowLeft className="size-4" /> Back to feed
-        </Link>
-
         <PostCard post={post} />
 
         <section className="mt-6 sm:mt-8">

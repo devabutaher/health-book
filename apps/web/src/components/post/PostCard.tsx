@@ -47,23 +47,25 @@ export const PostCard = memo(function PostCard({ post }: { post: Post }) {
 
   const handleCopy = async () => {
     if (!post.healthLog) return;
+    play("success");
     try {
       await copyLog(post.healthLog.id).unwrap();
       setCopied(true);
-      play("success");
       toast.success("Saved to your My Book");
     } catch {
+      play("error");
       toast.error("Failed to save health log");
     }
   };
 
   const handleSave = async () => {
+    play("success");
     try {
       await toggleSave(post.id).unwrap();
       setIsSaved(!isSaved);
-      play("success");
       toast.success(isSaved ? "Removed from saved" : "Post saved");
     } catch {
+      play("error");
       toast.error("Failed to save post");
     }
   };

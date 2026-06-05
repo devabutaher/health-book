@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { getTemplate } from "./templates";
+import { playSipSound, playDropSound } from "@/lib/sounds";
 
 export interface RoutineData {
   wakeTime: string;
@@ -38,10 +39,12 @@ export default function RoutineForm({
     waterIntake: 0,
     screenTime: 0,
   });
+  const [screenTimeStr, setScreenTimeStr] = useState("");
   const [mealInput, setMealInput] = useState({ type: "breakfast", description: "" });
 
   const addMeal = () => {
     if (!mealInput.description.trim()) return;
+    playDropSound();
     setData((d) => ({ ...d, meals: [...d.meals, { ...mealInput }] }));
     setMealInput({ type: "breakfast", description: "" });
   };
@@ -150,9 +153,10 @@ export default function RoutineForm({
                 type="button"
                 variant="ghost"
                 size="icon-sm"
-                onClick={() =>
-                  setData((d) => ({ ...d, waterIntake: Math.max(0, d.waterIntake - 1) }))
-                }
+                onClick={() => {
+                  playSipSound();
+                  setData((d) => ({ ...d, waterIntake: Math.max(0, d.waterIntake - 1) }));
+                }}
               >
                 -
               </Button>
@@ -164,7 +168,10 @@ export default function RoutineForm({
                 type="button"
                 variant="ghost"
                 size="icon-sm"
-                onClick={() => setData((d) => ({ ...d, waterIntake: d.waterIntake + 1 }))}
+                onClick={() => {
+                  playSipSound();
+                  setData((d) => ({ ...d, waterIntake: d.waterIntake + 1 }));
+                }}
               >
                 +
               </Button>
@@ -177,10 +184,15 @@ export default function RoutineForm({
               min="0"
               max="24"
               step="0.5"
-              value={data.screenTime}
-              onChange={(e) =>
-                setData((d) => ({ ...d, screenTime: parseFloat(e.target.value) || 0 }))
-              }
+              value={screenTimeStr}
+              placeholder="0"
+              onChange={(e) => {
+                setScreenTimeStr(e.target.value);
+                setData((d) => ({
+                  ...d,
+                  screenTime: e.target.value === "" ? 0 : parseFloat(e.target.value) || 0,
+                }));
+              }}
             />
           </Field>
         </div>
@@ -190,7 +202,7 @@ export default function RoutineForm({
         <Button variant="outline" onClick={onCancel}>
           Cancel
         </Button>
-        <Button onClick={() => onSubmit(data)} disabled={!data.wakeTime || !data.sleepTime}>
+        <Button onClick={() => { setScreenTimeStr(""); onSubmit(data); }} disabled={!data.wakeTime || !data.sleepTime}>
           <Moon className="size-4" /> Save Routine
         </Button>
       </div>

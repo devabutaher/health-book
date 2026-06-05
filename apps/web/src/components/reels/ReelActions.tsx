@@ -13,7 +13,7 @@ import {
 } from "@/redux/api/reelsApi";
 import { Heart, Loader2, MessageCircle, MoreVertical, Pencil, Share2, Trash2 } from "lucide-react";
 import { motion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 export function ReelActions({
@@ -41,20 +41,18 @@ export function ReelActions({
 }) {
   const [deleteReel, { isLoading: deleting }] = useDeleteReelMutation();
   const [updateReel, { isLoading: updating }] = useUpdateReelMutation();
-  const [liked, setLiked] = useState(initialLiked);
-  const [likesCount, setLikesCount] = useState(initialLikesCount);
+  const [optimisticLiked, setOptimisticLiked] = useState<boolean | null>(null);
+  const [optimisticLikesCount, setOptimisticLikesCount] = useState<number | null>(null);
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState(currentCaption || "");
 
-  useEffect(() => {
-    setLiked(initialLiked);
-    setLikesCount(initialLikesCount);
-  }, [initialLiked, initialLikesCount]);
+  const liked = optimisticLiked ?? initialLiked;
+  const likesCount = optimisticLikesCount ?? initialLikesCount;
 
   const handleLike = () => {
     const next = !liked;
-    setLiked(next);
-    setLikesCount((c) => (next ? c + 1 : c - 1));
+    setOptimisticLiked(next);
+    setOptimisticLikesCount((c) => (c ?? initialLikesCount) + (next ? 1 : -1));
     onLikeToggle?.();
   };
 

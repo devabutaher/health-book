@@ -8,6 +8,8 @@ import { GlassCard } from "@/components/ui/glass-card";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { getTemplate } from "./templates";
+import { playSipSound } from "@/lib/sounds";
+import { soundManager } from "@/lib/soundManager";
 
 const GOAL = 8;
 
@@ -32,14 +34,16 @@ export default function WaterWidget() {
   const add = async () => {
     const next = glasses + 1;
     setGlasses(next);
+    playSipSound();
     localStorage.setItem(
       "water_today",
       JSON.stringify({ date: new Date().toDateString(), count: next }),
     );
     if (next === 1 || next % 2 === 0) {
-      createLog({ type: "QUICK", data: { type: "water", glasses: next } }).catch(() =>
-        toast.error("Failed to log"),
-      );
+      createLog({ type: "QUICK", data: { type: "water", glasses: next } }).catch(() => {
+        soundManager.playError();
+        toast.error("Failed to log");
+      });
     }
   };
 

@@ -3,6 +3,7 @@ import { createApi } from "@reduxjs/toolkit/query/react";
 import { createBaseQuery } from "../baseQuery";
 import type { RootState } from "../store";
 import type { Comment } from "@/types/comment";
+import { soundManager } from "@/lib/soundManager";
 
 export const commentApi = createApi({
   reducerPath: "commentApi",
@@ -76,6 +77,7 @@ export const commentApi = createApi({
           }
         } catch {
           patch.undo();
+          soundManager.playError();
         }
       },
     }),
@@ -109,6 +111,7 @@ export const commentApi = createApi({
           await queryFulfilled;
         } catch {
           patch?.undo();
+          soundManager.playError();
         }
       },
     }),
@@ -140,6 +143,7 @@ export const commentApi = createApi({
           await queryFulfilled;
         } catch {
           patch?.undo();
+          soundManager.playError();
         }
       },
     }),

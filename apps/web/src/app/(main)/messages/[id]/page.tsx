@@ -22,8 +22,6 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   const { data: allConvos } = useGetConversationsQuery();
   const conv = allConvos?.find((c) => c.id === id);
   const isGroup = conv?.isGroup;
-  const isAdmin =
-    conv?.participants?.some((p) => p.userId === userId && p.role === "ADMIN") ?? false;
   const [newConvoOpen, setNewConvoOpen] = useState(false);
   const [newGroupOpen, setNewGroupOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -72,7 +70,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
             onBack={() => router.push("/messages")}
             onToggleSidebar={() => setSidebarOpen(true)}
           />
-          <ChatWindow conversationId={id} isGroup={isGroup} isAdmin={isAdmin} />
+          <ChatWindow conversationId={id} isGroup={isGroup} />
         </div>
       </GlassCard>
 

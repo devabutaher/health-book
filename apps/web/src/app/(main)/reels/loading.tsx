@@ -1,13 +1,25 @@
-import { PostSkeletonList } from "@/components/shared/PostSkeleton";
+import { Skeleton } from "@/components/ui/skeleton";
 
-export default function MainLoading() {
+export default function ReelsLoading() {
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6 pb-24 lg:pb-12">
-      <div className="lg:grid lg:grid-cols-[1fr_320px] lg:gap-6">
-        <div className="mx-auto max-w-[600px] lg:mx-0">
-          <div className="mb-6 h-12 w-48 animate-pulse rounded-xl bg-[var(--bg-overlay)]" />
-          <PostSkeletonList count={3} />
-        </div>
+    <div className="relative h-[calc(100dvh-11rem)] lg:h-[calc(100dvh-8rem)]">
+      <div className="flex h-full items-center justify-center gap-4 overflow-hidden px-4">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="relative h-[90%] w-72 shrink-0 overflow-hidden rounded-2xl">
+            <Skeleton className="size-full" />
+            <div className="absolute bottom-0 left-0 right-0 space-y-2 p-4">
+              <div className="flex items-center gap-2">
+                <Skeleton className="size-8 rounded-full" />
+                <Skeleton className="h-3 w-24" />
+              </div>
+              <Skeleton className="h-3 w-48" />
+              <Skeleton className="h-3 w-32" />
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="absolute top-6 right-4">
+        <Skeleton className="size-14 rounded-2xl" />
       </div>
     </div>
   );

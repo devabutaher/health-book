@@ -7,7 +7,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Video, X } from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-export function ReelUploadModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function ReelUploadModal({ open, onClose, onUploadComplete }: { open: boolean; onClose: () => void; onUploadComplete?: () => void }) {
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [caption, setCaption] = useState("");
   const [preview, setPreview] = useState("");
@@ -42,6 +42,7 @@ export function ReelUploadModal({ open, onClose }: { open: boolean; onClose: () 
       setVideoFile(null);
       setCaption("");
       setPreview("");
+      onUploadComplete?.();
       onClose();
     } catch {
       toast.dismiss(toastId);

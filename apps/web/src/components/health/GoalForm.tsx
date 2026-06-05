@@ -9,6 +9,7 @@ import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Progress } from "@/components/ui/progress";
 import { getTemplate } from "./templates";
+import { playCheckSound, playDropSound } from "@/lib/sounds";
 
 interface GoalItem {
   text: string;
@@ -41,13 +42,16 @@ export default function GoalForm({
 
   const addItem = () => {
     if (!text.trim()) return;
+    playDropSound();
     setItems((prev) => [...prev, { text: text.trim(), priority, completed: false }]);
     setText("");
   };
-  const toggleItem = (i: number) =>
+  const toggleItem = (i: number) => {
+    playCheckSound();
     setItems((prev) =>
       prev.map((item, idx) => (idx === i ? { ...item, completed: !item.completed } : item)),
     );
+  };
   const removeItem = (i: number) => setItems((prev) => prev.filter((_, idx) => idx !== i));
 
   const completed = items.filter((i) => i.completed).length;

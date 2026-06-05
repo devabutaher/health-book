@@ -53,15 +53,21 @@ export function FollowersModal({
   const isLoading = tab === "followers" ? followersLoading : followingLoading;
 
   const handleFollow = async (targetId: string, currentlyFollowing: boolean) => {
-    try {
-      if (currentlyFollowing) {
+    if (currentlyFollowing) {
+      try {
         await unfollow(targetId).unwrap();
-      } else {
-        await follow(targetId).unwrap();
-        play("follow");
+      } catch {
+        play("error");
+        toast.error("Failed to update follow status");
       }
-    } catch {
-      toast.error("Failed to update follow status");
+    } else {
+      play("follow");
+      try {
+        await follow(targetId).unwrap();
+      } catch {
+        play("error");
+        toast.error("Failed to update follow status");
+      }
     }
   };
 

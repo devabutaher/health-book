@@ -42,6 +42,7 @@ export function StoryCircle({
           className="absolute inset-0 h-full w-full object-cover"
           width={112}
           height={176}
+          priority
         />
       ) : (
         <div

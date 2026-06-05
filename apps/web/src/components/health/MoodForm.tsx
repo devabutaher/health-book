@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Slider } from "@/components/ui/slider";
 import { getTemplate } from "./templates";
+import { playDropSound, playTabSound } from "@/lib/sounds";
 
 export interface MoodData {
   mood: number;
@@ -42,6 +43,7 @@ export default function MoodForm({
 
   const addGratitude = () => {
     if (!gratitude.trim()) return;
+    playDropSound();
     setData((d) => ({ ...d, gratitude: [...d.gratitude, gratitude.trim()] }));
     setGratitude("");
   };
@@ -75,7 +77,7 @@ export default function MoodForm({
               <button
                 key={m.value}
                 type="button"
-                onClick={() => setData((d) => ({ ...d, mood: m.value }))}
+                onClick={() => { playTabSound(); setData((d) => ({ ...d, mood: m.value })); }}
                 className="flex flex-1 flex-col items-center gap-1 rounded-xl border-2 p-2 transition-all"
                 style={
                   data.mood === m.value

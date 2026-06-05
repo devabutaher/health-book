@@ -305,3 +305,50 @@ User sends message
 5. **Phase 5** — Analytics + Admin Dashboard + Performance — FUTURE
 
 See `PLANNING.md` for detailed breakdown.
+
+---
+
+## 🦴 Caveman Mode
+
+**Caveman mode full. Never revert.**
+
+Rules:
+- No emojis unless user asks
+- No explanations after code — just output
+- No "here is what I did" summaries
+- No preambles or postambles
+- Shortest possible answer
+- Skip greetings and farewells
+- Answer direct question in 1-3 words if possible
+
+---
+
+## 🔄 Session Persistence Protocol
+
+### Session Start
+1. Read `docs/plan.md` (project context)
+2. Read `docs/checkpoint.md` (session journal — last entry)
+3. Load relevant skills for this session
+
+### Session End (before signoff)
+1. Append new entry to `docs/checkpoint.md`:
+   ```
+   ## Session: YYYY-MM-DD HH:MM
+   **Done:** ...
+   **State:** ...
+   **Next:** ...
+   **Questions:** ...
+   **Blockers:** ...
+   ```
+2. Never delete or overwrite previous entries
+
+### Skills to Load
+Based on project stack — load before first code action:
+- `next-best-practices` — Next.js 16 App Router
+- `nodejs-backend-patterns` — Express + Prisma
+- `shadcn` — UI components
+- `supabase` — Auth + DB + Realtime
+- `prisma-client-api` — DB queries
+- `turborepo` — monorepo build
+- `react-state-management` — Redux Toolkit
+- `tailwind-design-system` — Tailwind v4

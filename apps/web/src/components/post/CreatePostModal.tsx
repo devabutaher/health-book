@@ -30,6 +30,7 @@ import { useAppSelector } from "@/hooks";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { CURATED_TAGS } from "@/lib/constants";
+import { useSound } from "@/hooks/useSound";
 import RecipeForm from "../health/RecipeForm";
 import type { CreatePostPayload } from "@/types/post";
 
@@ -52,6 +53,7 @@ export function CreatePostModal({
 }: CreatePostModalProps) {
   const token = useAppSelector((s) => s.auth.accessToken);
   const [create, { isLoading }] = useCreatePostMutation();
+  const { play } = useSound();
   const isEdit = !!initialPost;
   const [content, setContent] = useState("");
   const [templateMode, setTemplateMode] = useState<TemplateMode>(null);
@@ -168,6 +170,7 @@ export function CreatePostModal({
       if (isDraft) payload.isDraft = true;
       if (!isPostNow && scheduledAt) payload.scheduledAt = new Date(scheduledAt).toISOString();
 
+      play("post-publish");
       await create(payload).unwrap();
       toast.dismiss(toastId);
       toast.success(isScheduled ? "Post scheduled!" : isDraft ? "Draft saved!" : "Post shared!");
@@ -178,6 +181,7 @@ export function CreatePostModal({
       const msg =
         (err as { data?: { message?: string } })?.data?.message || "Failed to create post";
       toast.dismiss(toastId);
+      play("error");
       toast.error(msg);
     } finally {
       setUploading(false);

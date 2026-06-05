@@ -164,6 +164,7 @@ export function HighlightViewer({
                 className="max-h-full max-w-full object-contain"
                 width={400}
                 height={700}
+                priority
               />
             )}
           </div>

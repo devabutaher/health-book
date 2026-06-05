@@ -66,5 +66,17 @@ export function useSound() {
     [soundEnabled],
   );
 
-  return { play };
+  const playOptimistic = useCallback(
+    (key: SoundKey) => {
+      play(key);
+      return {
+        onError: () => {
+          play("error");
+        },
+      };
+    },
+    [play],
+  );
+
+  return { play, playOptimistic };
 }

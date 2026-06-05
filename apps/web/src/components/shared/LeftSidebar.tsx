@@ -1,7 +1,10 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { useAppSelector } from "@/hooks";
+import { cn } from "@/lib/utils";
+import { useGetDraftsQuery } from "@/redux/api/postApi";
 import {
   Bell,
   Bookmark,
@@ -17,11 +20,8 @@ import {
   Users,
   Video,
 } from "lucide-react";
-import { useAppSelector } from "@/hooks";
-import { useGetDraftsQuery } from "@/redux/api/postApi";
-import { cn } from "@/lib/utils";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 const sections: {
   label: string;
@@ -157,7 +157,7 @@ export default function LeftSidebar({
       )}
 
       <Link
-        href={`/${user?.username || ""}`}
+        href={`/${user?.username || "name"}`}
         prefetch={false}
         className="mt-2 flex items-center gap-3 rounded-2xl border border-[var(--glass-border)] bg-[var(--bg-overlay)] px-3 py-2.5 text-sm transition-colors hover:bg-[var(--bg-subtle)]"
       >
@@ -165,14 +165,14 @@ export default function LeftSidebar({
           <Avatar size="default" className="size-9">
             {user?.avatar ? <AvatarImage src={user.avatar} alt={user.name ?? ""} /> : null}
             <AvatarFallback className="bg-gradient-to-br from-brand-teal to-brand-green text-white font-semibold">
-              {user?.name?.charAt(0)?.toUpperCase() || "?"}
+              {user?.name?.charAt(0)?.toUpperCase() || ""}
             </AvatarFallback>
           </Avatar>
           <span className="absolute bottom-0 right-0 size-2.5 rounded-full border-2 border-[var(--bg-subtle)] bg-brand-green" />
         </div>
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold text-foreground">{user?.name}</p>
-          <p className="truncate text-xs text-muted-foreground">@{user?.username}</p>
+          <p className="truncate text-xs text-muted-foreground">@{user?.username || "username"}</p>
         </div>
       </Link>
     </aside>

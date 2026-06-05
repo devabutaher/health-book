@@ -248,20 +248,7 @@ export const messageService = {
     const message = await prisma.message.findUniqueOrThrow({ where: { id: messageId } })
 
     if (message.senderId !== userId) {
-      if (!deleteForAll) throw new AppError(403, "Not your message")
-
-      const participant = await prisma.conversationParticipant.findUnique({
-        where: { conversationId_userId: { conversationId: message.conversationId, userId } },
-      })
-      if (!participant || participant.role !== "ADMIN") {
-        throw new AppError(403, "Only admins can delete other members' messages")
-      }
-
-      await prisma.message.update({
-        where: { id: messageId },
-        data: { isDeleted: true },
-      })
-      return
+      throw new AppError(403, "Not your message")
     }
 
     if (deleteForAll) {

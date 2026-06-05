@@ -3,7 +3,7 @@
 import { cn } from "@/lib/utils";
 import { useCreateStoryMutation } from "@/redux/api/storiesApi";
 import { motion } from "framer-motion";
-import { Check, Eye, EyeOff, Minus, Plus, Send } from "lucide-react";
+import { Check, Eye, EyeOff, Minus, Plus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 

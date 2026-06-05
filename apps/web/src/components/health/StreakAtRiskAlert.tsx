@@ -1,10 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { AlertTriangle, Activity } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useGetHealthLogsQuery } from "@/redux/api/healthLogApi";
-import { Button } from "@/components/ui/button";
 
 export default function StreakAtRiskAlert() {
   const { data } = useGetHealthLogsQuery({ limit: 1 });
@@ -31,9 +30,6 @@ export default function StreakAtRiskAlert() {
           <span className="flex-1 font-medium">
             You haven&apos;t logged any health data today. Log something to keep your streak alive!
           </span>
-          <Button size="xs" variant="gradient">
-            <Activity /> Log now
-          </Button>
         </motion.div>
       )}
     </AnimatePresence>

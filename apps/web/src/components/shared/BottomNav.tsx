@@ -97,7 +97,7 @@ export default function BottomNav({ onCreatePost }: { onCreatePost?: () => void 
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex items-center justify-center rounded-2xl p-2.5 transition-all duration-200 active:scale-90",
+                  "flex items-center justify-center rounded-2xl p-3 transition-all duration-200 active:scale-90",
                   active
                     ? "bg-gradient-to-r from-brand-teal/20 to-brand-green/20 border border-brand-teal/20"
                     : "text-muted-foreground hover:text-foreground",
@@ -126,7 +126,7 @@ export default function BottomNav({ onCreatePost }: { onCreatePost?: () => void 
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex items-center justify-center rounded-2xl p-2.5 transition-all duration-200 active:scale-90",
+                  "flex items-center justify-center rounded-2xl p-3 transition-all duration-200 active:scale-90",
                   active
                     ? "bg-gradient-to-r from-brand-teal/20 to-brand-green/20 border border-brand-teal/20"
                     : "text-muted-foreground hover:text-foreground",
@@ -141,7 +141,7 @@ export default function BottomNav({ onCreatePost }: { onCreatePost?: () => void 
             onClick={() => setMenuOpen(true)}
             aria-label="Menu"
             className={cn(
-              "flex items-center justify-center rounded-2xl p-2.5 transition-all duration-200 active:scale-90",
+              "flex items-center justify-center rounded-2xl p-3 transition-all duration-200 active:scale-90",
               menuOpen
                 ? "bg-gradient-to-r from-brand-teal/20 to-brand-green/20 border border-brand-teal/20"
                 : "text-muted-foreground hover:text-foreground",

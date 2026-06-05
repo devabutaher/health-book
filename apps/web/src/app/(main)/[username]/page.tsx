@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { ProtectedRoute } from "@/components/shared/ProtectedRoute";
@@ -28,7 +28,6 @@ import { Empty, EmptyDescription, EmptyMedia, EmptyTitle } from "@/components/ui
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   AlertCircle,
-  ArrowLeft,
   Bookmark,
   FileText,
   Heart,
@@ -40,7 +39,6 @@ import type { HealthLog } from "@/redux/api/healthLogApi";
 
 export default function ProfilePage() {
   const { username } = useParams<{ username: string }>();
-  const router = useRouter();
   const currentUser = useAppSelector((s) => s.auth.user);
   const { data, isLoading, error } = useGetProfileQuery(username);
   const [editOpen, setEditOpen] = useState(false);
@@ -101,12 +99,6 @@ export default function ProfilePage() {
   return (
     <ProtectedRoute>
       <div className="mx-auto max-w-3xl">
-        <button
-          onClick={() => router.back()}
-          className="mb-3 inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
-        >
-          <ArrowLeft className="size-4" /> Back
-        </button>
         <ProfileHeader
           profile={profile}
           onEdit={isOwner ? () => setEditOpen(true) : undefined}

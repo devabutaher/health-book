@@ -3,6 +3,7 @@ import type { Conversation, Message } from "@/types/conversation";
 import { createApi } from "@reduxjs/toolkit/query/react";
 import { createBaseQuery } from "../baseQuery";
 import type { RootState } from "../store";
+import { soundManager } from "@/lib/soundManager";
 
 export const messagingApi = createApi({
   reducerPath: "messagingApi",
@@ -142,10 +143,10 @@ export const messagingApi = createApi({
         } catch {
           patchMessages.undo();
           patchConvList.undo();
+          soundManager.playError();
         }
       },
     }),
-
     deleteMessage: builder.mutation<
       void,
       { messageId: string; conversationId: string; forAll?: boolean }
@@ -166,10 +167,10 @@ export const messagingApi = createApi({
           await queryFulfilled;
         } catch {
           patch.undo();
+          soundManager.playError();
         }
       },
     }),
-
     toggleMute: builder.mutation<{ isMuted: boolean }, string>({
       query: (conversationId) => ({
         url: "/conversations/" + conversationId + "/mute",
@@ -188,10 +189,10 @@ export const messagingApi = createApi({
           await queryFulfilled;
         } catch {
           patch.undo();
+          soundManager.playError();
         }
       },
     }),
-
     markRead: builder.mutation<void, string>({
       query: (conversationId) => ({
         url: "/conversations/" + conversationId + "/read",

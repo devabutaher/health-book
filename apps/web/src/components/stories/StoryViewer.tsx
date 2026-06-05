@@ -150,10 +150,10 @@ export function StoryViewer({
     if (isInteractive) return;
     playAdvanceSound();
     if (storyIdx < stories.length - 1) {
-      setActiveIdx(([, d]) => [storyIdx + 1, 1]);
+      setActiveIdx(() => [storyIdx + 1, 1]);
       setStoryIdx((i) => i + 1);
     } else if (groupIdx < groups.length - 1) {
-      setActiveIdx(([, d]) => [0, 1]);
+      setActiveIdx(() => [0, 1]);
       setGroupIdx((i) => i + 1);
       setStoryIdx(0);
     } else {
@@ -176,6 +176,7 @@ export function StoryViewer({
 
     // Always reset on story change
     elapsedRef.current = 0;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setProgress(0);
 
     const duration = story.duration ? story.duration * 1000 : isText ? 8000 : 10000;
@@ -204,11 +205,11 @@ export function StoryViewer({
     }, 50);
 
     return () => clearInterval(id);
-  }, [story?.id, isText]);
+  }, [story, isText]);
 
   useEffect(() => {
     if (story && !story.viewed) viewStory(story.id);
-  }, [story?.id]);
+  }, [story, viewStory]);
 
   const goBack = useCallback(() => {
     if (storyIdx > 0) {
@@ -399,7 +400,6 @@ export function StoryViewer({
 
   return (
     <motion.div
-      data-story-viewer=""
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -519,6 +519,7 @@ export function StoryViewer({
                       className="h-full w-full object-contain"
                       width={400}
                       height={712}
+                      priority
                     />
                   ) : null}
                 </div>

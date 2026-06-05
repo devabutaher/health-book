@@ -16,7 +16,7 @@ import { useGetHealthStatsQuery } from "@/redux/api/healthLogApi";
 import { logout } from "@/redux/slices/authSlice";
 import { Activity, BookOpen, Flame, LogOut, Trophy, User as UserIcon, Users } from "lucide-react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useSyncExternalStore } from "react";
 import MessagesBell from "../messaging/MessagesBell";
 import NotificationBell from "../notifications/NotificationBell";
@@ -25,22 +25,7 @@ import RefreshButton from "./RefreshButton";
 import SearchBar from "./SearchBar";
 import { ThemeToggle } from "./ThemeToggle";
 
-const pageNames: Record<string, string> = {
-  "/feed": "Home",
-  "/explore": "Explore",
-  "/messages": "Messages",
-  "/groups": "Groups",
-  "/my-book": "My Book",
-  "/challenges": "Challenges",
-  "/reels": "Reels",
-  "/stories": "Stories",
-  "/saved": "Saved",
-  "/notifications": "Notifications",
-  "/settings": "Settings",
-};
-
 export default function TopHeader() {
-  const pathname = usePathname();
   const user = useAppSelector((s) => s.auth.user);
   const dispatch = useAppDispatch();
   const router = useRouter();
@@ -49,10 +34,6 @@ export default function TopHeader() {
   const stats = healthStats as { streak?: number; healthScore?: number } | undefined;
   const streak = stats?.streak ?? 0;
   const healthScore = stats?.healthScore ?? 0;
-
-  const currentPage = Object.entries(pageNames).find(
-    ([path]) => pathname === path || pathname.startsWith(path + "/"),
-  )?.[1];
 
   const myUserId = useAppSelector((s) => s.auth.user?.id);
   const online = useSyncExternalStore(
@@ -81,7 +62,7 @@ export default function TopHeader() {
       )}
     >
       <div className="relative flex h-14 items-center">
-        <div className="flex flex-shrink-0 items-center pl-4 lg:w-60">
+        <div className="flex shrink-0 items-center pl-4 lg:w-60">
           <Link href="/feed" className="flex items-center gap-3">
             <div className="relative flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-brand-teal to-brand-green shadow-lg shadow-brand-teal/20">
               <BookOpen className="size-5 text-white" />
@@ -159,7 +140,7 @@ export default function TopHeader() {
                         <AvatarImage src={user.avatar} alt={user.name ?? ""} />
                       ) : null}
                       <AvatarFallback className="bg-gradient-to-br from-brand-teal to-brand-green text-white font-semibold">
-                        {user?.name?.charAt(0)?.toUpperCase() || "?"}
+                        {user?.name?.charAt(0)?.toUpperCase() || ""}
                       </AvatarFallback>
                     </Avatar>
                     {online && (

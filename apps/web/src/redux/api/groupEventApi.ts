@@ -51,7 +51,7 @@ export const groupEventApi = createApi({
       onQueryStarted: async ({ groupId, eventId, status }, { dispatch, queryFulfilled }) => {
         const patch = dispatch(
           groupEventApi.util.updateQueryData("getGroupEvents", groupId, (draft) => {
-            const event = draft.find((e) => e.id === eventId) as any;
+            const event = draft.find((e) => e.id === eventId) as (GroupEvent & { attendeeCount?: number; attendees?: { status: string; userId?: string }[] }) | undefined;
             if (!event) return;
             if (status === "going") {
               event.attendeeCount = (event.attendeeCount || 0) + 1;
@@ -60,7 +60,7 @@ export const groupEventApi = createApi({
             } else if (status === "maybe") {
               event.attendeeCount = Math.max(0, (event.attendeeCount || 0) - 1);
               if (event.attendees) {
-                event.attendees = event.attendees.filter((a: any) => a.userId !== event.userId);
+                event.attendees = event.attendees.filter((a) => a.userId !== (event as GroupEvent & { userId?: string }).userId);
               }
             }
           }),

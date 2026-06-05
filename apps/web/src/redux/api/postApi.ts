@@ -3,6 +3,7 @@ import type { Post, PostFeedData } from "@/types/post";
 import { createApi } from "@reduxjs/toolkit/query/react";
 import { createBaseQuery } from "../baseQuery";
 import type { RootState } from "../store";
+import { soundManager } from "@/lib/soundManager";
 
 export const postApi = createApi({
   reducerPath: "postApi",
@@ -150,6 +151,7 @@ export const postApi = createApi({
           await queryFulfilled;
         } catch {
           patches.forEach((p) => (p as any).undo?.());
+          soundManager.playError();
         }
       },
     }),
@@ -193,6 +195,7 @@ export const postApi = createApi({
           await queryFulfilled;
         } catch {
           patches.forEach((p) => p.undo());
+          soundManager.playError();
         }
       },
     }),
@@ -250,6 +253,7 @@ export const postApi = createApi({
         } catch {
           patchPost.undo();
           patchFeed.undo();
+          soundManager.playError();
         }
       },
     }),
@@ -280,6 +284,7 @@ export const postApi = createApi({
         } catch {
           patchPost.undo();
           patchFeed.undo();
+          soundManager.playError();
         }
       },
     }),

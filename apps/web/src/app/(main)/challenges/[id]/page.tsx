@@ -31,7 +31,6 @@ import {
   Users,
   CalendarDays,
   CheckCircle,
-  ArrowLeft,
   LogOut,
   Trash2,
   Pencil,
@@ -137,40 +136,47 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
   );
 
   const handleJoin = async () => {
+    play("success");
     try {
       await joinChallenge(id).unwrap();
-      play("success");
       toast.success("Joined challenge!");
     } catch {
+      play("error");
       toast.error("Failed to join");
     }
   };
 
   const handleLeave = async () => {
+    play("success");
     try {
       await leaveChallenge(id).unwrap();
       toast.success("Left challenge");
       router.push("/challenges");
     } catch {
+      play("error");
       toast.error("Failed to leave");
     }
   };
 
   const handleDelete = async () => {
+    play("success");
     try {
       await deleteChallenge(id).unwrap();
       toast.success("Challenge deleted");
       router.push("/challenges");
     } catch {
+      play("error");
       toast.error("Failed to delete");
     }
   };
 
   const handleToggleSave = async () => {
+    play("success");
     try {
       await toggleSave(id).unwrap();
-      play("success");
-    } catch {}
+    } catch {
+      play("error");
+    }
   };
 
   const handleShare = async () => {
@@ -187,17 +193,10 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
   return (
     <ProtectedRoute>
       <div className="mx-auto max-w-4xl space-y-4 sm:space-y-6">
-        <button
-          onClick={() => router.back()}
-          className="mb-1 inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
-        >
-          <ArrowLeft className="size-4" /> Back
-        </button>
-
-        <GlassCard variant="elevated" className="p-6">
-          <div className="flex flex-wrap items-start justify-between gap-4">
+        <GlassCard variant="elevated" className="p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <h1 className="font-display text-xl font-bold text-[var(--text-primary)]">
                   {challenge.title}
                 </h1>
@@ -262,9 +261,9 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
               {!challenge.isJoined ? (
-                <Button variant="gradient" size="sm" onClick={handleJoin} disabled={joining}>
+                <Button variant="gradient" size="sm" onClick={handleJoin} disabled={joining} className="w-full sm:w-auto">
                   {joining ? "Joining..." : "Join Challenge"}
                 </Button>
               ) : (
@@ -277,7 +276,7 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
                 <button
                   onClick={handleLeave}
                   disabled={leaving}
-                  className="flex size-8 items-center justify-center rounded-xl text-[var(--text-muted)] hover:bg-red-500/10 hover:text-red-500 disabled:opacity-50"
+                  className="flex size-9 sm:size-8 items-center justify-center rounded-xl text-[var(--text-muted)] hover:bg-red-500/10 hover:text-red-500 disabled:opacity-50"
                   title="Leave challenge"
                 >
                   <LogOut className="size-4" />
@@ -287,7 +286,7 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
               <button
                 onClick={handleToggleSave}
                 className={cn(
-                  "flex size-8 items-center justify-center rounded-xl transition-colors",
+                  "flex size-9 sm:size-8 items-center justify-center rounded-xl transition-colors",
                   challenge.isSaved
                     ? "text-brand-teal hover:bg-brand-teal/10"
                     : "text-[var(--text-muted)] hover:bg-[var(--bg-overlay)]",
@@ -298,7 +297,7 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
               </button>
               <button
                 onClick={handleShare}
-                className="flex size-8 items-center justify-center rounded-xl text-[var(--text-muted)] hover:bg-[var(--bg-overlay)]"
+                className="flex size-9 sm:size-8 items-center justify-center rounded-xl text-[var(--text-muted)] hover:bg-[var(--bg-overlay)]"
                 title="Share"
               >
                 <Share2 className="size-4" />
@@ -308,7 +307,7 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
                 <div className="relative">
                   <button
                     onClick={() => setMenuOpen(!menuOpen)}
-                    className="flex size-8 items-center justify-center rounded-xl text-[var(--text-muted)] hover:bg-[var(--bg-overlay)]"
+                    className="flex size-9 sm:size-8 items-center justify-center rounded-xl text-[var(--text-muted)] hover:bg-[var(--bg-overlay)]"
                     title="More options"
                   >
                     <MoreHorizontal className="size-4" />
@@ -316,7 +315,7 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
                   {menuOpen && (
                     <>
                       <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-                      <div className="absolute right-0 top-full z-20 mt-1 w-40 overflow-hidden rounded-xl border border-[var(--border-default)] bg-[var(--bg-elevated)] py-1 shadow-[var(--shadow-lg)]">
+                      <div className="absolute right-0 sm:left-0 top-full z-20 mt-1 w-40 overflow-hidden rounded-xl border border-[var(--border-default)] bg-[var(--bg-elevated)] py-1 shadow-[var(--shadow-lg)]">
                         <button
                           onClick={() => {
                             setEditOpen(true);
@@ -395,7 +394,7 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
               variant="secondary"
               size="sm"
               onClick={() => setInviteOpen(true)}
-              className="gap-1.5"
+              className="gap-1.5 w-full sm:w-auto"
             >
               <UserPlus className="size-3.5" /> Invite Friends
             </Button>

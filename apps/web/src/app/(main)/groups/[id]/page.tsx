@@ -5,16 +5,42 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ArrowLeft,
-  X,
-  Plus,
-  Camera,
-  ImagePlus,
-  Users,
-  Calendar,
+  ArrowUpRight,
+  Ban,
+  BookOpen,
+  CalendarDays,
+  Crown,
+  Edit3,
+  Flag,
+  Info,
+  LogOut,
+  Mail,
+  MessageCircle,
+  MoreHorizontal,
   Shield,
+  Swords,
+  Trash2,
+  UserPlus,
+  Users,
+  Verified,
+  X,
+  Zap,
+  AlertCircle,
+  Settings,
   Lock,
+  Clock,
+  Puzzle,
+  Eye,
+  Sparkles,
+  Lightbulb,
+  Gavel,
+  ClipboardCheck,
+  Handshake,
+  Camera,
+  Calendar,
   Globe,
+  ImagePlus,
+  Plus,
 } from "lucide-react";
 import { ProtectedRoute } from "@/components/shared/ProtectedRoute";
 import { GroupHeader } from "@/components/groups/GroupHeader";
@@ -137,31 +163,35 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
   };
 
   const handleJoin = async () => {
+    play("success");
     try {
       await joinGroup(id).unwrap();
-      play("success");
       toast.success("Joined group!");
     } catch {
+      play("error");
       toast.error("Failed to join group");
     }
   };
 
   const handleRequestJoin = async () => {
+    play("success");
     try {
       await requestJoinGroup(id).unwrap();
-      play("success");
       toast.success("Join request sent!");
     } catch {
+      play("error");
       toast.error("Failed to send join request");
     }
   };
 
   const handleLeave = async () => {
+    play("success");
     try {
       await leaveGroup(id).unwrap();
       toast.success("Left group");
       setLeaveOpen(false);
     } catch (err) {
+      play("error");
       toast.error(
         (err as { data?: { message?: string } })?.data?.message || "Failed to leave group",
       );
@@ -284,12 +314,6 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
   return (
     <ProtectedRoute>
       <div className="mx-auto max-w-4xl space-y-4 sm:space-y-6">
-        <button
-          onClick={() => router.back()}
-          className="mb-1 inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
-        >
-          <ArrowLeft className="size-4" /> Back
-        </button>
         <GroupHeader
           group={group}
           isMember={group.isMember}

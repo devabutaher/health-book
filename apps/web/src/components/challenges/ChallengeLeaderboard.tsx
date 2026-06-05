@@ -11,7 +11,7 @@ export function ChallengeLeaderboard({
   isDuel?: boolean;
 }) {
   return (
-    <GlassCard variant="elevated" className="p-5">
+    <GlassCard variant="elevated" className="p-4 sm:p-5">
       <h2 className="mb-4 font-display text-base font-bold text-[var(--text-primary)]">
         {isDuel ? (
           <>

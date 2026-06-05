@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Slider } from "@/components/ui/slider";
 import { getTemplate } from "./templates";
+import { playTabSound } from "@/lib/sounds";
 
 export interface QuickData {
   note: string;
@@ -64,7 +65,7 @@ export default function QuickForm({
               <button
                 key={m.value}
                 type="button"
-                onClick={() => setMood(m.value)}
+                onClick={() => { playTabSound(); setMood(m.value); }}
                 className="flex flex-1 flex-col items-center gap-1 rounded-xl border-2 p-2 transition-all"
                 style={
                   mood === m.value
@@ -93,7 +94,7 @@ export default function QuickForm({
             max={10}
             step={1}
             value={[energy]}
-            onValueChange={([v]) => setEnergy(v)}
+            onValueChange={([v]) => { playTabSound(); setEnergy(v); }}
           />
           <div className="flex justify-between text-[10px] text-muted-foreground">
             <span>Drained</span>

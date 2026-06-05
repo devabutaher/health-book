@@ -14,7 +14,6 @@ import {
   Brain,
   Zap,
   Send,
-  X,
   Sparkles,
   Users,
   CheckCircle,
@@ -331,18 +330,16 @@ export default function MyBookPage() {
 
   const handleFormSubmit = async (formData: Record<string, unknown>) => {
     if (!activeTemplate) return;
+    play("post-publish");
     try {
       const result = await createLog({
         type: activeTemplate as "ROUTINE" | "GOAL" | "WORKOUT" | "MOOD" | "QUICK",
         data: formData,
         isPublic: false,
       }).unwrap();
-      play("post-publish");
       toast.success("Health log saved!");
       setActiveTemplate(null);
-      const newId =
-        (result as { data?: { id?: string }; log?: { id?: string } }).data?.id ||
-        (result as { log?: { id?: string } }).log?.id;
+      const newId = (result as { data: { id: string } }).data.id;
       if (newId) {
         setShareDialog({ logId: newId, type: activeTemplate });
         setShareContent(
@@ -350,24 +347,26 @@ export default function MyBookPage() {
         );
       }
     } catch {
+      play("error");
       toast.error("Failed to save health log");
     }
   };
 
   const handleShare = async () => {
     if (!shareDialog) return;
+    play("post-publish");
     try {
       await shareLog({ id: shareDialog.logId, content: shareContent }).unwrap();
-      play("post-publish");
       toast.success("Shared to feed!");
       setShareDialog(null);
     } catch {
+      play("error");
       toast.error("Failed to share");
     }
   };
 
   return (
-    <div className="mx-auto max-w-5xl space-y-4 sm:space-y-6 p-3 pb-20 sm:p-4 sm:pb-24 lg:p-6 lg:pb-6">
+    <div className="mx-auto max-w-5xl space-y-4 sm:space-y-6 p-3 sm:p-4 lg:p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="font-display text-3xl font-extrabold tracking-tight">
@@ -645,12 +644,12 @@ export default function MyBookPage() {
             />
             <div className="flex justify-end gap-2">
               <Button variant="ghost" onClick={() => setShareDialog(null)}>
-                <X /> Skip
+                Skip
               </Button>
               <Button
                 variant="gradient"
                 onClick={handleShare}
-                disabled={sharing || !shareContent.trim()}
+                disabled={sharing}
               >
                 {sharing ? <Spinner /> : <Send />}
                 {sharing ? "Sharing..." : "Share to Feed"}

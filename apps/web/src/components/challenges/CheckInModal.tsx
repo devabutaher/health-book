@@ -41,25 +41,7 @@ export function CheckInModal({
   const showValueInput = goalTarget != null && goalUnit != null;
 
   const handleImageUpload = () => {
-    const cloudinary = (window as unknown as { cloudinary?: { openUploadWidget: (...args: unknown[]) => { open: () => void } } }).cloudinary;
-    if (cloudinary?.openUploadWidget) {
-      const widget = cloudinary.openUploadWidget(
-        {
-          cloudName: process.env["NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME"],
-          uploadPreset: "healthbook",
-          multiple: false,
-          sources: ["local", "camera"],
-        },
-        (_error: unknown, result: { event: string; info: { secure_url: string } }) => {
-          if (result.event === "success") {
-            setMediaUrls((prev) => [...prev, result.info.secure_url]);
-          }
-        },
-      );
-      widget?.open();
-    } else {
-      fileInputRef.current?.click();
-    }
+    fileInputRef.current?.click();
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {

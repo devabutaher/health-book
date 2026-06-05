@@ -81,9 +81,10 @@ export function StoryMediaEditor({
   const [privacy, setPrivacy] = useState<"public" | "friends" | "private">("public");
   const [uploading, setUploading] = useState(false);
   const [localPreview, setLocalPreview] = useState<string>("");
-  const [mediaType, setMediaType] = useState<"image" | "video" | null>(null);
   const [duration, setDuration] = useState<number>(0);
   const [createdStoryId, setCreatedStoryId] = useState<string | null>(null);
+
+  const mediaType = file?.type.startsWith("video/") ? "video" : file ? "image" : null;
 
   const [createStory] = useCreateStoryMutation();
 
@@ -97,8 +98,8 @@ export function StoryMediaEditor({
 
   useEffect(() => {
     if (!file) return;
-    setMediaType(file.type.startsWith("video/") ? "video" : "image");
     const url = URL.createObjectURL(file);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLocalPreview(url);
     return () => URL.revokeObjectURL(url);
   }, [file]);

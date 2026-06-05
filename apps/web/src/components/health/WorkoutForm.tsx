@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { getTemplate } from "./templates";
+import { playDropSound } from "@/lib/sounds";
 
 interface Exercise {
   name: string;
@@ -59,11 +60,18 @@ export default function WorkoutForm({
     intensity: 5,
   });
   const [exercise, setExercise] = useState({ name: "", sets: 3, reps: 10 });
+  const [durStr, setDurStr] = useState("30");
+  const [calStr, setCalStr] = useState("0");
+  const [setsStr, setSetsStr] = useState("3");
+  const [repsStr, setRepsStr] = useState("10");
 
   const addExercise = () => {
     if (!exercise.name.trim()) return;
+    playDropSound();
     setData((d) => ({ ...d, exercises: [...d.exercises, { ...exercise }] }));
     setExercise({ name: "", sets: 3, reps: 10 });
+    setSetsStr("3");
+    setRepsStr("10");
   };
   const removeExercise = (i: number) =>
     setData((d) => ({ ...d, exercises: d.exercises.filter((_, idx) => idx !== i) }));
@@ -114,8 +122,15 @@ export default function WorkoutForm({
               type="number"
               min="1"
               max="480"
-              value={data.duration}
-              onChange={(e) => setData((d) => ({ ...d, duration: parseInt(e.target.value) || 0 }))}
+              value={durStr}
+              placeholder="30"
+              onChange={(e) => {
+                setDurStr(e.target.value);
+                setData((d) => ({
+                  ...d,
+                  duration: e.target.value === "" ? 0 : parseInt(e.target.value) || 0,
+                }));
+              }}
             />
           </Field>
           <Field>
@@ -123,8 +138,15 @@ export default function WorkoutForm({
             <Input
               type="number"
               min="0"
-              value={data.calories}
-              onChange={(e) => setData((d) => ({ ...d, calories: parseInt(e.target.value) || 0 }))}
+              value={calStr}
+              placeholder="0"
+              onChange={(e) => {
+                setCalStr(e.target.value);
+                setData((d) => ({
+                  ...d,
+                  calories: e.target.value === "" ? 0 : parseInt(e.target.value) || 0,
+                }));
+              }}
             />
           </Field>
         </div>
@@ -190,20 +212,28 @@ export default function WorkoutForm({
               type="number"
               min="1"
               placeholder="Sets"
-              value={exercise.sets}
-              onChange={(e) =>
-                setExercise((ex) => ({ ...ex, sets: parseInt(e.target.value) || 1 }))
-              }
+              value={setsStr}
+              onChange={(e) => {
+                setSetsStr(e.target.value);
+                setExercise((ex) => ({
+                  ...ex,
+                  sets: e.target.value === "" ? 0 : parseInt(e.target.value) || 1,
+                }));
+              }}
               className="w-16"
             />
             <Input
               type="number"
               min="1"
               placeholder="Reps"
-              value={exercise.reps}
-              onChange={(e) =>
-                setExercise((ex) => ({ ...ex, reps: parseInt(e.target.value) || 1 }))
-              }
+              value={repsStr}
+              onChange={(e) => {
+                setRepsStr(e.target.value);
+                setExercise((ex) => ({
+                  ...ex,
+                  reps: e.target.value === "" ? 0 : parseInt(e.target.value) || 1,
+                }));
+              }}
               className="w-16"
             />
             <Button
@@ -223,7 +253,7 @@ export default function WorkoutForm({
         <Button variant="outline" onClick={onCancel}>
           Cancel
         </Button>
-        <Button onClick={() => onSubmit(data)} disabled={!data.activityType}>
+        <Button onClick={() => { setDurStr("30"); setCalStr("0"); onSubmit(data); }} disabled={!data.activityType}>
           <Dumbbell /> Save Workout
         </Button>
       </div>

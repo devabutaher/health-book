@@ -52,7 +52,7 @@ export const storiesApi = createApi({
         success: boolean;
         data: { id: string } & Record<string, unknown>;
       }) => response.data,
-      onQueryStarted: async (_body, { dispatch, queryFulfilled }) => {
+      onQueryStarted: async (_body, { queryFulfilled }) => {
         try {
           await queryFulfilled;
         } catch {}

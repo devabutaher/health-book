@@ -59,18 +59,24 @@ export function ProfileHeader({
   };
 
   const handleFollow = async () => {
-    try {
-      if (isFollow) {
+    if (isFollow) {
+      try {
         await unfollow(profile.id).unwrap();
         setIsFollow(false);
-      } else {
+      } catch {
+        play("error");
+        toast.error("Failed to update follow status");
+      }
+    } else {
+      play("follow");
+      try {
         await follow(profile.id).unwrap();
         setIsFollow(true);
-        play("follow");
         toast.success(`Following ${profile.name}`);
+      } catch {
+        play("error");
+        toast.error("Failed to update follow status");
       }
-    } catch {
-      toast.error("Failed to update follow status");
     }
   };
 

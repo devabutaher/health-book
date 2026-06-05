@@ -17,7 +17,6 @@ export function StoryInputWithEmoji({
   onChange,
   placeholder,
   maxLength,
-  showEmoji,
   onEmojiToggle,
   focusColor = "focus:ring-brand-teal",
 }: StoryInputWithEmojiProps) {

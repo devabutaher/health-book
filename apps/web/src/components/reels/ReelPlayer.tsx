@@ -1,6 +1,6 @@
 "use client";
 
-import { Heart, Play, Volume2, VolumeX } from "lucide-react";
+import { Heart, Loader2, Play, Volume2, VolumeX } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -15,6 +15,7 @@ export function ReelPlayer({
 }) {
   const [playing, setPlaying] = useState(true);
   const [muted, setMuted] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [showHeart, setShowHeart] = useState(false);
   const [heartPosition, setHeartPosition] = useState({ x: 0, y: 0 });
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -87,7 +88,16 @@ export function ReelPlayer({
         playsInline
         muted={muted}
         onClick={handleClick}
+        onWaiting={() => setLoading(true)}
+        onCanPlay={() => setLoading(false)}
       />
+
+      {/* Loading spinner */}
+      {loading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+          <Loader2 className="size-8 animate-spin text-white/70" />
+        </div>
+      )}
 
       {/* Volume toggle */}
       <button

@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useCallback, useState } from "react";
-import { useRouter } from "next/navigation";
-import { ArrowLeft, BellOff, Check } from "lucide-react";
+import { BellOff, Check } from "lucide-react";
 import { motion } from "framer-motion";
 import { ProtectedRoute } from "@/components/shared/ProtectedRoute";
 import {
@@ -19,7 +18,7 @@ import { useFeedPagination } from "@/hooks/useFeedPagination";
 import { staggerContainer, staggerItem } from "@/lib/motion/variants";
 
 export default function NotificationsPage() {
-  const router = useRouter();
+
   const [cursor] = useState<string | undefined>(undefined);
   const { allPosts: allNotifications, loadMore, applyPage } = useFeedPagination<Notification>();
   const loaderRef = useRef<HTMLDivElement>(null);
@@ -58,12 +57,6 @@ export default function NotificationsPage() {
   return (
     <ProtectedRoute>
       <div className="mx-auto max-w-[600px]">
-        <button
-          onClick={() => router.back()}
-          className="mb-3 inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
-        >
-          <ArrowLeft className="size-4" /> Back
-        </button>
         <div className="mb-4 sm:mb-6 flex items-center justify-between">
           <div>
             <h1 className="font-display text-2xl font-extrabold tracking-tight">Notifications</h1>

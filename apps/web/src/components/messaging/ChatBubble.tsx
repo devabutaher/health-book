@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { memo, useState } from "react";
+import { memo, useState, useRef } from "react";
 import type { Message } from "@/types/conversation";
 import { cn, formatRelativeTime } from "@/lib/utils";
 import { useAppSelector } from "@/hooks";
@@ -62,13 +62,15 @@ function StoryReplyCard({ data }: { data: NonNullable<Message["storyReplyData"]>
   return null;
 }
 
-export const ChatBubble = memo(function ChatBubble({ message, isGroup, isAdmin }: { message: Message; isGroup?: boolean; isAdmin?: boolean }) {
+export const ChatBubble = memo(function ChatBubble({ message, isGroup }: { message: Message; isGroup?: boolean }) {
   const userId = useAppSelector((s) => s.auth.user?.id);
   const isOwn = message.senderId === userId;
-  const canDelete = isOwn || isAdmin;
+  const canDelete = isOwn;
   const [menuOpen, setMenuOpen] = useState(false);
+  const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null);
   const [deleteDialog, setDeleteDialog] = useState<"me" | "everyone" | null>(null);
   const [deleteMessage] = useDeleteMessageMutation();
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   if (message.isDeleted) return null;
 
@@ -83,8 +85,35 @@ export const ChatBubble = memo(function ChatBubble({ message, isGroup, isAdmin }
     setDeleteDialog(null);
   };
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    longPressTimer.current = setTimeout(() => {
+      const touch = e.touches[0];
+      setMenuPos({ x: touch.clientX, y: touch.clientY });
+      setMenuOpen(true);
+    }, 500);
+  };
+
+  const handleTouchEnd = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
+
+  const handleTouchMove = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
+
   return (
-    <div className={cn("group flex gap-2 px-4 py-1", isOwn ? "flex-row-reverse" : "flex-row")}>
+    <div
+      className={cn("group flex gap-2 px-4 py-1", isOwn ? "flex-row-reverse" : "flex-row")}
+      onTouchStart={canDelete ? handleTouchStart : undefined}
+      onTouchEnd={canDelete ? handleTouchEnd : undefined}
+      onTouchMove={canDelete ? handleTouchMove : undefined}
+    >
       {!isOwn && (
         <Avatar size="sm" className="mt-1 size-7 shrink-0">
           {message.sender?.avatar ? <AvatarImage src={message.sender.avatar} alt="" /> : null}
@@ -142,7 +171,7 @@ export const ChatBubble = memo(function ChatBubble({ message, isGroup, isAdmin }
           {canDelete && (
             <button
               onClick={() => setMenuOpen(!menuOpen)}
-              className="absolute -right-1 -top-1 flex size-7 items-center justify-center rounded-full bg-[var(--bg-elevated)] opacity-0 shadow-[var(--shadow-card)] transition-opacity group-hover:opacity-100 max-sm:opacity-100"
+              className="absolute -right-1 -top-1 flex size-7 items-center justify-center rounded-full bg-[var(--bg-elevated)] opacity-0 shadow-[var(--shadow-card)] transition-opacity group-hover:opacity-100"
             >
               <MoreVertical className="size-3.5 text-[var(--text-muted)]" />
             </button>
@@ -151,7 +180,10 @@ export const ChatBubble = memo(function ChatBubble({ message, isGroup, isAdmin }
           {menuOpen && (
             <>
               <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
-              <div className="absolute right-0 top-0 z-50 min-w-48 overflow-y-auto rounded-xl border border-[var(--border-default)] bg-[var(--bg-elevated)] shadow-[var(--shadow-lg)] max-h-60">
+              <div
+                className="fixed z-50 min-w-48 overflow-y-auto rounded-xl border border-[var(--border-default)] bg-[var(--bg-elevated)] shadow-[var(--shadow-lg)] max-h-60"
+                style={menuPos ? { left: menuPos.x, top: menuPos.y, transform: "translate(-50%, -50%)" } : undefined}
+              >
                 {isOwn && (
                   <button
                     onClick={() => {

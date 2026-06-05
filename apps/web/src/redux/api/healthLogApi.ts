@@ -1,5 +1,6 @@
 import { createApi } from "@reduxjs/toolkit/query/react";
 import { createBaseQuery } from "../baseQuery";
+import { soundManager } from "@/lib/soundManager";
 
 export interface HealthLog {
   id: string;
@@ -115,6 +116,7 @@ export const healthLogApi = createApi({
           await queryFulfilled;
         } catch {
           patch.undo();
+          soundManager.playError();
         }
       },
     }),
@@ -140,6 +142,7 @@ export const healthLogApi = createApi({
           await queryFulfilled;
         } catch {
           patches.forEach((p) => p.undo());
+          soundManager.playError();
         }
       },
     }),

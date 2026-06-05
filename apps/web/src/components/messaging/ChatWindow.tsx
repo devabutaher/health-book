@@ -16,11 +16,9 @@ import { ChevronUp } from "lucide-react";
 export function ChatWindow({
   conversationId,
   isGroup,
-  isAdmin,
 }: {
   conversationId: string;
   isGroup?: boolean;
-  isAdmin?: boolean;
 }) {
   const { data, isLoading, error, isError } = useGetConversationQuery({ id: conversationId });
   const [sendMessage] = useSendMessageMutation();
@@ -125,9 +123,9 @@ export function ChatWindow({
   }
 
   const handleSend = async (content: string, mediaUrl?: string) => {
+    play("message-send");
     try {
       await sendMessage({ conversationId, content: content || undefined, mediaUrl }).unwrap();
-      play("message-send");
     } catch {}
   };
 
@@ -151,7 +149,7 @@ export function ChatWindow({
           </div>
         )}
         {allMessages.map((msg) => (
-          <ChatBubble key={msg.id} message={msg} isGroup={isGroup} isAdmin={isAdmin} />
+          <ChatBubble key={msg.id} message={msg} isGroup={isGroup} />
         ))}
         {allMessages.length === 0 && (
           <div className="flex flex-col items-center justify-center py-20 text-center">

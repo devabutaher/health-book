@@ -163,7 +163,7 @@ export const healthLogService = {
         templateType: log.type,
         healthLogId: log.id,
         mediaUrls: [],
-        privacy: log.isPublic ? "PUBLIC" : "PRIVATE",
+        privacy: "PUBLIC",
       },
     });
   },
