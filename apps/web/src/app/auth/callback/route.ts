@@ -19,11 +19,22 @@ export async function GET(request: Request) {
       });
 
       if (apiRes.ok) {
+        const body = await apiRes.json();
         const response = NextResponse.redirect(`${origin}/feed`);
-        const setCookie = apiRes.headers.get("set-cookie");
-        if (setCookie) {
-          response.headers.set("set-cookie", setCookie);
-        }
+        response.cookies.set("hb_at", body.data.accessToken, {
+          httpOnly: false,
+          secure: true,
+          sameSite: "lax",
+          path: "/",
+          maxAge: 60,
+        });
+        response.cookies.set("hb_rt", body.data.refreshToken, {
+          httpOnly: false,
+          secure: true,
+          sameSite: "lax",
+          path: "/",
+          maxAge: 60,
+        });
         return response;
       }
     }

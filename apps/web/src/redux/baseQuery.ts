@@ -26,8 +26,11 @@ function acquireRefreshLock(
   if (!pendingRefresh) {
     pendingRefresh = (async () => {
       try {
+        const refreshToken = (api.getState() as RootState).auth.refreshToken;
+        if (!refreshToken) return false;
+
         const refreshResult = await refreshBaseQuery(
-          { url: "/refresh", method: "POST" },
+          { url: "/refresh", method: "POST", body: { refreshToken } },
           api,
           extraOptions,
         );
@@ -38,6 +41,7 @@ function acquireRefreshLock(
             setCredentials({
               user: data.data.user,
               accessToken: data.data.accessToken,
+              refreshToken: data.data.refreshToken,
             }),
           );
           return true;

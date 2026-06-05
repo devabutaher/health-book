@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Mail, ArrowRight, Sparkles } from "lucide-react";
 import { useLoginMutation } from "@/redux/api/authApi";
-import { useAppDispatch } from "@/hooks";
 import { setCredentials } from "@/redux/slices/authSlice";
+import { useAppDispatch } from "@/hooks";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -45,6 +45,7 @@ export default function LoginPage() {
         setCredentials({
           user: result.data.user,
           accessToken: result.data.accessToken,
+          refreshToken: result.data.refreshToken,
         }),
       );
       router.push("/feed");

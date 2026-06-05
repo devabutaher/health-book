@@ -41,6 +41,7 @@ export const authController = {
         success: true,
         data: {
           accessToken: result.accessToken,
+          refreshToken: result.refreshToken,
           user: result.user,
         },
       });
@@ -65,7 +66,7 @@ export const authController = {
 
   async refresh(req: Request, res: Response, next: NextFunction) {
     try {
-      const refreshToken = req.cookies?.["refresh_token"];
+      const refreshToken = req.body?.refreshToken || req.cookies?.["refresh_token"];
       if (!refreshToken) {
         return res.status(401).json({ success: false, message: "No refresh token" });
       }
@@ -123,6 +124,7 @@ export const authController = {
         success: true,
         data: {
           accessToken: result.accessToken,
+          refreshToken: result.refreshToken,
           user: result.user,
         },
       });
