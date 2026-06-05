@@ -241,7 +241,7 @@ export default function SettingsPage() {
                   variant="gradient"
                   size="sm"
                   onClick={handleSaveProfile}
-                  disabled={isUpdating || !name.trim()}
+                  disabled={isUpdating || !name.trim() || !gender}
                 >
                   {isUpdating ? "Saving..." : "Save changes"}
                 </Button>
