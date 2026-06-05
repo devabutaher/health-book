@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ChevronDown, ChevronUp, Pin, Send, Trash2, AlertTriangle } from "lucide-react";
+import { toast } from "sonner";
 import {
   useGetCommentsQuery,
   useCreateCommentMutation,
@@ -78,10 +79,15 @@ export function CommentSection({ postId, postUserId }: { postId: string; postUse
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!content.trim()) return;
-    await createComment({ postId, content: content.trim(), parentId: replyTo || undefined });
     play("reaction");
-    setContent("");
-    setReplyTo(null);
+    try {
+      await createComment({ postId, content: content.trim(), parentId: replyTo || undefined }).unwrap();
+      setContent("");
+      setReplyTo(null);
+    } catch {
+      play("error");
+      toast.error("Failed to post comment");
+    }
   };
 
   return (
