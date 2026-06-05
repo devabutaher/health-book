@@ -2,6 +2,7 @@
   "extends": "@healthbook/config-tsconfig/node.json",
   "compilerOptions": {
     "outDir": "dist",
+    "rootDir": "./src",
     "verbatimModuleSyntax": false,
     "paths": {
       "@healthbook/shared": ["../../packages/shared/src"],
