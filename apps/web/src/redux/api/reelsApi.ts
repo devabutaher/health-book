@@ -17,12 +17,14 @@ export const reelsApi = createApi({
         success: boolean;
         data: { reels: Reel[]; nextCursor: string | null; hasMore: boolean };
       }) => response.data,
+      keepUnusedDataFor: 300,
     }),
 
     getReel: builder.query<Reel, string>({
       query: (id) => `/${id}`,
       providesTags: (_result, _error, id) => [{ type: "Reel", id }],
       transformResponse: (response: { success: boolean; data: Reel }) => response.data,
+      keepUnusedDataFor: 300,
     }),
 
     createReel: builder.mutation<

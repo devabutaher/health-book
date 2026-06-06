@@ -20,7 +20,6 @@ export default function NotificationBell() {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const isAuthLoading = useAppSelector((s) => s.auth.isLoading);
   const { data: countData } = useGetUnreadCountQuery(undefined, {
-    pollingInterval: 30000,
     skip: isAuthLoading,
   });
   const { data: notifData, isFetching } = useGetNotificationsQuery({ limit: 5 }, { skip: !open });

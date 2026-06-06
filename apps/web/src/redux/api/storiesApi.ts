@@ -20,6 +20,7 @@ export const storiesApi = createApi({
       query: () => "/friends",
       providesTags: ["Stories"],
       transformResponse: (response: { success: boolean; data: StoryGroup[] }) => response.data,
+      keepUnusedDataFor: 300,
     }),
 
     createStory: builder.mutation<
@@ -113,6 +114,7 @@ export const storiesApi = createApi({
     getStoryInteractions: builder.query<StoryInteractions, string>({
       query: (storyId) => `/${storyId}/interactions`,
       transformResponse: (response: { success: boolean; data: StoryInteractions }) => response.data,
+      keepUnusedDataFor: 60,
     }),
 
     deleteStory: builder.mutation<void, string>({

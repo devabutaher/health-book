@@ -33,6 +33,7 @@ export const authApi = createApi({
     }),
     getMe: builder.query({
       query: () => "/me",
+      keepUnusedDataFor: 600,
     }),
     forgotPassword: builder.mutation({
       query: (body: { email: string }) => ({

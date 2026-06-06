@@ -29,10 +29,12 @@ export const notificationApi = createApi({
         return `/?${search.toString()}`;
       },
       providesTags: ["Notifications"],
+      keepUnusedDataFor: 300,
     }),
     getUnreadCount: builder.query({
       query: () => "/unread-count",
       providesTags: ["Notifications"],
+      keepUnusedDataFor: 600,
     }),
     markRead: builder.mutation({
       query: (id: string) => ({

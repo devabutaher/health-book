@@ -16,6 +16,7 @@ export const searchApi = createApi({
     searchUsers: builder.query<SearchUser[], string>({
       query: (q) => `/users?q=${encodeURIComponent(q)}`,
       transformResponse: (response: { success: boolean; users: SearchUser[] }) => response.users,
+      keepUnusedDataFor: 60,
     }),
     searchPosts: builder.query({
       query: ({ q, cursor }: { q: string; cursor?: string }) => {
@@ -24,15 +25,18 @@ export const searchApi = createApi({
         return `/posts?${params.toString()}`;
       },
       providesTags: ["Search"],
+      keepUnusedDataFor: 60,
     }),
     searchHashtags: builder.query({
       query: (q: string) => `/hashtags?q=${encodeURIComponent(q)}`,
       providesTags: ["Search"],
+      keepUnusedDataFor: 60,
     }),
     getRelatedHashtags: builder.query<{ tag: string; count: number }[], string>({
       query: (tag: string) => `/related-hashtags?tag=${encodeURIComponent(tag)}`,
       transformResponse: (response: { success: boolean; data: { tag: string; count: number }[] }) =>
         response.data,
+      keepUnusedDataFor: 600,
     }),
   }),
 });

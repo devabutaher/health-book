@@ -11,6 +11,7 @@ export const groupPollApi = createApi({
       query: (groupId) => `/${groupId}/polls`,
       providesTags: (_result, _error, groupId) => [{ type: "GroupPolls", id: groupId }],
       transformResponse: (response: { success: boolean; data: GroupPoll[] }) => response.data,
+      keepUnusedDataFor: 120,
     }),
     createPoll: builder.mutation<
       GroupPoll,

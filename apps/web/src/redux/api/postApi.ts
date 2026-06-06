@@ -13,6 +13,7 @@ export const postApi = createApi({
     getFeed: builder.query({
       query: ({ cursor }: { cursor?: string } = {}) => `/feed${cursor ? `?cursor=${cursor}` : ""}`,
       providesTags: ["Feed"],
+      keepUnusedDataFor: 300,
     }),
     getUserPosts: builder.query({
       query: ({ userId, cursor }: { userId: string; cursor?: string }) =>
@@ -101,6 +102,7 @@ export const postApi = createApi({
       query: ({ groupId, cursor }) => `/group/${groupId}${cursor ? `?cursor=${cursor}` : ""}`,
       providesTags: (_result, _error, { groupId }) => [{ type: "Posts", id: `group-${groupId}` }],
       transformResponse: (response: { success: boolean; data: PostFeedData }) => response.data,
+      keepUnusedDataFor: 300,
     }),
     updatePost: builder.mutation({
       query: ({

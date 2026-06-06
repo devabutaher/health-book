@@ -14,6 +14,7 @@ export const commentApi = createApi({
       query: ({ postId, cursor }: { postId: string; cursor?: string }) =>
         `/${postId}${cursor ? `?cursor=${cursor}` : ""}`,
       providesTags: (_result, _error, { postId }) => [{ type: "Comments", id: postId }],
+      keepUnusedDataFor: 120,
     }),
     createComment: builder.mutation({
       query: ({
@@ -32,7 +33,6 @@ export const commentApi = createApi({
       invalidatesTags: (_result, _error, { postId }) => [
         { type: "Post", id: postId },
         { type: "Comments", id: postId },
-        "Feed",
       ],
       onQueryStarted: async (
         { postId, content, parentId },
@@ -87,7 +87,7 @@ export const commentApi = createApi({
         method: "PUT",
         body: { content },
       }),
-      invalidatesTags: ["Comments", "Feed"],
+      invalidatesTags: (_result, _error, { commentId }) => [{ type: "Comments", id: commentId }],
       onQueryStarted: async ({ commentId, content }, { dispatch, queryFulfilled, getState }) => {
         const state = getState() as RootState;
         const queries = (state as any).commentApi?.queries ?? {};
@@ -120,7 +120,7 @@ export const commentApi = createApi({
         url: `/${commentId}`,
         method: "DELETE",
       }),
-      invalidatesTags: ["Comments", "Feed"],
+      invalidatesTags: ["Comments"],
       onQueryStarted: async (commentId, { dispatch, queryFulfilled, getState }) => {
         const state = getState() as RootState;
         const queries = (state as any).commentApi?.queries ?? {};

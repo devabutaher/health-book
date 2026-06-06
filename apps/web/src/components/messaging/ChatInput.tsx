@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import NextImage from "next/image";
 import { Image as ImageIcon, Send, X, Loader2 } from "lucide-react";
 import { useAppSelector } from "@/hooks";
+import { toast } from "sonner";
 
 export function ChatInput({ onSend }: { onSend: (content: string, mediaUrl?: string) => void }) {
   const [text, setText] = useState("");
@@ -59,6 +60,7 @@ export function ChatInput({ onSend }: { onSend: (content: string, mediaUrl?: str
       setMediaPreview(json.data.url);
     } catch {
       setMediaPreview(null);
+      toast.error("Failed to upload image");
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";

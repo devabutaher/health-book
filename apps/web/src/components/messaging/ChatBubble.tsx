@@ -18,6 +18,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 
 function StoryReplyCard({ data }: { data: NonNullable<Message["storyReplyData"]> }) {
   const isQuiz = data.storyType === "quiz";
@@ -80,8 +81,12 @@ export const ChatBubble = memo(function ChatBubble({ message, isGroup }: { messa
   const hasContent = message.content || message.mediaUrl || message.sharedPostId || isStoryReply;
   if (!hasContent) return null;
 
-  const handleDelete = (forAll: boolean) => {
-    deleteMessage({ messageId: message.id, conversationId: message.conversationId, forAll });
+  const handleDelete = async (forAll: boolean) => {
+    try {
+      await deleteMessage({ messageId: message.id, conversationId: message.conversationId, forAll }).unwrap();
+    } catch {
+      toast.error("Failed to delete message");
+    }
     setDeleteDialog(null);
   };
 

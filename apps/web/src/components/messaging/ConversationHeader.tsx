@@ -49,7 +49,7 @@ export function ConversationHeader({
   onBack: () => void;
   onToggleSidebar?: () => void;
 }) {
-  const { data: conversations, isLoading } = useGetConversationsQuery();
+  const { data: conversations, isLoading, isFetching } = useGetConversationsQuery();
   const [toggleMute] = useToggleMuteMutation();
   const [deleteConversation] = useDeleteConversationMutation();
   const [clearMessages] = useClearMessagesMutation();
@@ -131,10 +131,15 @@ export function ConversationHeader({
 
   return (
     <div className="relative flex items-center gap-3 border-b border-[var(--border-default)] bg-[var(--bg-elevated)] px-4 py-3">
-      {isLoading ? (
+      {isLoading || (!conv && isFetching) ? (
         <div className="flex items-center gap-3 flex-1">
           <div className="size-9 animate-pulse rounded-full bg-[var(--bg-subtle)]" />
           <div className="h-4 w-32 animate-pulse rounded bg-[var(--bg-subtle)]" />
+        </div>
+      ) : !conv ? (
+        <div className="flex items-center gap-3 flex-1">
+          <div className="size-9 rounded-full bg-[var(--bg-subtle)]" />
+          <p className="text-sm text-[var(--text-muted)]">Conversation</p>
         </div>
       ) : (
         <>

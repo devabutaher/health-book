@@ -12,7 +12,6 @@ export default function MessagesBell() {
   const pathname = usePathname();
   const isAuthLoading = useAppSelector((s) => s.auth.isLoading);
   const { data } = useGetUnreadCountQuery(undefined, {
-    pollingInterval: 30000,
     skip: isAuthLoading,
   });
 

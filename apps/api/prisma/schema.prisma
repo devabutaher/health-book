@@ -164,6 +164,7 @@ model Follow {
   following User @relation("Following", fields: [followingId], references: [id], onDelete: Cascade)
 
   @@id([followerId, followingId])
+  @@index([followingId])
   @@map("follows")
 }
 
@@ -273,6 +274,8 @@ model Comment {
   parent  Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
   replies Comment[] @relation("CommentReplies")
 
+  @@index([postId])
+  @@index([userId])
   @@map("comments")
 }
 
@@ -285,6 +288,7 @@ model SavedPost {
   post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   @@id([userId, postId])
+  @@index([userId])
   @@map("saved_posts")
 }
 
@@ -438,6 +442,7 @@ model Group {
   polls     GroupPoll[]
   events    GroupEvent[]
 
+  @@index([type])
   @@map("groups")
 }
 
@@ -451,6 +456,7 @@ model GroupMember {
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([groupId, userId])
+  @@index([role])
   @@map("group_members")
 }
 
@@ -864,6 +870,7 @@ model Reel {
   comments ReelComment[]
 
   @@index([createdAt(sort: Desc)])
+  @@index([userId])
   @@map("reels")
 }
 

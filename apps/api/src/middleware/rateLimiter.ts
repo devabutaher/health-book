@@ -4,7 +4,7 @@ const isDev = process.env["NODE_ENV"] !== "production" || process.env["RENDER"] 
 
 export const rateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: isDev ? 1000 : 300,
+  max: isDev ? 1000 : 1000,
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, message: "Too many requests, slow down." },

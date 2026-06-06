@@ -12,6 +12,7 @@ import { useSound } from "@/hooks/useSound";
 import { ChatBubble } from "./ChatBubble";
 import { ChatInput } from "./ChatInput";
 import { ChevronUp } from "lucide-react";
+import { toast } from "sonner";
 
 export function ChatWindow({
   conversationId,
@@ -126,7 +127,9 @@ export function ChatWindow({
     play("message-send");
     try {
       await sendMessage({ conversationId, content: content || undefined, mediaUrl }).unwrap();
-    } catch {}
+    } catch {
+      toast.error("Failed to send message");
+    }
   };
 
   return (

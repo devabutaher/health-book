@@ -2,6 +2,7 @@ import { fetchBaseQuery, type BaseQueryFn, type BaseQueryApi } from "@reduxjs/to
 import type { RootState } from "./store";
 import type { FetchArgs, FetchBaseQueryError } from "@reduxjs/toolkit/query";
 import { setCredentials, logout, type AuthUser } from "./slices/authSlice";
+import { toast } from "sonner";
 
 interface RefreshResponse {
   success: boolean;
@@ -53,8 +54,6 @@ function acquireRefreshLock(
   if (!pendingRefresh) {
     pendingRefresh = (async () => {
       try {
-        const ok = await attemptRefresh(api, extraOptions);
-        if (ok) return true;
         return await attemptRefresh(api, extraOptions);
       } catch {
         return false;
@@ -95,6 +94,9 @@ export function createBaseQuery(baseUrl: string) {
       if (refreshed) {
         result = await apiBaseQuery(args, api, extraOptions);
       } else {
+        if (typeof window !== "undefined" && !window.location.href.includes("/login")) {
+          toast.error("Session expired. Please login again.");
+        }
         api.dispatch(logout());
       }
     }

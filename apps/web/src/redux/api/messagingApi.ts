@@ -14,12 +14,14 @@ export const messagingApi = createApi({
       query: () => "/conversations",
       providesTags: ["Conversations"],
       transformResponse: (response: { success: boolean; data: Conversation[] }) => response.data,
+      keepUnusedDataFor: 300,
     }),
 
     getUnreadCount: builder.query<{ count: number }, void>({
       query: () => "/unread-count",
       providesTags: ["MessageUnread"],
       transformResponse: (response: { success: boolean; data: { count: number } }) => response.data,
+      keepUnusedDataFor: 600,
     }),
 
     createConversation: builder.mutation<
@@ -57,6 +59,7 @@ export const messagingApi = createApi({
         success: boolean;
         data: { messages: Message[]; nextCursor: string | null; hasMore: boolean };
       }) => response.data,
+      keepUnusedDataFor: 60,
     }),
 
     sendMessage: builder.mutation<

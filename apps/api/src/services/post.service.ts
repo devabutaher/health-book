@@ -305,12 +305,14 @@ export const postService = {
     const following = await prisma.follow.findMany({
       where: { followerId: userId },
       select: { followingId: true },
+      take: 1000,
     });
     const followingIds = following.map((f) => f.followingId);
 
     const followers = await prisma.follow.findMany({
       where: { followingId: userId },
       select: { followerId: true },
+      take: 1000,
     });
     const followerIds = followers.map((f) => f.followerId);
 
