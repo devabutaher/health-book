@@ -1,6 +1,7 @@
 import { prisma } from "../lib/prisma";
 import { Prisma } from "../../generated/prisma";
 import { AppError } from "../utils/AppError";
+import { deleteImage, deleteVideo, extractPublicId } from "./cloudinary";
 import type { PostPrivacy, ReactionType, HealthLogType } from "../../generated/prisma";
 import { notificationService } from "./notification.service";
 import { notifyMentions } from "../utils/mentions";
@@ -163,6 +164,7 @@ export const postService = {
     data: {
       content?: string;
       privacy?: PostPrivacy;
+      mediaUrls?: string[];
       templateType?: string;
       templateData?: Record<string, unknown>;
       isDraft?: boolean;
@@ -175,6 +177,18 @@ export const postService = {
     }
     if (data.templateData !== undefined) {
       updateData.templateData = (data.templateData ?? Prisma.JsonNull) as Prisma.InputJsonValue;
+    }
+    if (data.mediaUrls !== undefined) {
+      const existing = await prisma.post.findUnique({
+        where: { id: postId },
+        select: { mediaUrls: true },
+      });
+      if (existing) {
+        for (const url of existing.mediaUrls) {
+          const publicId = extractPublicId(url);
+          if (publicId) deleteImage(publicId).catch(() => {});
+        }
+      }
     }
     const post = await prisma.post.update({
       where: { id: postId },
@@ -195,6 +209,15 @@ export const postService = {
   },
 
   async delete(postId: string, userId: string) {
+    const post = await prisma.post.findUnique({
+      where: { id: postId },
+      select: { mediaUrls: true, userId: true },
+    });
+    if (!post || post.userId !== userId) throw new AppError(404, "Post not found");
+    for (const url of post.mediaUrls) {
+      const publicId = extractPublicId(url);
+      if (publicId) deleteImage(publicId).catch(() => {});
+    }
     await prisma.post.delete({ where: { id: postId } });
   },
 

@@ -33,6 +33,20 @@ export async function uploadVideo(
   };
 }
 
+export function extractPublicId(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    const segments = parsed.pathname.split("/");
+    const uploadIdx = segments.indexOf("upload");
+    if (uploadIdx === -1) return null;
+    const startIdx = segments[uploadIdx + 1]?.startsWith("v") ? uploadIdx + 2 : uploadIdx + 1;
+    const publicId = segments.slice(startIdx).join("/");
+    return publicId.replace(/\.[^.]+$/, "");
+  } catch {
+    return null;
+  }
+}
+
 export async function deleteImage(publicId: string): Promise<void> {
   await cloudinary.uploader.destroy(publicId);
 }

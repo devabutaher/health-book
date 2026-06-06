@@ -1,5 +1,6 @@
 import { prisma } from "../lib/prisma";
 import { AppError } from "../utils/AppError";
+import { deleteImage, extractPublicId } from "./cloudinary";
 import type { GroupType, GroupRole } from "../../generated/prisma";
 
 export const groupService = {
@@ -185,6 +186,20 @@ export const groupService = {
     if (membership.role !== "ADMIN")
       throw new AppError(403, "Only group admins can update the group");
 
+    const existing = await prisma.group.findUnique({
+      where: { id: groupId },
+      select: { avatar: true, coverPhoto: true },
+    });
+
+    if (data.avatar && existing?.avatar && data.avatar !== existing.avatar) {
+      const publicId = extractPublicId(existing.avatar);
+      if (publicId) deleteImage(publicId).catch(() => {});
+    }
+    if (data.coverPhoto && existing?.coverPhoto && data.coverPhoto !== existing.coverPhoto) {
+      const publicId = extractPublicId(existing.coverPhoto);
+      if (publicId) deleteImage(publicId).catch(() => {});
+    }
+
     return prisma.group.update({
       where: { id: groupId },
       data,
@@ -197,6 +212,19 @@ export const groupService = {
     });
     if (membership.role !== "ADMIN")
       throw new AppError(403, "Only group admins can delete the group");
+
+    const group = await prisma.group.findUnique({
+      where: { id: groupId },
+      select: { avatar: true, coverPhoto: true },
+    });
+    if (group?.avatar) {
+      const publicId = extractPublicId(group.avatar);
+      if (publicId) deleteImage(publicId).catch(() => {});
+    }
+    if (group?.coverPhoto) {
+      const publicId = extractPublicId(group.coverPhoto);
+      if (publicId) deleteImage(publicId).catch(() => {});
+    }
 
     await prisma.group.delete({ where: { id: groupId } });
   },

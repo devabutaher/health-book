@@ -102,6 +102,7 @@ export const postApi = createApi({
         id: string;
         content?: string;
         privacy?: string;
+        mediaUrls?: string[];
         templateType?: string;
         templateData?: Record<string, unknown>;
         healthLogId?: string;

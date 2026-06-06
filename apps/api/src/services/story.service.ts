@@ -1,5 +1,6 @@
 import { prisma } from "../lib/prisma";
 import { AppError } from "../utils/AppError";
+import { deleteImage, extractPublicId } from "./cloudinary";
 
 export const storyService = {
   async create(data: {
@@ -199,11 +200,24 @@ export const storyService = {
   async delete(storyId: string, userId: string) {
     const story = await prisma.story.findUniqueOrThrow({ where: { id: storyId } });
     if (story.userId !== userId) throw new AppError(403, "Not your story");
-
+    if (story.mediaUrl) {
+      const publicId = extractPublicId(story.mediaUrl);
+      if (publicId) deleteImage(publicId).catch(() => {});
+    }
     await prisma.story.delete({ where: { id: storyId } });
   },
 
   async cleanupExpired() {
+    const expired = await prisma.story.findMany({
+      where: { expiresAt: { lt: new Date() } },
+      select: { mediaUrl: true },
+    });
+    for (const story of expired) {
+      if (story.mediaUrl) {
+        const publicId = extractPublicId(story.mediaUrl);
+        if (publicId) deleteImage(publicId).catch(() => {});
+      }
+    }
     await prisma.story.deleteMany({
       where: { expiresAt: { lt: new Date() } },
     });

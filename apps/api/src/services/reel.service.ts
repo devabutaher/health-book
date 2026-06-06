@@ -1,5 +1,6 @@
 import { prisma } from "../lib/prisma";
 import { AppError } from "../utils/AppError";
+import { deleteImage, deleteVideo, extractPublicId } from "./cloudinary";
 
 export const reelService = {
   async browse(cursor?: string, limit = 10, userId?: string) {
@@ -152,6 +153,14 @@ export const reelService = {
   async delete(reelId: string, userId: string) {
     const reel = await prisma.reel.findUniqueOrThrow({ where: { id: reelId } });
     if (reel.userId !== userId) throw new AppError(403, "Not your reel");
+    if (reel.videoUrl) {
+      const publicId = extractPublicId(reel.videoUrl);
+      if (publicId) deleteVideo(publicId).catch(() => {});
+    }
+    if (reel.thumbnailUrl) {
+      const publicId = extractPublicId(reel.thumbnailUrl);
+      if (publicId) deleteImage(publicId).catch(() => {});
+    }
     await prisma.reel.delete({ where: { id: reelId } });
   },
 };

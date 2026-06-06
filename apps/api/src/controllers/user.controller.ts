@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { updateProfileSchema } from "../utils/validators";
 import { userService } from "../services/user.service";
-import { uploadImage } from "../services/cloudinary";
+import { uploadImage, deleteImage, extractPublicId } from "../services/cloudinary";
 
 interface MulterFile {
   fieldname: string;
@@ -49,7 +49,14 @@ export const userController = {
       if (!req.file) {
         return res.status(400).json({ success: false, message: "No file provided" });
       }
-      const url = await uploadImage(req.file.path, "avatars");
+      const [existing, url] = await Promise.all([
+        userService.getAvatar(req.user!.id),
+        uploadImage(req.file.path, "avatars"),
+      ]);
+      if (existing) {
+        const publicId = extractPublicId(existing);
+        if (publicId) deleteImage(publicId).catch(() => {});
+      }
       const user = await userService.updateAvatar(req.user!.id, url);
       res.json({ success: true, data: user });
     } catch (err) {
@@ -62,7 +69,14 @@ export const userController = {
       if (!req.file) {
         return res.status(400).json({ success: false, message: "No file provided" });
       }
-      const url = await uploadImage(req.file.path, "covers");
+      const [existing, url] = await Promise.all([
+        userService.getCover(req.user!.id),
+        uploadImage(req.file.path, "covers"),
+      ]);
+      if (existing) {
+        const publicId = extractPublicId(existing);
+        if (publicId) deleteImage(publicId).catch(() => {});
+      }
       const user = await userService.updateCover(req.user!.id, url);
       res.json({ success: true, data: user });
     } catch (err) {

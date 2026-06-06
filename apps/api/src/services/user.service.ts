@@ -91,6 +91,22 @@ export const userService = {
     });
   },
 
+  async getAvatar(userId: string) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { avatar: true },
+    });
+    return user?.avatar;
+  },
+
+  async getCover(userId: string) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { coverPhoto: true },
+    });
+    return user?.coverPhoto;
+  },
+
   async updateAvatar(userId: string, avatar: string) {
     return prisma.user.update({
       where: { id: userId },

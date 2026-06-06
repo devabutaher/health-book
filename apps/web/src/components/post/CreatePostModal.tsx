@@ -25,7 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Field, FieldGroup, FieldLabel, FieldDescription } from "@/components/ui/field";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { useCreatePostMutation, uploadPostImage } from "@/redux/api/postApi";
+import { useCreatePostMutation, useUpdatePostMutation, uploadPostImage } from "@/redux/api/postApi";
 import { useAppSelector } from "@/hooks";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -53,6 +53,7 @@ export function CreatePostModal({
 }: CreatePostModalProps) {
   const token = useAppSelector((s) => s.auth.accessToken);
   const [create, { isLoading }] = useCreatePostMutation();
+  const [updatePost] = useUpdatePostMutation();
   const { play } = useSound();
   const isEdit = !!initialPost;
   const [content, setContent] = useState("");
@@ -119,12 +120,6 @@ export function CreatePostModal({
     setUploading(true);
     const toastId = toast.loading("Uploading post...");
     try {
-      const mediaUrls: string[] = [];
-      for (const file of files) {
-        const url = await uploadPostImage(file, token!);
-        mediaUrls.push(url);
-      }
-
       const payload: CreatePostPayload & { groupId?: string } = {
         content:
           content.trim() ||
@@ -136,7 +131,7 @@ export function CreatePostModal({
                 ? "Shared a poll"
                 : "Shared a health log"),
         privacy,
-        mediaUrls,
+        mediaUrls: [],
       };
 
       if (groupId) payload.groupId = groupId;
@@ -170,8 +165,24 @@ export function CreatePostModal({
       if (isDraft) payload.isDraft = true;
       if (!isPostNow && scheduledAt) payload.scheduledAt = new Date(scheduledAt).toISOString();
 
+      // Step 1 — backend validates & creates post (no media)
+      const result = await create(payload).unwrap();
+      const postId = result?.data?.id;
+      if (!postId) throw new Error("No post ID returned");
+
+      // Step 2 — upload images to Cloudinary (only after validation passed)
+      const mediaUrls: string[] = [];
+      for (const file of files) {
+        const url = await uploadPostImage(file, token!);
+        mediaUrls.push(url);
+      }
+
+      // Step 3 — attach media URLs to the post
+      if (mediaUrls.length > 0) {
+        await updatePost({ id: postId, mediaUrls }).unwrap();
+      }
+
       play("post-publish");
-      await create(payload).unwrap();
       toast.dismiss(toastId);
       toast.success(isScheduled ? "Post scheduled!" : isDraft ? "Draft saved!" : "Post shared!");
       resetForm();

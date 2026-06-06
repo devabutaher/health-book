@@ -51,6 +51,7 @@ export const createPostSchema = z.object({
 export const updatePostSchema = z.object({
   content: z.string().min(1).max(2000).optional(),
   privacy: z.enum(["PUBLIC", "FRIENDS", "PRIVATE"]).optional(),
+  mediaUrls: z.array(z.string()).max(10).optional(),
   templateType: z.string().max(50).optional(),
   templateData: z.record(z.string(), z.unknown()).optional(),
   healthLogId: z.string().uuid().optional(),
