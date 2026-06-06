@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowLeft, Users } from "lucide-react";
+import { Users } from "lucide-react";
 import { ProtectedRoute } from "@/components/shared/ProtectedRoute";
 import { UserAvatar } from "@/components/shared/UserAvatar";
 import { Button } from "@/components/ui/button";

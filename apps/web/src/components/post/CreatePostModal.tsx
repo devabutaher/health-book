@@ -168,7 +168,8 @@ export function CreatePostModal({
       // Step 1 — backend validates & creates/updates post (no media)
       let postId = initialPost?.id || null;
       if (isEdit && postId) {
-        const { groupId: _g, ...updatePayload } = payload;
+        const updatePayload = { ...payload };
+        delete updatePayload.groupId;
         await updatePost({ id: postId, ...updatePayload }).unwrap();
       } else {
         const result = await create(payload).unwrap();
