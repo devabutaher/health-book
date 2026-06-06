@@ -570,7 +570,7 @@ export const challengeService = {
     const existing = await prisma.challengeParticipant.findUnique({
       where: { challengeId_userId: { challengeId, userId } },
     });
-    if (existing) throw new AppError(409, "Already joined this challenge");
+    if (existing) return existing;
 
     const challenge = await prisma.challenge.findUniqueOrThrow({
       where: { id: challengeId },
