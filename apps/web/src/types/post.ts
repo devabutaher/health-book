@@ -7,6 +7,7 @@ export interface PostUser {
   username: string;
   avatar: string | null;
   isVerified: boolean;
+  isFollowing?: boolean;
 }
 
 export interface PostReaction {

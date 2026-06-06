@@ -75,7 +75,7 @@ export function StoryCreationPicker({
 }) {
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent showCloseButton={false}>
+      <DialogContent showCloseButton={false} aria-describedby={undefined}>
         <DialogTitle className="sr-only">Create a Story</DialogTitle>
 
         <button

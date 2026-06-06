@@ -26,7 +26,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         onOpenDrafts={() => setDraftsOpen(true)}
       />
       <RightSidebar />
-      <main className="flex-1 overflow-y-auto pt-2 md:pt-6 md:pl-60 xl:pr-96">
+      <main className="flex-1 overflow-y-auto pt-[calc(3.5rem+0.5rem)] md:pt-[calc(3.5rem+1.5rem)] md:pl-60 xl:pr-96">
         <PageTransition>
           <div className="mx-auto max-w-6xl px-4 pb-24 sm:pb-28 lg:pb-12">{children}</div>
         </PageTransition>

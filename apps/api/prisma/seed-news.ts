@@ -97,17 +97,105 @@ const articles = [
     category: "mental_health",
     publishedAt: new Date("2025-01-30"),
   },
+  {
+    title: "Walking 8,000 steps a week can lower dementia risk, study finds",
+    source: "WHO",
+    url: "https://www.who.int/news-room/walking-dementia-2025",
+    imageUrl: null,
+    category: "fitness",
+    publishedAt: new Date("2025-04-10"),
+  },
+  {
+    title: "How intermittent fasting affects your metabolism after 40",
+    source: "Healthline",
+    url: "https://www.healthline.com/nutrition/intermittent-fasting-metabolism",
+    imageUrl: null,
+    category: "nutrition",
+    publishedAt: new Date("2025-04-12"),
+  },
+  {
+    title: "Bangladesh launches national mental health helpline",
+    source: "DGHS",
+    url: "https://www.dghs.gov.bd/mental-health-helpline",
+    imageUrl: null,
+    category: "mental_health",
+    publishedAt: new Date("2025-04-08"),
+  },
+  {
+    title: "Brisk walking for 30 minutes daily cuts heart disease risk by 35%",
+    source: "AHA",
+    url: "https://www.heart.org/en/news/brisk-walking-heart-health",
+    imageUrl: null,
+    category: "fitness",
+    publishedAt: new Date("2025-04-15"),
+  },
+  {
+    title: "COVID-19 subvariant JN.1: Symptoms and prevention tips",
+    source: "CDC",
+    url: "https://www.cdc.gov/covid/jn1-variant-2025",
+    imageUrl: null,
+    category: "general",
+    publishedAt: new Date("2025-04-14"),
+  },
+  {
+    title: "Probiotics vs prebiotics: What the science actually says",
+    source: "Mayo Clinic",
+    url: "https://www.mayoclinic.org/healthy-lifestyle/probiotics-prebiotics",
+    imageUrl: null,
+    category: "nutrition",
+    publishedAt: new Date("2025-04-06"),
+  },
+  {
+    title: "Tea drinkers have lower risk of type 2 diabetes, study shows",
+    source: "Healthline",
+    url: "https://www.healthline.com/nutrition/tea-diabetes-risk",
+    imageUrl: null,
+    category: "nutrition",
+    publishedAt: new Date("2025-04-11"),
+  },
+  {
+    title: "Posture correction: Simple exercises for desk workers",
+    source: "Mayo Clinic",
+    url: "https://www.mayoclinic.org/healthy-lifestyle/posture-exercises",
+    imageUrl: null,
+    category: "fitness",
+    publishedAt: new Date("2025-04-03"),
+  },
+  {
+    title: "Digital detox: How screen time affects sleep quality",
+    source: "CDC",
+    url: "https://www.cdc.gov/sleep/digital-detox",
+    imageUrl: null,
+    category: "general",
+    publishedAt: new Date("2025-03-28"),
+  },
+  {
+    title: "Omega-3 fatty acids: Best food sources for brain health",
+    source: "AHA",
+    url: "https://www.heart.org/en/healthy-living/omega3-brain-health",
+    imageUrl: null,
+    category: "nutrition",
+    publishedAt: new Date("2025-03-30"),
+  },
+  {
+    title: "How to build a sustainable home workout routine",
+    source: "WHO",
+    url: "https://www.who.int/news-room/home-workout-guide",
+    imageUrl: null,
+    category: "fitness",
+    publishedAt: new Date("2025-04-02"),
+  },
 ];
 
 export async function seedNews() {
   for (const article of articles) {
-    await prisma.newsArticle.upsert({
-      where: { url: article.url },
-      update: { publishedAt: article.publishedAt },
-      create: article,
-    });
+    const existing = await prisma.newsArticle.findFirst({ where: { url: article.url } });
+    if (!existing) {
+      await prisma.newsArticle.create({ data: article });
+    }
   }
-  console.log(`Seeded ${articles.length} news articles`);
+  const total = await prisma.newsArticle.count();
+  console.log(`Seeded ${articles.length} articles (total in DB: ${total})`);
 }
 
 seedNews()

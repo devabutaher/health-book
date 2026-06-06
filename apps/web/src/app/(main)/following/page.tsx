@@ -1,16 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
-import { motion } from "framer-motion";
-import { ArrowLeft, UserMinus } from "lucide-react";
 import { ProtectedRoute } from "@/components/shared/ProtectedRoute";
 import { UserAvatar } from "@/components/shared/UserAvatar";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import { GlassCard } from "@/components/ui/glass-card";
-import { useGetFollowingQuery, useUnfollowMutation } from "@/redux/api/userApi";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useAppSelector } from "@/hooks";
+import { useGetFollowingQuery, useUnfollowMutation } from "@/redux/api/userApi";
+import { motion } from "framer-motion";
+import { UserMinus } from "lucide-react";
+import Link from "next/link";
+import { useState } from "react";
 import { toast } from "sonner";
 
 const itemVariants = {
@@ -49,18 +49,9 @@ export default function FollowingPage() {
   return (
     <ProtectedRoute>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="font-display text-2xl font-bold">Following</h1>
-            <p className="mt-1 text-sm text-muted-foreground">People you follow</p>
-          </div>
-          <Link
-            href="/feed"
-            className="flex items-center gap-1.5 text-sm text-brand-teal hover:text-brand-green transition-colors"
-          >
-            <ArrowLeft className="size-4" />
-            Back to Feed
-          </Link>
+        <div>
+          <h1 className="font-display text-2xl font-bold">Following</h1>
+          <p className="mt-1 text-sm text-muted-foreground">People you follow</p>
         </div>
 
         {isLoading ? (

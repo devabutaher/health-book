@@ -55,7 +55,7 @@ export default function TopHeader() {
   return (
     <header
       className={cn(
-        "sticky top-0 z-40 w-full",
+        "fixed inset-x-0 top-0 z-40",
         "bg-[var(--glass-bg)] backdrop-blur-md md:backdrop-blur-2xl",
         "border-b border-[var(--glass-border)]",
         "sm:pt-safe",

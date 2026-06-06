@@ -627,7 +627,7 @@ export default function MyBookPage() {
       </Tabs>
 
       <Dialog open={!!shareDialog} onOpenChange={(o) => !o && setShareDialog(null)}>
-        <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto" aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle className="font-display">Share to Feed?</DialogTitle>
           </DialogHeader>

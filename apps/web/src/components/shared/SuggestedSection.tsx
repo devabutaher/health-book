@@ -55,7 +55,7 @@ export function SuggestedSection() {
 
   return (
     <div className="flex flex-col gap-1 px-3">
-      {users.slice(0, 6).map((u) => (
+      {users.slice(0, 3).map((u) => (
         <div key={u.id} className="flex items-center gap-3 rounded-xl px-2 py-1.5">
           <Link href={`/${u.username}`} prefetch={false} className="shrink-0">
             <UserAvatar

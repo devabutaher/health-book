@@ -73,7 +73,7 @@ export function FollowersModal({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-xl">
+      <DialogContent className="sm:max-w-xl" aria-describedby={undefined}>
         <DialogHeader>
           <DialogTitle className="font-display text-lg">Connections</DialogTitle>
         </DialogHeader>

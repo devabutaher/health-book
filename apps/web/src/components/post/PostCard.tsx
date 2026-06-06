@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useState, useCallback } from "react";
+import { useState, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import dynamic from "next/dynamic";
@@ -13,34 +13,92 @@ import { Button } from "../ui/button";
 import { GlassCard } from "../ui/glass-card";
 import { useAppSelector } from "@/hooks";
 import { useCopyHealthLogMutation } from "@/redux/api/healthLogApi";
-import { useToggleSaveMutation } from "@/redux/api/postApi";
+import { useToggleSaveMutation, useToggleReactionMutation } from "@/redux/api/postApi";
+import { useFollowMutation, useUnfollowMutation } from "@/redux/api/userApi";
 import type { Post } from "@/types/post";
 import { toast } from "sonner";
 import { cn, formatRelativeTime } from "@/lib/utils";
 import { staggerItem } from "@/lib/motion/variants";
 import { useSound } from "@/hooks/useSound";
 
-const CommentSection = dynamic(() => import("./CommentSection").then((m) => ({ default: m.CommentSection })));
-const CreatePostModal = dynamic(() => import("./CreatePostModal").then((m) => ({ default: m.CreatePostModal })));
-const ImageLightbox = dynamic(() => import("../shared/ImageLightbox").then((m) => ({ default: m.ImageLightbox })));
+const CommentSection = dynamic(() =>
+  import("./CommentSection").then((m) => ({ default: m.CommentSection })),
+);
+const CreatePostModal = dynamic(() =>
+  import("./CreatePostModal").then((m) => ({ default: m.CreatePostModal })),
+);
+const ImageLightbox = dynamic(() =>
+  import("../shared/ImageLightbox").then((m) => ({ default: m.ImageLightbox })),
+);
 const HealthLogEmbed = dynamic(() => import("../health/HealthLogEmbed"));
 const RecipeEmbed = dynamic(() => import("../health/RecipeEmbed"));
 const BeforeAfterSlider = dynamic(() => import("../shared/BeforeAfterSlider"));
-const PostPollCard = dynamic(() => import("./PostPollCard").then((m) => ({ default: m.PostPollCard })));
-const PostQuizCard = dynamic(() => import("./PostQuizCard").then((m) => ({ default: m.PostQuizCard })));
+const PostPollCard = dynamic(() =>
+  import("./PostPollCard").then((m) => ({ default: m.PostPollCard })),
+);
+const PostQuizCard = dynamic(() =>
+  import("./PostQuizCard").then((m) => ({ default: m.PostQuizCard })),
+);
 
-export const PostCard = memo(function PostCard({ post }: { post: Post }) {
+export function PostCard({ post }: { post: Post }) {
   const user = useAppSelector((s) => s.auth.user);
   const isOwner = user?.id === post.userId;
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [editPostId, setEditPostId] = useState<string | null>(null);
   const handleEdit = useCallback(() => setEditPostId(post.id), [post.id]);
-  const userReaction = post.reactions?.find((r) => r.userId === user?.id)?.type;
   const [copyLog, { isLoading: copying }] = useCopyHealthLogMutation();
   const [toggleSave] = useToggleSaveMutation();
+  const [toggleReaction] = useToggleReactionMutation();
+  const [localReaction, setLocalReaction] = useState<string | undefined>(
+    post.reactions?.find((r) => r.userId === user?.id)?.type,
+  );
+  const [localReactionCount, setLocalReactionCount] = useState(
+    post._count?.reactions ?? post.reactions?.length ?? 0,
+  );
+  const [follow] = useFollowMutation();
+  const [unfollow] = useUnfollowMutation();
   const [isSaved, setIsSaved] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [isFollowing, setIsFollowing] = useState(() => post.user.isFollowing ?? false);
   const { play } = useSound();
+
+  const handleToggleFollow = async () => {
+    const wasFollowing = isFollowing;
+    setIsFollowing(!wasFollowing);
+    play("reaction");
+    try {
+      if (wasFollowing) {
+        await unfollow(post.userId).unwrap();
+      } else {
+        await follow(post.userId).unwrap();
+      }
+    } catch {
+      setIsFollowing(wasFollowing);
+      play("error");
+      toast.error("Failed to update follow status");
+    }
+  };
+
+  const handleReaction = useCallback(
+    async (type: string) => {
+      const prev = localReaction;
+      if (prev === type) {
+        setLocalReaction(undefined);
+        setLocalReactionCount((c) => Math.max(0, c - 1));
+      } else {
+        if (!prev) setLocalReactionCount((c) => c + 1);
+        setLocalReaction(type);
+      }
+      try {
+        await toggleReaction({ postId: post.id, type: type as any }).unwrap();
+      } catch {
+        setLocalReaction(prev);
+        setLocalReactionCount(post._count?.reactions ?? post.reactions?.length ?? 0);
+        play("error");
+      }
+    },
+    [localReaction, post.id, post._count?.reactions, post.reactions, toggleReaction, play],
+  );
 
   const showBeforeAfter = post.templateType === "BEFORE_AFTER";
   const showRecipe = post.templateType === "RECIPE";
@@ -88,8 +146,12 @@ export const PostCard = memo(function PostCard({ post }: { post: Post }) {
   return (
     <motion.div variants={staggerItem}>
       <GlassCard variant="elevated" className="p-3 sm:p-4">
-        <div className="flex items-start justify-between">
-          <Link href={`/${post.user.username}`} prefetch={false} className="flex items-center gap-3">
+        <div className="flex items-center justify-between">
+          <Link
+            href={`/${post.user.username}`}
+            prefetch={false}
+            className="flex items-center gap-3"
+          >
             <UserAvatar
               name={post.user.name}
               avatar={post.user.avatar}
@@ -110,6 +172,19 @@ export const PostCard = memo(function PostCard({ post }: { post: Post }) {
               </p>
             </div>
           </Link>
+          {!isOwner && (
+            <button
+              onClick={handleToggleFollow}
+              className={cn(
+                "ml-auto mr-2 rounded-lg px-2.5 py-1 text-[11px] font-semibold transition-all",
+                isFollowing
+                  ? "border border-[var(--border-default)] text-muted-foreground hover:border-destructive hover:text-destructive"
+                  : "bg-gradient-to-r from-brand-teal to-brand-green text-white",
+              )}
+            >
+              {isFollowing ? "Following" : "Follow"}
+            </button>
+          )}
           <PostOptionsMenu postId={post.id} isOwner={isOwner} onEdit={handleEdit} />
         </div>
 
@@ -186,10 +261,7 @@ export const PostCard = memo(function PostCard({ post }: { post: Post }) {
 
         <div className="mt-3 flex items-center gap-4 text-xs text-muted-foreground">
           <span>
-            <strong className="text-foreground">
-              {post._count?.reactions ?? post.reactions?.length ?? 0}
-            </strong>{" "}
-            reactions
+            <strong className="text-foreground">{localReactionCount}</strong> reactions
           </span>
           <span>
             <strong className="text-foreground">{post._count?.comments ?? 0}</strong> comments
@@ -197,7 +269,7 @@ export const PostCard = memo(function PostCard({ post }: { post: Post }) {
         </div>
 
         <div className="mt-2 flex items-center justify-between border-t border-[var(--border-subtle)] pt-2">
-          <ReactionBar postId={post.id} userReaction={userReaction} />
+          <ReactionBar postId={post.id} userReaction={localReaction} onReaction={handleReaction} />
           <div className="flex items-center gap-1">
             <Button
               variant="ghost"
@@ -244,4 +316,4 @@ export const PostCard = memo(function PostCard({ post }: { post: Post }) {
       )}
     </motion.div>
   );
-});
+}

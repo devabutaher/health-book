@@ -2,6 +2,7 @@
 import { createApi } from "@reduxjs/toolkit/query/react";
 import { createBaseQuery } from "../baseQuery";
 import { reelsApi } from "./reelsApi";
+import { postApi } from "./postApi";
 import type { RootState } from "../store";
 
 export interface SuggestedUser {
@@ -60,9 +61,9 @@ export const userApi = createApi({
         if (targetUsername) {
           const p1 = dispatch(
             userApi.util.updateQueryData("getProfile", targetUsername, (draft: any) => {
-              draft.isFollowing = true;
-              if (draft._count?.followers !== undefined) {
-                draft._count.followers += 1;
+              draft.data.isFollowing = true;
+              if (draft.data?._count?.followers !== undefined) {
+                draft.data._count.followers += 1;
               }
             }),
           );
@@ -72,8 +73,8 @@ export const userApi = createApi({
         // Update current user's following count
         const p2 = dispatch(
           userApi.util.updateQueryData("getProfile", currentUser.username, (draft: any) => {
-            if (draft._count?.following !== undefined) {
-              draft._count.following += 1;
+            if (draft.data?._count?.following !== undefined) {
+              draft.data._count.following += 1;
             }
           }),
         );
@@ -97,6 +98,22 @@ export const userApi = createApi({
               reelsApi.util.updateQueryData("browseReels", q.originalArgs, (draft: any) => {
                 draft.reels.forEach((reel: any) => {
                   if (reel.user.id === userId) reel.user.isFollowing = true;
+                });
+              }),
+            );
+            patches.push(p);
+          }
+        }
+
+        // Patch feed caches (all cursor variants)
+        const feedQueries = (state as any).postApi?.queries ?? {};
+        for (const key of Object.keys(feedQueries)) {
+          const q = feedQueries[key];
+          if (q?.endpointName === "getFeed" && q?.status === "fulfilled") {
+            const p = dispatch(
+              postApi.util.updateQueryData("getFeed", q.originalArgs, (draft: any) => {
+                draft?.data?.posts?.forEach((post: any) => {
+                  if (post.user?.id === userId) post.user.isFollowing = true;
                 });
               }),
             );
@@ -140,9 +157,9 @@ export const userApi = createApi({
         if (targetUsername) {
           const p1 = dispatch(
             userApi.util.updateQueryData("getProfile", targetUsername, (draft: any) => {
-              draft.isFollowing = false;
-              if (draft._count?.followers !== undefined) {
-                draft._count.followers = Math.max(0, draft._count.followers - 1);
+              draft.data.isFollowing = false;
+              if (draft.data?._count?.followers !== undefined) {
+                draft.data._count.followers = Math.max(0, draft.data._count.followers - 1);
               }
             }),
           );
@@ -152,8 +169,8 @@ export const userApi = createApi({
         // Update current user's following count
         const p2 = dispatch(
           userApi.util.updateQueryData("getProfile", currentUser.username, (draft: any) => {
-            if (draft._count?.following !== undefined) {
-              draft._count.following = Math.max(0, draft._count.following - 1);
+            if (draft.data?._count?.following !== undefined) {
+              draft.data._count.following = Math.max(0, draft.data._count.following - 1);
             }
           }),
         );
@@ -177,6 +194,22 @@ export const userApi = createApi({
               reelsApi.util.updateQueryData("browseReels", q.originalArgs, (draft: any) => {
                 draft.reels.forEach((reel: any) => {
                   if (reel.user.id === userId) reel.user.isFollowing = false;
+                });
+              }),
+            );
+            patches.push(p);
+          }
+        }
+
+        // Patch feed caches (all cursor variants)
+        const feedQueries2 = (state as any).postApi?.queries ?? {};
+        for (const key of Object.keys(feedQueries2)) {
+          const q = feedQueries2[key];
+          if (q?.endpointName === "getFeed" && q?.status === "fulfilled") {
+            const p = dispatch(
+              postApi.util.updateQueryData("getFeed", q.originalArgs, (draft: any) => {
+                draft?.data?.posts?.forEach((post: any) => {
+                  if (post.user?.id === userId) post.user.isFollowing = false;
                 });
               }),
             );

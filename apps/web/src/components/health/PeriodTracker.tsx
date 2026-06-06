@@ -143,7 +143,7 @@ export default function PeriodTracker() {
               <Plus /> Log
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
+          <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md" aria-describedby={undefined}>
             <DialogHeader>
               <DialogTitle className="font-display">
                 {editId ? "Edit Period" : "Log Period"}

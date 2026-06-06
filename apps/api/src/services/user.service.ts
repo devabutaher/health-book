@@ -124,6 +124,11 @@ export const userService = {
   },
 
   async follow(followerId: string, followingId: string) {
+    const existing = await prisma.follow.findUnique({
+      where: { followerId_followingId: { followerId, followingId } },
+    });
+    if (existing) return;
+
     await prisma.follow.create({
       data: { followerId, followingId },
     });
@@ -142,10 +147,8 @@ export const userService = {
   },
 
   async unfollow(followerId: string, followingId: string) {
-    await prisma.follow.delete({
-      where: {
-        followerId_followingId: { followerId, followingId },
-      },
+    await prisma.follow.deleteMany({
+      where: { followerId, followingId },
     });
   },
 

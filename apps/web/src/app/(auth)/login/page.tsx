@@ -48,6 +48,9 @@ export default function LoginPage() {
           refreshToken: result.data.refreshToken,
         }),
       );
+      const cookieBase = `path=/; maxAge=604800; SameSite=Lax${location.protocol === "https:" ? "; Secure" : ""}`;
+      document.cookie = `hb_token=${result.data.accessToken}; ${cookieBase}`;
+      document.cookie = `hb_rt=${result.data.refreshToken}; ${cookieBase}`;
       new Audio("/sounds/badge-earned.mp3").play().catch(() => {});
       router.push("/feed");
     } catch (err: unknown) {

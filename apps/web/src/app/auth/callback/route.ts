@@ -33,7 +33,14 @@ export async function GET(request: Request) {
           secure: true,
           sameSite: "lax",
           path: "/",
-          maxAge: 60,
+          maxAge: 604800,
+        });
+        response.cookies.set("hb_token", body.data.accessToken, {
+          httpOnly: false,
+          secure: true,
+          sameSite: "lax",
+          path: "/",
+          maxAge: 604800,
         });
         return response;
       }

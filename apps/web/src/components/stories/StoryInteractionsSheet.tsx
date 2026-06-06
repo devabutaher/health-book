@@ -16,7 +16,7 @@ export function StoryInteractionsSheet({
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent showCloseButton={false}>
+      <DialogContent showCloseButton={false} aria-describedby={undefined}>
         <DialogTitle className="sr-only">Story Interactions</DialogTitle>
 
         <div className="mb-3 flex items-center justify-between">

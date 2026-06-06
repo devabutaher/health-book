@@ -52,8 +52,8 @@ export function CreatePostModal({
   groupId,
 }: CreatePostModalProps) {
   const token = useAppSelector((s) => s.auth.accessToken);
-  const [create, { isLoading }] = useCreatePostMutation();
-  const [updatePost] = useUpdatePostMutation();
+  const [create, { isLoading: isCreating }] = useCreatePostMutation();
+  const [updatePost, { isLoading: isUpdating }] = useUpdatePostMutation();
   const { play } = useSound();
   const isEdit = !!initialPost;
   const [content, setContent] = useState("");
@@ -165,10 +165,16 @@ export function CreatePostModal({
       if (isDraft) payload.isDraft = true;
       if (!isPostNow && scheduledAt) payload.scheduledAt = new Date(scheduledAt).toISOString();
 
-      // Step 1 — backend validates & creates post (no media)
-      const result = await create(payload).unwrap();
-      const postId = result?.data?.id;
-      if (!postId) throw new Error("No post ID returned");
+      // Step 1 — backend validates & creates/updates post (no media)
+      let postId = initialPost?.id || null;
+      if (isEdit && postId) {
+        const { groupId: _g, ...updatePayload } = payload;
+        await updatePost({ id: postId, ...updatePayload }).unwrap();
+      } else {
+        const result = await create(payload).unwrap();
+        postId = result?.data?.id;
+        if (!postId) throw new Error("No post ID returned");
+      }
 
       // Step 2 — upload images to Cloudinary (only after validation passed)
       const mediaUrls: string[] = [];
@@ -230,7 +236,7 @@ export function CreatePostModal({
     );
   };
 
-  const isBusy = isLoading || uploading;
+  const isBusy = isCreating || isUpdating || uploading;
   const charLimit = 2000;
   const charsOverEighty = content.length > charLimit * 0.8;
   const charsAtLimit = content.length >= charLimit;
@@ -681,7 +687,7 @@ export function CreatePostModal({
                   className="flex-[2]"
                 >
                   {isBusy && <Loader2 className="animate-spin" />}
-                  {uploading ? "Uploading..." : isLoading ? "Submitting..." : "Schedule Post"}
+                  {uploading ? "Uploading..." : isCreating || isUpdating ? "Submitting..." : "Schedule Post"}
                 </Button>
               </div>
             ) : (
@@ -692,7 +698,7 @@ export function CreatePostModal({
                 onClick={() => (postNowRef.current = true)}
               >
                 {isBusy && <Loader2 className="animate-spin" />}
-                {uploading ? "Uploading..." : isLoading ? "Posting..." : isEdit ? "Save" : "Post"}
+                {uploading ? "Uploading..." : isCreating || isUpdating ? "Posting..." : isEdit ? "Save" : "Post"}
               </Button>
             )}
           </div>

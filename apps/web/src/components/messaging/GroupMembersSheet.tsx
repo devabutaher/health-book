@@ -47,7 +47,7 @@ export function GroupMembersSheet({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent showCloseButton={false}>
+      <DialogContent showCloseButton={false} aria-describedby={undefined}>
         <DialogTitle className="sr-only">Group Members</DialogTitle>
 
         <div className="mb-3 flex items-center justify-between">

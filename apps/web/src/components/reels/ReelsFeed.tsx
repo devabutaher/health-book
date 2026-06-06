@@ -16,7 +16,11 @@ import { ReelComments } from "./ReelComments";
 import { ReelPlayer } from "./ReelPlayer";
 import { ReelSkeleton } from "./ReelSkeleton";
 
-export function ReelsFeed({ onUploadClick, refreshFlag }: { onUploadClick?: () => void; refreshFlag?: number }) {
+export function ReelsFeed({
+  onUploadClick,
+}: {
+  onUploadClick?: () => void;
+}) {
   const [cursor, setCursor] = useState<string | undefined>(undefined);
   const [allReels, setAllReels] = useState<Reel[]>([]);
   const [activeIdx, setActiveIdx] = useState(0);
@@ -29,13 +33,6 @@ export function ReelsFeed({ onUploadClick, refreshFlag }: { onUploadClick?: () =
   const [toggleLike] = useToggleReelLikeMutation();
   const [followUser] = useFollowMutation();
   const [unfollowUser] = useUnfollowMutation();
-
-  useEffect(() => {
-    if (!refreshFlag) return;
-    setCursor(undefined);
-    setAllReels([]);
-    seenIds.current = new Set();
-  }, [refreshFlag]);
 
   useEffect(() => {
     if (data?.reels) {
@@ -211,10 +208,7 @@ export function ReelsFeed({ onUploadClick, refreshFlag }: { onUploadClick?: () =
                   <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent p-4 pt-12">
                     <div className="flex items-center gap-2">
                       <Link href={`/${reel.user.username}`} prefetch={false}>
-                        <Avatar
-                          size="sm"
-                          className="size-8 ring-2 ring-white/30 cursor-pointer hover:opacity-80 transition-opacity"
-                        >
+                        <Avatar className="size-8 ring-2 ring-white/30 cursor-pointer hover:opacity-80 transition-opacity">
                           {reel.user.avatar ? (
                             <AvatarImage src={reel.user.avatar} alt={reel.user.name} />
                           ) : null}
@@ -226,7 +220,7 @@ export function ReelsFeed({ onUploadClick, refreshFlag }: { onUploadClick?: () =
                       <Link
                         href={`/${reel.user.username}`}
                         prefetch={false}
-                        className="text-sm font-semibold text-white hover:underline"
+                        className="font-semibold text-white hover:underline"
                       >
                         {reel.user.name}
                       </Link>
@@ -237,7 +231,7 @@ export function ReelsFeed({ onUploadClick, refreshFlag }: { onUploadClick?: () =
                               ? handleUnfollow(reel.user.id)
                               : handleFollow(reel.user.id)
                           }
-                          className="ml-1 inline-flex min-h-[36px] items-center justify-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold text-white transition-colors hover:bg-white/20"
+                          className="ml-1 inline-flex min-h-[36px] items-center justify-center gap-0.5 rounded-full border px-2 text-[10px] font-semibold text-white transition-colors hover:bg-white/20"
                         >
                           {reel.user.isFollowing ? (
                             "Following"
@@ -250,7 +244,7 @@ export function ReelsFeed({ onUploadClick, refreshFlag }: { onUploadClick?: () =
                       )}
                     </div>
                     {reel.caption && (
-                      <p className="mt-1.5 line-clamp-2 text-sm text-white/80">{reel.caption}</p>
+                      <p className="mt-1.5 line-clamp-2 text-white/80">{reel.caption}</p>
                     )}
                   </div>
 
@@ -290,7 +284,9 @@ export function ReelsFeed({ onUploadClick, refreshFlag }: { onUploadClick?: () =
               </div>
               <div>
                 <p className="text-sm font-semibold text-foreground">You&apos;ve seen all reels</p>
-                <p className="mt-1 text-xs text-muted-foreground">Upload a new reel to inspire others</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Upload a new reel to inspire others
+                </p>
               </div>
               <Button variant="gradient" size="sm" onClick={onUploadClick} className="gap-1.5">
                 <Plus className="size-4" />

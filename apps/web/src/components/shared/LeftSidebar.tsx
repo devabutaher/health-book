@@ -171,7 +171,7 @@ export default function LeftSidebar({
           <span className="absolute bottom-0 right-0 size-2.5 rounded-full border-2 border-[var(--bg-subtle)] bg-brand-green" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-foreground">{user?.name}</p>
+          <p className="truncate text-sm font-semibold text-foreground">{user?.name || "Name"}</p>
           <p className="truncate text-xs text-muted-foreground">@{user?.username || "username"}</p>
         </div>
       </Link>

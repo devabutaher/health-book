@@ -7,26 +7,34 @@ import { popReaction } from "@/lib/motion/variants";
 import { useSound } from "@/hooks/useSound";
 
 const REACTIONS = [
-  { type: "INSPIRED", label: "Inspired", icon: "🔥" },
-  { type: "CLAP", label: "Clap", icon: "👏" },
-  { type: "KEEP_IT_UP", label: "Keep it up", icon: "💪" },
-  { type: "HEALING", label: "Healing", icon: "🩹" },
-  { type: "LOVE", label: "Love", icon: "❤️" },
+  { type: "INSPIRED" as const, label: "Inspired", icon: "🔥" },
+  { type: "CLAP" as const, label: "Clap", icon: "👏" },
+  { type: "KEEP_IT_UP" as const, label: "Keep it up", icon: "💪" },
+  { type: "HEALING" as const, label: "Healing", icon: "🩹" },
+  { type: "LOVE" as const, label: "Love", icon: "❤️" },
 ] as const;
+
+type ReactionType = typeof REACTIONS[number]["type"];
 
 export function ReactionBar({
   postId,
   userReaction,
+  onReaction,
 }: {
   postId: string;
   userReaction?: string | null;
+  onReaction?: (type: ReactionType) => void;
 }) {
   const [toggle] = useToggleReactionMutation();
   const { play } = useSound();
 
-  const handleReact = async (type: "INSPIRED" | "CLAP" | "KEEP_IT_UP" | "HEALING" | "LOVE") => {
+  const handleReact = (type: ReactionType) => {
     play("reaction");
-    await toggle({ postId, type });
+    if (onReaction) {
+      onReaction(type);
+    } else {
+      toggle({ postId, type });
+    }
   };
 
   return (

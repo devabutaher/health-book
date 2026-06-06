@@ -8,7 +8,7 @@ import { soundManager } from "@/lib/soundManager";
 export const postApi = createApi({
   reducerPath: "postApi",
   baseQuery: createBaseQuery(`${process.env["NEXT_PUBLIC_API_URL"]}/api/posts`),
-  tagTypes: ["Posts", "Post", "Feed", "Saved"],
+  tagTypes: ["Posts", "Post", "Feed", "Saved", "Drafts"],
   endpoints: (builder) => ({
     getFeed: builder.query({
       query: ({ cursor }: { cursor?: string } = {}) => `/feed${cursor ? `?cursor=${cursor}` : ""}`,
@@ -66,13 +66,21 @@ export const postApi = createApi({
           const { data: res } = await queryFulfilled;
           const newPost = (res as any)?.data;
           if (!newPost) return;
-          dispatch(
-            postApi.util.updateQueryData("getFeed", { cursor: undefined }, (draft: any) => {
-              if (draft?.data?.posts) {
-                draft.data.posts.unshift(newPost);
-              }
-            }),
-          );
+          if (body.isDraft) {
+            dispatch(
+              postApi.util.updateQueryData("getDrafts", undefined, (draft: any) => {
+                if (draft) draft.unshift(newPost);
+              }),
+            );
+          } else {
+            dispatch(
+              postApi.util.updateQueryData("getFeed", { cursor: undefined }, (draft: any) => {
+                if (draft?.data?.posts) {
+                  draft.data.posts.unshift(newPost);
+                }
+              }),
+            );
+          }
           if (body.groupId) {
             dispatch(
               postApi.util.updateQueryData(
@@ -192,6 +200,16 @@ export const postApi = createApi({
           );
           patches.push(p);
         });
+        apply(() => {
+          const p = dispatch(
+            postApi.util.updateQueryData("getDrafts", undefined, (draft: any) => {
+              if (!draft) return;
+              const idx = draft.findIndex((p: any) => p.id === id);
+              if (idx >= 0) draft.splice(idx, 1);
+            }),
+          );
+          patches.push(p);
+        });
         try {
           await queryFulfilled;
         } catch {
@@ -296,7 +314,7 @@ export const postApi = createApi({
     }),
     getDrafts: builder.query<Post[], void>({
       query: () => "/drafts",
-      providesTags: ["Posts"],
+      providesTags: ["Drafts"],
       transformResponse: (response: { success: boolean; data: Post[] }) => response.data,
       keepUnusedDataFor: 300,
     }),
@@ -307,26 +325,29 @@ export const postApi = createApi({
       }),
       invalidatesTags: (_result, _error, id) => [{ type: "Post", id }],
       onQueryStarted: async (id, { dispatch, queryFulfilled }) => {
+        const patchDrafts = dispatch(
+          postApi.util.updateQueryData("getDrafts", undefined, (draft: any) => {
+            if (!draft) return;
+            const idx = draft.findIndex((p: any) => p.id === id);
+            if (idx >= 0) draft.splice(idx, 1);
+          }),
+        );
         try {
           const { data: res } = await queryFulfilled;
           const publishedPost = (res as any)?.data;
-          if (!publishedPost) return;
-          dispatch(
-            postApi.util.updateQueryData("getFeed", { cursor: undefined }, (draft: any) => {
-              if (draft?.data?.posts) {
-                draft.data.posts.unshift(publishedPost);
-              }
-            }),
-          );
-          dispatch(
-            postApi.util.updateQueryData("getDrafts", undefined, (draft: any) => {
-              if (draft) {
-                const idx = draft.findIndex((p: any) => p.id === id);
-                if (idx >= 0) draft.splice(idx, 1);
-              }
-            }),
-          );
-        } catch {}
+          if (publishedPost) {
+            dispatch(
+              postApi.util.updateQueryData("getFeed", { cursor: undefined }, (draft: any) => {
+                if (draft?.data?.posts) {
+                  draft.data.posts.unshift(publishedPost);
+                }
+              }),
+            );
+          }
+        } catch {
+          patchDrafts.undo();
+          soundManager.playError();
+        }
       },
     }),
   }),

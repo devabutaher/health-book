@@ -26,11 +26,11 @@ export default function FeedPage() {
   const draftCount = Array.isArray(draftsData)
     ? draftsData.length
     : ((draftsData as { data?: unknown[] } | undefined)?.data?.length ?? 0);
-  const isAuthLoading = useAppSelector((s) => s.auth.isLoading);
+  const accessToken = useAppSelector((s) => s.auth.accessToken);
   const { cursor, allPosts, loadMore, applyPage, reset } = useFeedPagination<Post>();
   const { data, isLoading, isFetching, isError, refetch } = useGetFeedQuery(
     { cursor },
-    { skip: isAuthLoading },
+    { skip: !accessToken },
   );
   const loaderRef = useRef<HTMLDivElement>(null);
 
@@ -106,7 +106,9 @@ export default function FeedPage() {
 
         <FeatureDiscoveryCards />
 
-        {isError && allPosts.length === 0 ? (
+        {!accessToken || isLoading ? (
+          <PostSkeletonList count={3} />
+        ) : isError && allPosts.length === 0 ? (
           <Empty>
             <EmptyMedia variant="gradient">
               <Users />
@@ -117,7 +119,7 @@ export default function FeedPage() {
               Try again
             </Button>
           </Empty>
-        ) : allPosts.length === 0 && !isLoading ? (
+        ) : allPosts.length === 0 ? (
           <Empty>
             <EmptyMedia variant="gradient">
               <Users />
@@ -141,12 +143,6 @@ export default function FeedPage() {
               <PostCard key={post.id} post={post} />
             ))}
           </motion.div>
-        )}
-
-        {isLoading && (
-          <div className="mt-4">
-            <PostSkeletonList count={3} />
-          </div>
         )}
 
         {isError && allPosts.length > 0 && (

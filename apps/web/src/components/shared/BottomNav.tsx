@@ -153,7 +153,7 @@ export default function BottomNav({ onCreatePost }: { onCreatePost?: () => void 
       </nav>
 
       <Dialog open={menuOpen} onOpenChange={setMenuOpen}>
-        <DialogContent showCloseButton={false}>
+        <DialogContent showCloseButton={false} aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle className="font-display text-center">More</DialogTitle>
           </DialogHeader>
@@ -241,7 +241,7 @@ export default function BottomNav({ onCreatePost }: { onCreatePost?: () => void 
       <DraftsDialog open={draftsOpen} onClose={() => setDraftsOpen(false)} />
 
       <Dialog open={quickActionsOpen} onOpenChange={setQuickActionsOpen}>
-        <DialogContent showCloseButton={false}>
+        <DialogContent showCloseButton={false} aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle className="font-display text-center">Quick Create</DialogTitle>
           </DialogHeader>

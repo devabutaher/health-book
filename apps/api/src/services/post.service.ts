@@ -370,8 +370,18 @@ export const postService = {
     const hasMore = posts.length > limit;
     const items = hasMore ? posts.slice(0, limit) : posts;
 
+    const authorIds = [...new Set(items.map((p) => p.userId))];
+    const follows = await prisma.follow.findMany({
+      where: { followerId: userId, followingId: { in: authorIds } },
+      select: { followingId: true },
+    });
+    const followingSet = new Set(follows.map((f) => f.followingId));
+
     return {
-      posts: items.map((p) => enrichPost(p, viewerId || userId)),
+      posts: items.map((p) => ({
+        ...enrichPost(p, userId),
+        user: { ...p.user, isFollowing: followingSet.has(p.userId) },
+      })),
       nextCursor: hasMore ? items[items.length - 1]?.id : null,
       hasMore,
     };

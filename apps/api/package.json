@@ -14,7 +14,8 @@
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
     "db:push": "prisma db push",
-    "db:sync": "node scripts/dbSync.cjs"
+    "db:sync": "node scripts/dbSync.cjs",
+    "seed:news": "tsx prisma/seed-news.ts"
   },
   "dependencies": {
     "@healthbook/shared": "workspace:*",

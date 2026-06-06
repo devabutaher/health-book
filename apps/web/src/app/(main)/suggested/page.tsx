@@ -44,20 +44,11 @@ export default function SuggestedPage() {
   return (
     <ProtectedRoute>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="font-display text-2xl font-bold">Suggested People</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Follow people to see their health journey in your feed
-            </p>
-          </div>
-          <Link
-            href="/feed"
-            className="flex items-center gap-1.5 text-sm text-brand-teal hover:text-brand-green transition-colors"
-          >
-            <ArrowLeft className="size-4" />
-            Back to Feed
-          </Link>
+        <div>
+          <h1 className="font-display text-2xl font-bold">Suggested People</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Follow people to see their health journey in your feed
+          </p>
         </div>
 
         {isLoading ? (

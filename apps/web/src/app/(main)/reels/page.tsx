@@ -25,7 +25,7 @@ export default function ReelsPage() {
   return (
     <ProtectedRoute>
       <div className="relative h-[calc(100dvh-11rem)] lg:h-[calc(100dvh-8rem)]">
-        <ReelsFeed onUploadClick={() => setUploadOpen(true)} refreshFlag={refreshFlag} />
+        <ReelsFeed key={refreshFlag} onUploadClick={() => setUploadOpen(true)} />
 
         {/* Floating upload button */}
         <button
