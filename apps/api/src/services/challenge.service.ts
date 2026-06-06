@@ -584,8 +584,10 @@ export const challengeService = {
     if (challenge.startDate && now < challenge.startDate) {
       throw new AppError(400, "This challenge hasn't started yet");
     }
-    if (challenge.endDate && now > challenge.endDate) {
-      throw new AppError(400, "This challenge has already ended");
+    if (challenge.endDate) {
+      const endOfDay = new Date(challenge.endDate);
+      endOfDay.setHours(23, 59, 59, 999);
+      if (now > endOfDay) throw new AppError(400, "This challenge has already ended");
     }
 
     if (challenge.type === "GROUP" && challenge.groupId) {
@@ -682,8 +684,10 @@ export const challengeService = {
     if (startDate && now < startDate) {
       throw new AppError(400, "This challenge hasn't started yet");
     }
-    if (endDate && now > endDate) {
-      throw new AppError(400, "This challenge has already ended");
+    if (endDate) {
+      const endOfDay = new Date(endDate);
+      endOfDay.setHours(23, 59, 59, 999);
+      if (now > endOfDay) throw new AppError(400, "This challenge has already ended");
     }
 
     const dayCount = participant.challenge.dayCount || DEFAULT_DAY_COUNT;
