@@ -70,7 +70,7 @@ export function CreatePostModal({
 
   const [recipeData, setRecipeData] = useState<Record<string, unknown> | null>(null);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [privacy] = useState(initialPost?.privacy || "public");
+  const [privacy] = useState(initialPost?.privacy || "PUBLIC");
   const [showTags, setShowTags] = useState(false);
 
   // Poll builder state
