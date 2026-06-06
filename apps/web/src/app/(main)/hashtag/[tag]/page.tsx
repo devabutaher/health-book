@@ -3,7 +3,6 @@
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Hash, SearchX } from "lucide-react";
-import { ProtectedRoute } from "@/components/shared/ProtectedRoute";
 import { PostCard } from "@/components/post/PostCard";
 import { PostSkeletonList } from "@/components/shared/PostSkeleton";
 import { useSearchPostsQuery, useGetRelatedHashtagsQuery } from "@/redux/api/searchApi";
@@ -20,7 +19,6 @@ export default function HashtagPage() {
   const posts = data?.posts || [];
 
   return (
-    <ProtectedRoute>
       <div className="mx-auto max-w-[600px]">
         <Link
           href="/explore"
@@ -86,6 +84,5 @@ export default function HashtagPage() {
           </Empty>
         )}
       </div>
-    </ProtectedRoute>
   );
 }

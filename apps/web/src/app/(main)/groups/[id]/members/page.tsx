@@ -3,7 +3,6 @@
 import { use, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Shield, UserMinus, UserCheck, UserX } from "lucide-react";
-import { ProtectedRoute } from "@/components/shared/ProtectedRoute";
 import {
   useGetGroupQuery,
   useGetGroupMembersQuery,
@@ -97,18 +96,15 @@ export default function GroupMembersPage({ params }: { params: Promise<{ id: str
 
   if (groupLoading) {
     return (
-      <ProtectedRoute>
         <div className="mx-auto max-w-3xl space-y-4">
           <Skeleton className="h-8 w-48" />
           <Skeleton className="h-64 rounded-2xl" />
         </div>
-      </ProtectedRoute>
     );
   }
 
   if (isError || !group) {
     return (
-      <ProtectedRoute>
         <div className="mx-auto max-w-3xl py-20 text-center">
           <p className="text-[var(--text-secondary)]">Group not found</p>
           <Link
@@ -119,14 +115,12 @@ export default function GroupMembersPage({ params }: { params: Promise<{ id: str
             Back to groups
           </Link>
         </div>
-      </ProtectedRoute>
     );
   }
 
   const isMod = group.myRole === "ADMIN" || group.myRole === "MODERATOR";
 
   return (
-    <ProtectedRoute>
       <div className="mx-auto max-w-3xl space-y-4 sm:space-y-6">
         <Link
           href={`/groups/${id}`}
@@ -310,6 +304,5 @@ export default function GroupMembersPage({ params }: { params: Promise<{ id: str
           )}
         </GlassCard>
       </div>
-    </ProtectedRoute>
   );
 }

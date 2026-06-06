@@ -52,6 +52,10 @@ export default function LoginPage() {
       document.cookie = `hb_token=${result.data.accessToken}; ${cookieBase}`;
       document.cookie = `hb_rt=${result.data.refreshToken}; ${cookieBase}`;
       new Audio("/sounds/badge-earned.mp3").play().catch(() => {});
+      const { postApi } = await import("@/redux/api/postApi");
+      const { userApi } = await import("@/redux/api/userApi");
+      dispatch(postApi.util.prefetch("getFeed", { cursor: undefined }, { force: true }));
+      dispatch(userApi.util.prefetch("getSuggested", undefined, { force: true }));
       router.push("/feed");
     } catch (err: unknown) {
       const msg = (err as { data?: { message?: string } })?.data?.message || "Login failed";

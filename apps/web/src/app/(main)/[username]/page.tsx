@@ -3,7 +3,6 @@
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { ProtectedRoute } from "@/components/shared/ProtectedRoute";
 import { ProfileHeader } from "@/components/profile/ProfileHeader";
 import { EditProfileModal } from "@/components/profile/EditProfileModal";
 import { FollowersModal } from "@/components/profile/FollowersModal";
@@ -68,7 +67,6 @@ export default function ProfilePage() {
 
   if (isLoading) {
     return (
-      <ProtectedRoute>
         <div className="mx-auto max-w-3xl">
           <Skeleton className="h-56 rounded-2xl" />
           <div className="mt-6 space-y-2 px-6">
@@ -76,13 +74,11 @@ export default function ProfilePage() {
             <Skeleton className="h-4 w-32" />
           </div>
         </div>
-      </ProtectedRoute>
     );
   }
 
   if (error || !profile) {
     return (
-      <ProtectedRoute>
         <div className="mx-auto max-w-3xl">
           <Alert variant="destructive">
             <AlertCircle />
@@ -92,12 +88,11 @@ export default function ProfilePage() {
             </AlertDescription>
           </Alert>
         </div>
-      </ProtectedRoute>
     );
   }
 
   return (
-    <ProtectedRoute>
+    <>
       <div className="mx-auto max-w-3xl">
         <ProfileHeader
           profile={profile}
@@ -283,7 +278,7 @@ export default function ProfilePage() {
         />
       )}
       {manageHighlightsOpen && <HighlightManager onClose={() => setManageHighlightsOpen(false)} />}
-    </ProtectedRoute>
+    </>
   );
 }
 

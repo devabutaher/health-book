@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Video } from "lucide-react";
-import { ProtectedRoute } from "@/components/shared/ProtectedRoute";
 import { StoryCircle } from "@/components/stories/StoryCircle";
 import { StoryViewer } from "@/components/stories/StoryViewer";
 import { StoryCreateButton } from "@/components/stories/StoryCreateButton";
@@ -29,7 +28,6 @@ export default function StoriesPage() {
   };
 
   return (
-    <ProtectedRoute>
       <div className="mx-auto max-w-[600px]">
         <Link
           href="/feed"
@@ -107,6 +105,5 @@ export default function StoriesPage() {
           />
         )}
       </div>
-    </ProtectedRoute>
   );
 }

@@ -1,6 +1,5 @@
 "use client";
 
-import { ProtectedRoute } from "@/components/shared/ProtectedRoute";
 import dynamic from "next/dynamic";
 import { Loader2 } from "lucide-react";
 import { use } from "react";
@@ -19,8 +18,6 @@ const ReelDetail = dynamic(
 export default function ReelDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   return (
-    <ProtectedRoute>
       <ReelDetail id={id} />
-    </ProtectedRoute>
   );
 }

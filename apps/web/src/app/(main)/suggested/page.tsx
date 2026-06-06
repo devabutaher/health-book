@@ -4,7 +4,6 @@ import { useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Users } from "lucide-react";
-import { ProtectedRoute } from "@/components/shared/ProtectedRoute";
 import { UserAvatar } from "@/components/shared/UserAvatar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -42,7 +41,6 @@ export default function SuggestedPage() {
   };
 
   return (
-    <ProtectedRoute>
       <div className="space-y-6">
         <div>
           <h1 className="font-display text-2xl font-bold">Suggested People</h1>
@@ -115,6 +113,5 @@ export default function SuggestedPage() {
           </GlassCard>
         )}
       </div>
-    </ProtectedRoute>
   );
 }

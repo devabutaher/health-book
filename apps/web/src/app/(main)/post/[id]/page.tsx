@@ -3,7 +3,6 @@
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { MessageCircleX, Send, Trash2, AlertTriangle } from "lucide-react";
-import { ProtectedRoute } from "@/components/shared/ProtectedRoute";
 import { PostCard } from "@/components/post/PostCard";
 import { useGetPostQuery } from "@/redux/api/postApi";
 import {
@@ -101,18 +100,15 @@ export default function PostDetailPage() {
 
   if (isLoading) {
     return (
-      <ProtectedRoute>
         <div className="mx-auto max-w-[600px]">
           <Skeleton className="mb-4 h-6 w-32" />
           <Skeleton className="h-64 rounded-2xl" />
         </div>
-      </ProtectedRoute>
     );
   }
 
   if (error || !post) {
     return (
-      <ProtectedRoute>
         <div className="mx-auto max-w-[600px]">
           <Alert variant="destructive">
             <MessageCircleX />
@@ -122,12 +118,11 @@ export default function PostDetailPage() {
             </AlertDescription>
           </Alert>
         </div>
-      </ProtectedRoute>
     );
   }
 
   return (
-    <ProtectedRoute>
+    <>
       <div className="mx-auto max-w-[600px]">
         <PostCard post={post} />
 
@@ -353,6 +348,6 @@ export default function PostDetailPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </ProtectedRoute>
+    </>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { ProtectedRoute } from "@/components/shared/ProtectedRoute";
 import { CreatePostModal } from "@/components/post/CreatePostModal";
 import { DraftsDialog } from "@/components/post/DraftsDialog";
 import { BackgroundOrbs } from "@/components/shared/BackgroundOrbs";
@@ -18,7 +19,8 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const [draftsOpen, setDraftsOpen] = useState(false);
 
   return (
-    <div className="relative flex min-h-[100dvh] flex-col bg-background overflow-x-hidden">
+    <ProtectedRoute>
+      <div className="relative flex min-h-[100dvh] flex-col bg-background overflow-x-hidden">
       <BackgroundOrbs />
       <TopHeader />
       <LeftSidebar
@@ -36,5 +38,6 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       <CreatePostModal open={createOpen} onClose={() => setCreateOpen(false)} />
       <DraftsDialog open={draftsOpen} onClose={() => setDraftsOpen(false)} />
     </div>
+    </ProtectedRoute>
   );
 }

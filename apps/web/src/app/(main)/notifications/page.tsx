@@ -3,7 +3,6 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import { BellOff, Check } from "lucide-react";
 import { motion } from "framer-motion";
-import { ProtectedRoute } from "@/components/shared/ProtectedRoute";
 import {
   useGetNotificationsQuery,
   useMarkAllReadMutation,
@@ -55,7 +54,6 @@ export default function NotificationsPage() {
   }, [handleObserver]);
 
   return (
-    <ProtectedRoute>
       <div className="mx-auto max-w-[600px]">
         <div className="mb-4 sm:mb-6 flex items-center justify-between">
           <div>
@@ -114,6 +112,5 @@ export default function NotificationsPage() {
 
         <div ref={loaderRef} className="h-4" />
       </div>
-    </ProtectedRoute>
   );
 }

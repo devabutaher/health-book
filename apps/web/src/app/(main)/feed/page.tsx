@@ -3,7 +3,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { FileText, Plus, Users } from "lucide-react";
 import { motion } from "framer-motion";
-import { ProtectedRoute } from "@/components/shared/ProtectedRoute";
 import { PostCard } from "@/components/post/PostCard";
 import { CreatePostModal } from "@/components/post/CreatePostModal";
 import { DraftsDialog } from "@/components/post/DraftsDialog";
@@ -74,7 +73,7 @@ export default function FeedPage() {
   }, [handleObserver]);
 
   return (
-    <ProtectedRoute>
+    <>
       <div className="mx-auto max-w-2xl">
         <div className="mb-4 sm:mb-6 flex items-center justify-between">
           <div>
@@ -161,6 +160,6 @@ export default function FeedPage() {
         onCreated={handlePostCreated}
       />
       <DraftsDialog open={draftsOpen} onClose={() => setDraftsOpen(false)} />
-    </ProtectedRoute>
+    </>
   );
 }

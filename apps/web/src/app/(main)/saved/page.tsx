@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { ArrowLeft, Bookmark } from "lucide-react";
 import { motion } from "framer-motion";
-import { ProtectedRoute } from "@/components/shared/ProtectedRoute";
 import { PostCard } from "@/components/post/PostCard";
 import { PostSkeleton } from "@/components/shared/PostSkeleton";
 import { useGetSavedQuery } from "@/redux/api/postApi";
@@ -16,7 +15,6 @@ export default function SavedPage() {
   const posts = (data?.data?.posts || data?.posts || []) as Post[];
 
   return (
-    <ProtectedRoute>
       <div className="mx-auto max-w-[600px]">
         <Link
           href="/feed"
@@ -66,6 +64,5 @@ export default function SavedPage() {
           </motion.div>
         )}
       </div>
-    </ProtectedRoute>
   );
 }

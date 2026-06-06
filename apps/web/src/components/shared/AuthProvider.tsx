@@ -45,8 +45,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const accessToken = useAppSelector((s) => s.auth.accessToken);
   const refreshToken = useAppSelector((s) => s.auth.refreshToken);
   const isAuthenticated = useAppSelector((s) => s.auth.isAuthenticated);
-  const { data, isError, error } = useGetMeQuery(undefined, { skip: !accessToken });
+  const { data, isError, error, refetch } = useGetMeQuery(undefined, { skip: !accessToken });
   const initRef = useRef(false);
+  const retryTimer = useRef<ReturnType<typeof setTimeout>>();
 
   usePresenceRealtime();
 
@@ -81,6 +82,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (data && data.data) {
+      clearTimeout(retryTimer.current);
       dispatch(setCredentials({
         user: data.data,
         accessToken: accessToken!,
@@ -90,11 +92,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const isAuthError = error && "status" in error && error.status === 401;
       if (isAuthError && !refreshToken) {
         dispatch(logout());
-      } else {
+      } else if (isAuthError) {
         dispatch(setLoading(false));
+      } else {
+        // Transient error (network, 5xx). Tokens are likely still valid.
+        // Retry instead of redirecting to login.
+        const stored = loadTokensFromStorage();
+        if (stored.accessToken) {
+          retryTimer.current = setTimeout(() => refetch(), 3000);
+        } else {
+          dispatch(setLoading(false));
+        }
       }
     }
-  }, [data, isError, error, dispatch, accessToken, refreshToken]);
+    return () => clearTimeout(retryTimer.current);
+  }, [data, isError, error, dispatch, accessToken, refreshToken, refetch]);
 
   useEffect(() => {
     if (accessToken) {

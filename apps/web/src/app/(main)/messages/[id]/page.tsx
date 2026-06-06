@@ -4,7 +4,6 @@ import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Users, PenLine } from "lucide-react";
-import { ProtectedRoute } from "@/components/shared/ProtectedRoute";
 import { ConversationHeader } from "@/components/messaging/ConversationHeader";
 import { ChatWindow } from "@/components/messaging/ChatWindow";
 import { ConversationList } from "@/components/messaging/ConversationList";
@@ -29,7 +28,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   useUnreadCount();
 
   return (
-    <ProtectedRoute>
+    <>
       <GlassCard
         variant="elevated"
         className="mx-auto flex h-[calc(100vh-10rem)] max-w-5xl overflow-hidden! rounded-2xl md:h-[calc(100vh-8rem)]"
@@ -150,6 +149,6 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
         groupMode
         currentUserId={userId}
       />
-    </ProtectedRoute>
+    </>
   );
 }

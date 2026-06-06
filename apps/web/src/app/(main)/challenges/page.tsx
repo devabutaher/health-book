@@ -11,7 +11,6 @@ import {
   Bookmark,
   AlertCircle,
 } from "lucide-react";
-import { ProtectedRoute } from "@/components/shared/ProtectedRoute";
 import { ChallengeCard } from "@/components/challenges/ChallengeCard";
 import { CreateChallengeModal } from "@/components/challenges/CreateChallengeModal";
 import { CheckInModal } from "@/components/challenges/CheckInModal";
@@ -114,7 +113,7 @@ export default function ChallengesPage() {
   };
 
   return (
-    <ProtectedRoute>
+    <>
       <div className="mx-auto max-w-5xl">
         {/* Hero header */}
         <div className="relative mb-8 overflow-hidden rounded-3xl bg-gradient-to-br from-brand-teal/10 via-brand-blue/5 to-brand-green/10 p-8">
@@ -373,6 +372,6 @@ export default function ChallengesPage() {
         open={!!logChallengeId}
         onClose={() => setLogChallengeId(null)}
       />
-    </ProtectedRoute>
+    </>
   );
 }

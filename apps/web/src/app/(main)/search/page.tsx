@@ -4,7 +4,6 @@ import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import Link from "next/link";
 import { Users, FileText, Hash, SearchX, UsersRound, Trophy } from "lucide-react";
-import { ProtectedRoute } from "@/components/shared/ProtectedRoute";
 import { PostCard } from "@/components/post/PostCard";
 import {
   useSearchUsersQuery,
@@ -75,7 +74,6 @@ export default function SearchPage() {
 
   if (!q) {
     return (
-      <ProtectedRoute>
         <div className="mx-auto max-w-[600px]">
           {recentSearches.length > 0 ? (
             <div>
@@ -105,12 +103,10 @@ export default function SearchPage() {
             </Empty>
           )}
         </div>
-      </ProtectedRoute>
     );
   }
 
   return (
-    <ProtectedRoute>
       <div className="mx-auto max-w-[600px]">
         <h1 className="mb-4 sm:mb-6 font-display text-2xl font-extrabold tracking-tight">
           Results for &ldquo;{q}&rdquo;
@@ -341,6 +337,5 @@ export default function SearchPage() {
           </TabsContent>
         </Tabs>
       </div>
-    </ProtectedRoute>
   );
 }

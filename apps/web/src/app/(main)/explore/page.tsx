@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Compass, Newspaper } from "lucide-react";
 import { motion } from "framer-motion";
-import { ProtectedRoute } from "@/components/shared/ProtectedRoute";
 import { PostCard } from "@/components/post/PostCard";
 import { PostSkeletonList } from "@/components/shared/PostSkeleton";
 import { useGetExploreQuery } from "@/redux/api/postApi";
@@ -54,7 +53,6 @@ export default function ExplorePage() {
   }, [handleObserver]);
 
   return (
-    <ProtectedRoute>
       <div className="mx-auto max-w-2xl">
         <div className="mb-4 sm:mb-6">
           <h1 className="font-display text-2xl font-extrabold tracking-tight">Explore</h1>
@@ -130,6 +128,5 @@ export default function ExplorePage() {
           </>
         )}
       </div>
-    </ProtectedRoute>
   );
 }

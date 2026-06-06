@@ -4,7 +4,6 @@ import { useState } from "react";
 import Link from "next/link";
 import { Plus, Users, Search, Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import { motion } from "framer-motion";
-import { ProtectedRoute } from "@/components/shared/ProtectedRoute";
 import { GroupCard } from "@/components/groups/GroupCard";
 import { CreateGroupModal } from "@/components/groups/CreateGroupModal";
 import {
@@ -130,7 +129,6 @@ export default function GroupsPage() {
   );
 
   return (
-    <ProtectedRoute>
       <div className="mx-auto max-w-4xl">
         <div className="mb-4 sm:mb-6 flex flex-col gap-3 sm:gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -350,6 +348,5 @@ export default function GroupsPage() {
 
         <CreateGroupModal open={createOpen} onClose={() => setCreateOpen(false)} />
       </div>
-    </ProtectedRoute>
   );
 }

@@ -2,7 +2,6 @@
 
 import { ConversationList } from "@/components/messaging/ConversationList";
 import { NewConversationModal } from "@/components/messaging/NewConversationModal";
-import { ProtectedRoute } from "@/components/shared/ProtectedRoute";
 import { GlassCard } from "@/components/ui/glass-card";
 import { useAppSelector } from "@/hooks";
 import { useUnreadCount } from "@/hooks/useUnreadCount";
@@ -17,7 +16,7 @@ export default function MessagesPage() {
   useUnreadCount();
 
   return (
-    <ProtectedRoute>
+    <>
       <GlassCard
         variant="elevated"
         className="mx-auto flex h-[calc(100vh-10rem)] max-w-5xl overflow-hidden! rounded-2xl md:h-[calc(100vh-8rem)]"
@@ -73,6 +72,6 @@ export default function MessagesPage() {
         groupMode
         currentUserId={userId}
       />
-    </ProtectedRoute>
+    </>
   );
 }

@@ -1,6 +1,5 @@
 "use client";
 
-import { ProtectedRoute } from "@/components/shared/ProtectedRoute";
 import { UserAvatar } from "@/components/shared/UserAvatar";
 import { Button } from "@/components/ui/button";
 import { GlassCard } from "@/components/ui/glass-card";
@@ -47,7 +46,6 @@ export default function FollowingPage() {
   };
 
   return (
-    <ProtectedRoute>
       <div className="space-y-6">
         <div>
           <h1 className="font-display text-2xl font-bold">Following</h1>
@@ -131,6 +129,5 @@ export default function FollowingPage() {
           </GlassCard>
         )}
       </div>
-    </ProtectedRoute>
   );
 }

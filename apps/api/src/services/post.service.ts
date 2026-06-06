@@ -302,30 +302,29 @@ export const postService = {
   },
 
   async getFeed(userId: string, cursor?: string, limit = 10) {
-    const following = await prisma.follow.findMany({
-      where: { followerId: userId },
-      select: { followingId: true },
-      take: 1000,
-    });
-    const followingIds = following.map((f) => f.followingId);
+    const posts = await prisma.$queryRaw`
+      SELECT p.* FROM "posts" p
+      WHERE p."user_id" IN (
+        SELECT f."following_id" FROM "follows" f WHERE f."follower_id" = ${userId}::uuid
+        UNION
+        SELECT ${userId}::uuid
+      )
+      AND p."privacy" = 'PUBLIC'
+      AND p."is_draft" = false
+      ${cursor ? Prisma.sql`AND p."created_at" < (SELECT "created_at" FROM "posts" WHERE "id" = ${cursor}::uuid)` : Prisma.empty}
+      ORDER BY p."created_at" DESC
+      LIMIT ${limit + 1}
+    `;
 
-    const followers = await prisma.follow.findMany({
-      where: { followingId: userId },
-      select: { followerId: true },
-      take: 1000,
-    });
-    const followerIds = followers.map((f) => f.followerId);
+    // $queryRaw returns plain objects — re-fetch with Prisma for typed relations
+    const postIds = (posts as { id: string }[]).map((p) => p.id);
+    if (postIds.length === 0) {
+      return { posts: [], nextCursor: null, hasMore: false };
+    }
 
-    const visibleUserIds = [...new Set([...followingIds, ...followerIds, userId])];
-
-    const posts = await prisma.post.findMany({
-      where: {
-        userId: { in: visibleUserIds },
-        privacy: "PUBLIC",
-        isDraft: false,
-      },
+    const fullPosts = await prisma.post.findMany({
+      where: { id: { in: postIds } },
       take: limit + 1,
-      ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
       select: {
         ...postSelectFields,
         user: userSelect,
@@ -337,8 +336,8 @@ export const postService = {
       orderBy: { createdAt: "desc" },
     });
 
-    const hasMore = posts.length > limit;
-    const items = hasMore ? posts.slice(0, limit) : posts;
+    const hasMore = fullPosts.length > limit;
+    const items = hasMore ? fullPosts.slice(0, limit) : fullPosts;
 
     return {
       posts: items.map((p) => enrichPost(p, userId)),

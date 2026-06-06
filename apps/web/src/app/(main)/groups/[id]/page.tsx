@@ -15,7 +15,6 @@ import {
   ImagePlus,
   Plus,
 } from "lucide-react";
-import { ProtectedRoute } from "@/components/shared/ProtectedRoute";
 import { GroupHeader } from "@/components/groups/GroupHeader";
 import { GroupMembersList } from "@/components/groups/GroupMembersList";
 import { GroupEventsSection } from "@/components/groups/GroupEventsSection";
@@ -261,31 +260,26 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
 
   if (isLoading) {
     return (
-      <ProtectedRoute>
         <div className="mx-auto max-w-4xl space-y-4">
           <div className="h-48 animate-pulse rounded-2xl bg-[var(--bg-subtle)]" />
           <div className="h-10 animate-pulse rounded-xl bg-[var(--bg-subtle)]" />
           <div className="h-64 animate-pulse rounded-2xl bg-[var(--bg-subtle)]" />
         </div>
-      </ProtectedRoute>
     );
   }
 
   if (isError || !group) {
     return (
-      <ProtectedRoute>
         <div className="flex flex-col items-center py-20 text-center">
           <p className="text-[var(--text-secondary)]">Group not found</p>
           <Link href="/groups" prefetch={false} className="mt-4 text-sm text-brand-teal hover:underline">
             Back to groups
           </Link>
         </div>
-      </ProtectedRoute>
     );
   }
 
   return (
-    <ProtectedRoute>
       <div className="mx-auto max-w-4xl space-y-4 sm:space-y-6">
         <GroupHeader
           group={group}
@@ -831,6 +825,5 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
           </AlertDialogContent>
         </AlertDialog>
       </div>
-    </ProtectedRoute>
   );
 }

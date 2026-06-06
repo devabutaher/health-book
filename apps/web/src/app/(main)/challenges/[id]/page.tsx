@@ -1,7 +1,6 @@
 "use client";
 
 import { use, useState, useCallback } from "react";
-import { ProtectedRoute } from "@/components/shared/ProtectedRoute";
 import {
   useGetChallengeQuery,
   useJoinChallengeMutation,
@@ -89,17 +88,14 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
 
   if (isLoading) {
     return (
-      <ProtectedRoute>
         <div className="mx-auto max-w-4xl space-y-4">
           <div className="h-48 animate-pulse rounded-2xl bg-[var(--bg-subtle)]" />
         </div>
-      </ProtectedRoute>
     );
   }
 
   if (isError) {
     return (
-      <ProtectedRoute>
         <div className="mx-auto max-w-4xl py-20 text-center">
           <AlertCircle className="mx-auto mb-4 size-12 text-[var(--text-muted)]" />
           <p className="text-[var(--text-secondary)]">Failed to load challenge</p>
@@ -112,17 +108,14 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
             Back to challenges
           </Button>
         </div>
-      </ProtectedRoute>
     );
   }
 
   if (!challenge) {
     return (
-      <ProtectedRoute>
         <div className="mx-auto max-w-4xl py-20 text-center text-[var(--text-secondary)]">
           Challenge not found
         </div>
-      </ProtectedRoute>
     );
   }
 
@@ -188,7 +181,7 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
   };
 
   return (
-    <ProtectedRoute>
+    <>
       <div className="mx-auto max-w-4xl space-y-4 sm:space-y-6">
         <GlassCard variant="elevated" className="p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
@@ -442,6 +435,6 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
         open={inviteOpen}
         onClose={() => setInviteOpen(false)}
       />
-    </ProtectedRoute>
+    </>
   );
 }

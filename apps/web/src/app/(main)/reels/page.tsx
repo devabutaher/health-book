@@ -1,7 +1,6 @@
 "use client";
 
 import { ReelSkeleton } from "@/components/reels/ReelSkeleton";
-import { ProtectedRoute } from "@/components/shared/ProtectedRoute";
 import dynamic from "next/dynamic";
 import { Plus } from "lucide-react";
 import { useState } from "react";
@@ -23,7 +22,6 @@ export default function ReelsPage() {
   const [refreshFlag, setRefreshFlag] = useState(0);
 
   return (
-    <ProtectedRoute>
       <div className="relative h-[calc(100dvh-11rem)] lg:h-[calc(100dvh-8rem)]">
         <ReelsFeed key={refreshFlag} onUploadClick={() => setUploadOpen(true)} />
 
@@ -38,6 +36,5 @@ export default function ReelsPage() {
 
         <ReelUploadModal open={uploadOpen} onClose={() => setUploadOpen(false)} onUploadComplete={() => setRefreshFlag(f => f + 1)} />
       </div>
-    </ProtectedRoute>
   );
 }

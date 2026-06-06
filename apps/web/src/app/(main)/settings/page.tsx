@@ -23,7 +23,6 @@ import {
   AlertTriangle,
   Trash2,
 } from "lucide-react";
-import { ProtectedRoute } from "@/components/shared/ProtectedRoute";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Switch } from "@/components/ui/switch";
 import { Field, FieldGroup, FieldLabel, FieldDescription } from "@/components/ui/field";
@@ -101,7 +100,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <ProtectedRoute>
+    <>
       <div className="mx-auto max-w-[700px]">
         <motion.div
           variants={staggerContainer}
@@ -446,6 +445,6 @@ export default function SettingsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </ProtectedRoute>
+    </>
   );
 }
