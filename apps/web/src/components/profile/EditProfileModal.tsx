@@ -120,8 +120,12 @@ export function EditProfileModal({ open, onClose }: { open: boolean; onClose: ()
   const displayAvatar = avatarPreview ?? user?.avatar ?? null;
   const displayCover = coverPreview ?? user?.coverPhoto ?? null;
 
+  const prevUser = useRef(user?.id);
   useEffect(() => {
-    setGender(user?.gender ?? "");
+    if (user?.id !== prevUser.current) {
+      prevUser.current = user?.id;
+      setGender(user?.gender ?? "");
+    }
   }, [user]);
 
   return (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import {
@@ -72,11 +72,15 @@ export default function SettingsPage() {
   const [isPrivate, setIsPrivate] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
+  const prevSettingsUser = useRef(currentUser?.id);
   useEffect(() => {
-    setName(currentUser?.name || "");
-    setBio(currentUser?.bio || "");
-    setGender(currentUser?.gender || "");
-    setIsPrivate(currentUser?.isPrivate || false);
+    if (currentUser?.id !== prevSettingsUser.current) {
+      prevSettingsUser.current = currentUser?.id;
+      setName(currentUser?.name || "");
+      setBio(currentUser?.bio || "");
+      setGender(currentUser?.gender || "");
+      setIsPrivate(currentUser?.isPrivate || false);
+    }
   }, [currentUser]);
 
   const handleThemeChange = (value: string) => {

@@ -15,7 +15,7 @@ import { useAppSelector } from "@/hooks";
 import { useCopyHealthLogMutation } from "@/redux/api/healthLogApi";
 import { useToggleSaveMutation, useToggleReactionMutation } from "@/redux/api/postApi";
 import { useFollowMutation, useUnfollowMutation } from "@/redux/api/userApi";
-import type { Post } from "@/types/post";
+import type { Post, ReactionType } from "@/types/post";
 import { toast } from "sonner";
 import { cn, formatRelativeTime } from "@/lib/utils";
 import { staggerItem } from "@/lib/motion/variants";
@@ -80,7 +80,7 @@ export function PostCard({ post }: { post: Post }) {
   };
 
   const handleReaction = useCallback(
-    async (type: string) => {
+    async (type: ReactionType) => {
       const prev = localReaction;
       if (prev === type) {
         setLocalReaction(undefined);
@@ -90,7 +90,7 @@ export function PostCard({ post }: { post: Post }) {
         setLocalReaction(type);
       }
       try {
-        await toggleReaction({ postId: post.id, type: type as any }).unwrap();
+        await toggleReaction({ postId: post.id, type }).unwrap();
       } catch {
         setLocalReaction(prev);
         setLocalReactionCount(post._count?.reactions ?? post.reactions?.length ?? 0);
