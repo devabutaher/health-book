@@ -18,7 +18,7 @@ function clearCookie(name: string) {
 
 function loadTokensFromStorage(): { accessToken: string | null; refreshToken: string | null } {
   try {
-    const raw = sessionStorage.getItem("hb_auth");
+    const raw = localStorage.getItem("hb_auth");
     if (raw) {
       const parsed = JSON.parse(raw);
       return {

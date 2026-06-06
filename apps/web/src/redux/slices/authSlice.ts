@@ -28,9 +28,9 @@ const STORAGE_KEY = "hb_auth";
 function saveToStorage(accessToken: string | null, refreshToken: string | null) {
   try {
     if (accessToken && refreshToken) {
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ accessToken, refreshToken }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ accessToken, refreshToken }));
     } else {
-      sessionStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(STORAGE_KEY);
     }
   } catch {
     /* browser-only or quota — ignore */
