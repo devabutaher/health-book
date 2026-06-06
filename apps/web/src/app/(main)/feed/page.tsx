@@ -1,12 +1,10 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { FileText, Plus, Users } from "lucide-react";
 import { motion } from "framer-motion";
 import { PostCard } from "@/components/post/PostCard";
-import { CreatePostModal } from "@/components/post/CreatePostModal";
-import { DraftsDialog } from "@/components/post/DraftsDialog";
-import { StoryRow } from "@/components/stories/StoryRow";
 import { PostSkeletonList } from "@/components/shared/PostSkeleton";
 import { useGetDraftsQuery, useGetFeedQuery } from "@/redux/api/postApi";
 import { useAppSelector } from "@/hooks";
@@ -15,8 +13,22 @@ import type { Post } from "@/types/post";
 import { Button } from "@/components/ui/button";
 import { Empty, EmptyDescription, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { staggerContainer } from "@/lib/motion/variants";
-import { FeatureDiscoveryCards } from "@/components/shared/FeatureDiscoveryCards";
 import { MobilePeoplePanel } from "@/components/shared/MobilePeoplePanel";
+
+const CreatePostModal = dynamic(() =>
+  import("@/components/post/CreatePostModal").then((m) => ({ default: m.CreatePostModal })),
+  { ssr: false },
+);
+const DraftsDialog = dynamic(() =>
+  import("@/components/post/DraftsDialog").then((m) => ({ default: m.DraftsDialog })),
+  { ssr: false },
+);
+const StoryRow = dynamic(() =>
+  import("@/components/stories/StoryRow").then((m) => ({ default: m.StoryRow })),
+);
+const FeatureDiscoveryCards = dynamic(() =>
+  import("@/components/shared/FeatureDiscoveryCards").then((m) => ({ default: m.FeatureDiscoveryCards })),
+);
 
 export default function FeedPage() {
   const [createOpen, setCreateOpen] = useState(false);

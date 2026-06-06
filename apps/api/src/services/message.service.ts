@@ -97,6 +97,9 @@ export const messageService = {
           participants: {
             every: { userId: { in: allIds } },
           },
+          AND: allIds.map((id) => ({
+            participants: { some: { userId: id } },
+          })),
         },
         include: {
           participants: {

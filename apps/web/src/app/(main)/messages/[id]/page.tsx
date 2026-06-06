@@ -4,6 +4,7 @@ import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Users, PenLine } from "lucide-react";
+import { ActiveNow } from "@/components/shared/ActiveNow";
 import { ConversationHeader } from "@/components/messaging/ConversationHeader";
 import { ChatWindow } from "@/components/messaging/ChatWindow";
 import { ConversationList } from "@/components/messaging/ConversationList";
@@ -54,6 +55,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
               </button>
             </div>
           </div>
+          <ActiveNow variant="full" />
           <div className="flex-1 overflow-y-auto">
             <ConversationList
               activeId={id}
@@ -124,6 +126,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
                   </button>
                 </div>
               </div>
+              <ActiveNow variant="full" />
               <div className="flex-1 overflow-y-auto">
                 <ConversationList
                   activeId={id}

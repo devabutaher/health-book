@@ -47,7 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAppSelector((s) => s.auth.isAuthenticated);
   const { data, isError, error, refetch } = useGetMeQuery(undefined, { skip: !accessToken });
   const initRef = useRef(false);
-  const retryTimer = useRef<ReturnType<typeof setTimeout>>();
+  const retryTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   usePresenceRealtime();
 

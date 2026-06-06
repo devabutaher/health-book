@@ -109,9 +109,7 @@ export const notificationService = {
       notifications: items,
       nextCursor: hasMore ? items[items.length - 1]?.id : null,
       hasMore,
-      unreadCount: await prisma.notification.count({
-        where: { userId, read: false, type: { not: "MESSAGE" } },
-      }),
+      unreadCount: items.filter((n) => !n.read).length,
     };
   },
 

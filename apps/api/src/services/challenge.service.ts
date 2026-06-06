@@ -55,6 +55,54 @@ async function computeStreak(challengeId: string, userId: string): Promise<numbe
   return streak;
 }
 
+async function batchComputeProgress(
+  pairs: { challengeId: string; userId: string }[],
+): Promise<Map<string, { score: number; streak: number }>> {
+  if (pairs.length === 0) return new Map();
+
+  const allEntries = await prisma.challengeDayEntry.findMany({
+    where: {
+      OR: pairs.map((p) => ({
+        challengeId: p.challengeId,
+        userId: p.userId,
+        completed: true,
+      })),
+    },
+    select: { challengeId: true, userId: true, dayNumber: true },
+    orderBy: { dayNumber: "desc" },
+  });
+
+  const grouped = new Map<string, number[]>();
+  for (const e of allEntries) {
+    const key = `${e.challengeId}:${e.userId}`;
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key)!.push(e.dayNumber);
+  }
+
+  const result = new Map<string, { score: number; streak: number }>();
+  for (const pair of pairs) {
+    const key = `${pair.challengeId}:${pair.userId}`;
+    const dayNumbers = grouped.get(key) || [];
+    const score = dayNumbers.length;
+
+    let streak = 0;
+    if (dayNumbers.length > 0) {
+      streak = 1;
+      for (let i = 1; i < dayNumbers.length; i++) {
+        if (dayNumbers[i] === dayNumbers[i - 1] - 1) {
+          streak++;
+        } else {
+          break;
+        }
+      }
+    }
+
+    result.set(key, { score, streak });
+  }
+
+  return result;
+}
+
 function getDayCount(c: Challenge): number {
   return c.dayCount || DEFAULT_DAY_COUNT;
 }
@@ -228,20 +276,29 @@ export const challengeService = {
     const hasMore = challenges.length > limit;
     const items = hasMore ? challenges.slice(0, limit) : challenges;
 
-    const formatted = await Promise.all(
-      items.map(async (c) => {
-        const myParticipation = Array.isArray(c.participants) ? c.participants[0] : null;
-        const savedByArr = Array.isArray(c.savedBy) ? c.savedBy : [];
-        const f = formatChallenge({ ...c, savedBy: savedByArr }, myParticipation, userId);
-        if (myParticipation && f.myProgress) {
-          f.myProgress.score = await computeScore(c.id, myParticipation.userId);
-          f.myProgress.pct = Math.min((f.myProgress.score / f.myProgress.goal) * 100, 100);
-          const streak = await computeStreak(c.id, myParticipation.userId);
-          f.myProgress.streak = streak;
-        }
-        return f;
-      }),
-    );
+    const formatted = items.map((c) => {
+      const myParticipation = Array.isArray(c.participants) ? c.participants[0] : null;
+      const savedByArr = Array.isArray(c.savedBy) ? c.savedBy : [];
+      return formatChallenge({ ...c, savedBy: savedByArr }, myParticipation, userId);
+    });
+
+    const joinedPairs = items
+      .map((c) => {
+        const p = Array.isArray(c.participants) ? c.participants[0] : null;
+        return p ? { challengeId: c.id, userId: p.userId } : null;
+      })
+      .filter((x): x is { challengeId: string; userId: string } => x !== null);
+
+    const progressMap = await batchComputeProgress(joinedPairs);
+
+    for (const f of formatted) {
+      const progress = progressMap.get(`${f.id}:${userId}`);
+      if (progress && f.myProgress) {
+        f.myProgress.score = progress.score;
+        f.myProgress.pct = Math.min((progress.score / f.myProgress.goal) * 100, 100);
+        f.myProgress.streak = progress.streak;
+      }
+    }
 
     return {
       challenges: formatted,
@@ -272,18 +329,28 @@ export const challengeService = {
     const hasMore = challenges.length > limit;
     const items = hasMore ? challenges.slice(0, limit) : challenges;
 
-    const formatted = await Promise.all(
-      items.map(async (c) => {
-        const myParticipation = Array.isArray(c.participants) ? c.participants[0] : null;
-        const f = formatChallenge(c, myParticipation, userId);
-        if (myParticipation && f.myProgress) {
-          f.myProgress.score = await computeScore(c.id, myParticipation.userId);
-          f.myProgress.pct = Math.min((f.myProgress.score / f.myProgress.goal) * 100, 100);
-          f.myProgress.streak = await computeStreak(c.id, myParticipation.userId);
-        }
-        return f;
-      }),
-    );
+    const formatted = items.map((c) => {
+      const myParticipation = Array.isArray(c.participants) ? c.participants[0] : null;
+      return formatChallenge(c, myParticipation, userId);
+    });
+
+    const joinedPairs = items
+      .map((c) => {
+        const p = Array.isArray(c.participants) ? c.participants[0] : null;
+        return p ? { challengeId: c.id, userId: p.userId } : null;
+      })
+      .filter((x): x is { challengeId: string; userId: string } => x !== null);
+
+    const progressMap = await batchComputeProgress(joinedPairs);
+
+    for (const f of formatted) {
+      const progress = progressMap.get(`${f.id}:${userId}`);
+      if (progress && f.myProgress) {
+        f.myProgress.score = progress.score;
+        f.myProgress.pct = Math.min((progress.score / f.myProgress.goal) * 100, 100);
+        f.myProgress.streak = progress.streak;
+      }
+    }
 
     return {
       challenges: formatted,
@@ -328,9 +395,15 @@ export const challengeService = {
       userId,
     );
     if (myParticipation && f.myProgress) {
-      f.myProgress.score = await computeScore(challengeId, myParticipation.userId);
-      f.myProgress.pct = Math.min((f.myProgress.score / f.myProgress.goal) * 100, 100);
-      f.myProgress.streak = await computeStreak(challengeId, myParticipation.userId);
+      const progress = await batchComputeProgress([
+        { challengeId, userId: myParticipation.userId },
+      ]);
+      const p = progress.get(`${challengeId}:${myParticipation.userId}`);
+      if (p) {
+        f.myProgress.score = p.score;
+        f.myProgress.pct = Math.min((p.score / f.myProgress.goal) * 100, 100);
+        f.myProgress.streak = p.streak;
+      }
     }
     return f;
   },
@@ -350,20 +423,32 @@ export const challengeService = {
       orderBy: { savedAt: "desc" },
     });
 
-    const formatted = await Promise.all(
-      saved.map(async (s) => {
-        const myParticipation = Array.isArray(s.challenge.participants)
+    const formatted = saved.map((s) => {
+      const myParticipation = Array.isArray(s.challenge.participants)
+        ? s.challenge.participants[0]
+        : null;
+      return formatChallenge(s.challenge, myParticipation, userId);
+    });
+
+    const joinedPairs = saved
+      .map((s) => {
+        const p = Array.isArray(s.challenge.participants)
           ? s.challenge.participants[0]
           : null;
-        const f = formatChallenge(s.challenge, myParticipation, userId);
-        if (myParticipation && f.myProgress) {
-          f.myProgress.score = await computeScore(s.challenge.id, myParticipation.userId);
-          f.myProgress.pct = Math.min((f.myProgress.score / f.myProgress.goal) * 100, 100);
-          f.myProgress.streak = await computeStreak(s.challenge.id, myParticipation.userId);
-        }
-        return f;
-      }),
-    );
+        return p ? { challengeId: s.challenge.id, userId: p.userId } : null;
+      })
+      .filter((x): x is { challengeId: string; userId: string } => x !== null);
+
+    const progressMap = await batchComputeProgress(joinedPairs);
+
+    for (const f of formatted) {
+      const progress = progressMap.get(`${f.id}:${userId}`);
+      if (progress && f.myProgress) {
+        f.myProgress.score = progress.score;
+        f.myProgress.pct = Math.min((progress.score / f.myProgress.goal) * 100, 100);
+        f.myProgress.streak = progress.streak;
+      }
+    }
 
     return formatted;
   },
@@ -868,18 +953,19 @@ export const challengeService = {
       },
     });
 
-    const leaderboard = await Promise.all(
-      participants.map(async (p, i) => ({
-        userId: p.userId,
-        user: p.user,
-        score: p.score,
-        totalValue: p.totalValue,
-        rank: i + 1,
-        completed: p.completed,
-        completedAt: p.completedAt?.toISOString() ?? null,
-        streak: await computeStreak(challengeId, p.userId),
-      })),
-    );
+    const streakPairs = participants.map((p) => ({ challengeId, userId: p.userId }));
+    const progressMap = await batchComputeProgress(streakPairs);
+
+    const leaderboard = participants.map((p, i) => ({
+      userId: p.userId,
+      user: p.user,
+      score: p.score,
+      totalValue: p.totalValue,
+      rank: i + 1,
+      completed: p.completed,
+      completedAt: p.completedAt?.toISOString() ?? null,
+      streak: progressMap.get(`${challengeId}:${p.userId}`)?.streak ?? 0,
+    }));
 
     return leaderboard;
   },
@@ -899,33 +985,38 @@ export const challengeService = {
       orderBy: { joinedAt: "desc" },
     });
 
-    const formatted = await Promise.all(
-      participations.map(async (p) => {
-        const c = p.challenge;
-        const score = await computeScore(c.id, userId);
-        const streak = await computeStreak(c.id, userId);
-        const goal = getDayCount(c);
-        return {
-          ...c,
-          difficulty: c.difficulty || "BEGINNER",
-          dayCount: c.dayCount || DEFAULT_DAY_COUNT,
-          category: c.category || "GENERAL",
-          milestones: c.milestones as { name: string; threshold: number; icon: string }[] | null,
-          participantCount: c._count.participants,
-          myProgress: {
-            score,
-            goal,
-            pct: Math.min((score / goal) * 100, 100),
-            rank: p.rank,
-            completed: p.completed,
-            streak,
-            achievedMilestones: (p.achievedMilestones as string[]) || [],
-            dayEntries: [],
-          },
-          isJoined: true,
-        };
-      }),
-    );
+    const progressPairs = participations.map((p) => ({
+      challengeId: p.challenge.id,
+      userId,
+    }));
+    const progressMap = await batchComputeProgress(progressPairs);
+
+    const formatted = participations.map((p) => {
+      const c = p.challenge;
+      const progress = progressMap.get(`${c.id}:${userId}`);
+      const score = progress?.score ?? 0;
+      const streak = progress?.streak ?? 0;
+      const goal = getDayCount(c);
+      return {
+        ...c,
+        difficulty: c.difficulty || "BEGINNER",
+        dayCount: c.dayCount || DEFAULT_DAY_COUNT,
+        category: c.category || "GENERAL",
+        milestones: c.milestones as { name: string; threshold: number; icon: string }[] | null,
+        participantCount: c._count.participants,
+        myProgress: {
+          score,
+          goal,
+          pct: Math.min((score / goal) * 100, 100),
+          rank: p.rank,
+          completed: p.completed,
+          streak,
+          achievedMilestones: (p.achievedMilestones as string[]) || [],
+          dayEntries: [],
+        },
+        isJoined: true,
+      };
+    });
 
     return formatted;
   },
@@ -1145,15 +1236,21 @@ export const challengeService = {
       categoryCount[cat] = (categoryCount[cat] || 0) + 1;
     }
 
-    const sortedParticipations = await prisma.challengeParticipant.findMany({
+    const allParticipations = await prisma.challengeParticipant.findMany({
       where: { userId },
       select: { challengeId: true },
     });
 
-    const streaks = await Promise.all(
-      sortedParticipations.map((p) => computeStreak(p.challengeId, userId)),
-    );
-    const bestStreak = Math.max(0, ...streaks);
+    const streakPairs = allParticipations.map((p) => ({
+      challengeId: p.challengeId,
+      userId,
+    }));
+    const progressMap = await batchComputeProgress(streakPairs);
+    let bestStreak = 0;
+    for (const p of allParticipations) {
+      const s = progressMap.get(`${p.challengeId}:${userId}`)?.streak ?? 0;
+      if (s > bestStreak) bestStreak = s;
+    }
 
     return {
       totalJoined,
@@ -1252,16 +1349,23 @@ export const challengeService = {
 
     if (challenge.type !== "DUEL") throw new AppError(400, "Not a duel challenge");
 
-    const participantsWithStats = await Promise.all(
-      challenge.participants.map(async (p) => ({
+    const duelPairs = challenge.participants.map((p) => ({
+      challengeId,
+      userId: p.userId,
+    }));
+    const progressMap = await batchComputeProgress(duelPairs);
+
+    const participantsWithStats = challenge.participants.map((p) => {
+      const progress = progressMap.get(`${challengeId}:${p.userId}`);
+      return {
         userId: p.userId,
         user: p.user,
-        score: await computeScore(challengeId, p.userId),
-        streak: await computeStreak(challengeId, p.userId),
+        score: progress?.score ?? 0,
+        streak: progress?.streak ?? 0,
         completed: p.completed,
         joinedAt: p.joinedAt,
-      })),
-    );
+      };
+    });
 
     // Winner is the one with higher score (or first to reach it)
     const sorted = [...participantsWithStats].sort(

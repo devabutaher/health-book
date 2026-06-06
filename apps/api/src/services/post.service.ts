@@ -304,15 +304,15 @@ export const postService = {
   async getFeed(userId: string, cursor?: string, limit = 10) {
     const posts = await prisma.$queryRaw`
       SELECT p.* FROM "posts" p
-      WHERE p."user_id" IN (
-        SELECT f."following_id" FROM "follows" f WHERE f."follower_id" = ${userId}::uuid
+      WHERE p."userId" IN (
+        SELECT f."followingId" FROM "follows" f WHERE f."followerId" = ${userId}
         UNION
-        SELECT ${userId}::uuid
+        SELECT ${userId}
       )
       AND p."privacy" = 'PUBLIC'
       AND p."is_draft" = false
-      ${cursor ? Prisma.sql`AND p."created_at" < (SELECT "created_at" FROM "posts" WHERE "id" = ${cursor}::uuid)` : Prisma.empty}
-      ORDER BY p."created_at" DESC
+      ${cursor ? Prisma.sql`AND p."createdAt" < (SELECT "createdAt" FROM "posts" WHERE "id" = ${cursor})` : Prisma.empty}
+      ORDER BY p."createdAt" DESC
       LIMIT ${limit + 1}
     `;
 

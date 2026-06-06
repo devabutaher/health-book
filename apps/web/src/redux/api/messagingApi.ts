@@ -59,7 +59,7 @@ export const messagingApi = createApi({
         success: boolean;
         data: { messages: Message[]; nextCursor: string | null; hasMore: boolean };
       }) => response.data,
-      keepUnusedDataFor: 60,
+      keepUnusedDataFor: 300,
     }),
 
     sendMessage: builder.mutation<

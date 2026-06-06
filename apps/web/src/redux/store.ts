@@ -1,5 +1,7 @@
-import { configureStore, type Middleware } from "@reduxjs/toolkit";
+import { combineReducers, configureStore, type Middleware } from "@reduxjs/toolkit";
 import { setupListeners } from "@reduxjs/toolkit/query";
+import { persistReducer, persistStore, FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER } from "redux-persist";
+import storage from "./storage";
 import { authApi } from "./api/authApi";
 import { challengesApi } from "./api/challengesApi";
 import { commentApi } from "./api/commentApi";
@@ -43,34 +45,46 @@ const persistSettingsMiddleware: Middleware = (store) => {
   };
 };
 
+const rootReducer = combineReducers({
+  auth: authReducer,
+  settings: settingsReducer,
+  [authApi.reducerPath]: authApi.reducer,
+  [userApi.reducerPath]: userApi.reducer,
+  [postApi.reducerPath]: postApi.reducer,
+  [commentApi.reducerPath]: commentApi.reducer,
+  [healthLogApi.reducerPath]: healthLogApi.reducer,
+  [searchApi.reducerPath]: searchApi.reducer,
+  [notificationApi.reducerPath]: notificationApi.reducer,
+  [periodLogApi.reducerPath]: periodLogApi.reducer,
+  [weightLogApi.reducerPath]: weightLogApi.reducer,
+  [messagingApi.reducerPath]: messagingApi.reducer,
+  [groupsApi.reducerPath]: groupsApi.reducer,
+  [challengesApi.reducerPath]: challengesApi.reducer,
+  [groupEventApi.reducerPath]: groupEventApi.reducer,
+  [groupPollApi.reducerPath]: groupPollApi.reducer,
+  [storiesApi.reducerPath]: storiesApi.reducer,
+  [reelsApi.reducerPath]: reelsApi.reducer,
+  [highlightsApi.reducerPath]: highlightsApi.reducer,
+  [newsApi.reducerPath]: newsApi.reducer,
+  [pushApi.reducerPath]: pushApi.reducer,
+});
+
+const persistConfig = {
+  key: "hb-root",
+  storage,
+  blacklist: ["auth", "settings"],
+};
+
+const persistedReducer = persistReducer(persistConfig, rootReducer);
+
 export const store = configureStore({
-  reducer: {
-    auth: authReducer,
-    settings: settingsReducer,
-    [authApi.reducerPath]: authApi.reducer,
-    [userApi.reducerPath]: userApi.reducer,
-    [postApi.reducerPath]: postApi.reducer,
-    [commentApi.reducerPath]: commentApi.reducer,
-    [healthLogApi.reducerPath]: healthLogApi.reducer,
-    [searchApi.reducerPath]: searchApi.reducer,
-    [notificationApi.reducerPath]: notificationApi.reducer,
-    [periodLogApi.reducerPath]: periodLogApi.reducer,
-    [weightLogApi.reducerPath]: weightLogApi.reducer,
-    [messagingApi.reducerPath]: messagingApi.reducer,
-    [groupsApi.reducerPath]: groupsApi.reducer,
-    [challengesApi.reducerPath]: challengesApi.reducer,
-    [groupEventApi.reducerPath]: groupEventApi.reducer,
-    [groupPollApi.reducerPath]: groupPollApi.reducer,
-    [storiesApi.reducerPath]: storiesApi.reducer,
-    [reelsApi.reducerPath]: reelsApi.reducer,
-    [highlightsApi.reducerPath]: highlightsApi.reducer,
-    [newsApi.reducerPath]: newsApi.reducer,
-    [pushApi.reducerPath]: pushApi.reducer,
-  },
+  reducer: persistedReducer,
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
       immutableCheck: false,
-      serializableCheck: false,
+      serializableCheck: {
+        ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
+      },
     }).concat(
       persistSettingsMiddleware,
       authApi.middleware,
@@ -94,6 +108,8 @@ export const store = configureStore({
       pushApi.middleware,
     ),
 });
+
+export const persistor = persistStore(store);
 
 setupListeners(store.dispatch);
 

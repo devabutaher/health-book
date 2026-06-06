@@ -1,5 +1,6 @@
 "use client";
 
+import { ActiveNow } from "@/components/shared/ActiveNow";
 import { ConversationList } from "@/components/messaging/ConversationList";
 import { NewConversationModal } from "@/components/messaging/NewConversationModal";
 import { GlassCard } from "@/components/ui/glass-card";
@@ -42,6 +43,8 @@ export default function MessagesPage() {
               </button>
             </div>
           </div>
+
+          <ActiveNow variant="full" />
 
           <div className="flex-1 overflow-y-auto">
             <ConversationList onSelect={(id) => router.push(`/messages/${id}`)} />

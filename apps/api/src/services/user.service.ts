@@ -1,6 +1,5 @@
 import { prisma } from "../lib/prisma";
 import { notificationService } from "./notification.service";
-import { messageService } from "./message.service";
 
 const calcStreak = (logDates: Set<string>): number => {
   let streak = 0;
@@ -141,8 +140,6 @@ export const userService = {
           fromUserId: followerId,
         })
         .catch(() => {});
-
-      messageService.createConversation(followerId, [followingId]).catch(() => {});
     }
   },
 

@@ -87,3 +87,17 @@
 
 **State:** Draft/schedule features fixed with proper optimistic cache updates. Follow/unfollow works instantly on feed posts. Reaction buttons update visually on click without any delay.
 **Next:** Verify OAuth callback flow, test reaction visibility, test follow button.
+
+### 2026-06-06 (Browser Cache + Performance Optimization)
+**Done:**
+- **Step 4 (notification COUNT fix):** Removed redundant `prisma.notification.count()` in `notification.list()` — derives `unreadCount` from already-fetched items array (`notification.service.ts:112`)
+- **Step 1 (Cache-Control on all GET routes):** Applied `cacheControl` middleware to 42 GET routes across 9 route files (user, group, challenge, notification, healthLog, story, reel, search, message). Also added `public` variant param. 3 cache tiers: 10s/30s for dynamic data, 60s/300s for semi-dynamic, 300s/600s for static data.
+- **Step 5 (dynamic imports on FeedPage):** `CreatePostModal`, `DraftsDialog`, `StoryRow`, `FeatureDiscoveryCards` now use `next/dynamic()` — reduces initial bundle size.
+- **Step 7 (Service Worker fetch):** Added network-first caching for API calls and cache-first for static assets in `sw.js` — offline fallback for previously fetched data.
+- **Step 3 (N+1 in challenge service):** Replaced per-loop `computeScore` + `computeStreak` (2 queries per challenge → up to 40 per page) with single `batchComputeProgress()` that does 1 batch query for all joined challenges. Fixed: `browse()`, `search()`, `getSaved()`, `getMyChallenges()`, `getLeaderboard()` (50 queries → 1), `getDuel()`, `getUserStats()`.
+- **Step 2 (redux-persist):** Installed `redux-persist` v6. Wrapped store with `persistReducer` (blacklist: auth, settings) and `ReduxProvider` with `PersistGate`. RTK Query cache now survives page refresh — instant data restore on navigation.
+- **Lint + typecheck:** 0 errors, 0 warnings on both frontend and backend.
+
+**State:** All 7 performance/cache improvements implemented. Browser caching via Cache-Control headers + Service Worker. Backend N+1 queries eliminated in challenge service. Redux state persists across page refreshes. Build clean.
+
+**Next:** Deploy to Vercel and monitor. Verify OAuth callback flow end-to-end.
