@@ -53,9 +53,30 @@ const textBgColors = [
 ];
 
 const commonEmojis = [
-  "😀", "😂", "😍", "🥰", "😎", "🤔", "😢", "😡",
-  "🔥", "💯", "❤️", "💔", "⭐", "🎉", "🎂", "🌈",
-  "👍", "👎", "👏", "🙌", "💪", "🤝", "✌️", "🫶",
+  "😀",
+  "😂",
+  "😍",
+  "🥰",
+  "😎",
+  "🤔",
+  "😢",
+  "😡",
+  "🔥",
+  "💯",
+  "❤️",
+  "💔",
+  "⭐",
+  "🎉",
+  "🎂",
+  "🌈",
+  "👍",
+  "👎",
+  "👏",
+  "🙌",
+  "💪",
+  "🤝",
+  "✌️",
+  "🫶",
 ];
 
 export function StoryMediaEditor({
@@ -91,9 +112,12 @@ export function StoryMediaEditor({
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{
-    startX: number; startY: number;
-    posX: number; posY: number;
-    rectW: number; rectH: number;
+    startX: number;
+    startY: number;
+    posX: number;
+    posY: number;
+    rectW: number;
+    rectH: number;
   } | null>(null);
 
   useEffect(() => {
@@ -167,9 +191,12 @@ export function StoryMediaEditor({
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
     dragRef.current = {
-      startX: e.clientX, startY: e.clientY,
-      posX: textPos.x, posY: textPos.y,
-      rectW: rect.width, rectH: rect.height,
+      startX: e.clientX,
+      startY: e.clientY,
+      posX: textPos.x,
+      posY: textPos.y,
+      rectW: rect.width,
+      rectH: rect.height,
     };
   };
 
@@ -196,9 +223,23 @@ export function StoryMediaEditor({
       {/* Media Preview */}
       {localPreview ? (
         mediaType === "video" ? (
-          <video ref={videoRef} src={localPreview} className="h-full w-full object-contain" autoPlay playsInline muted loop />
+          <video
+            ref={videoRef}
+            src={localPreview}
+            className="h-full w-full object-contain"
+            autoPlay
+            playsInline
+            muted
+            loop
+          />
         ) : (
-          <Image src={localPreview} alt="Story media preview" className="h-full w-full object-contain" width={400} height={712} />
+          <Image
+            src={localPreview}
+            alt="Story media preview"
+            className="h-full w-full object-contain"
+            width={400}
+            height={712}
+          />
         )
       ) : (
         <div className="flex h-full w-full items-center justify-center bg-black/50">
@@ -228,7 +269,10 @@ export function StoryMediaEditor({
       {/* Draggable Text Overlay */}
       {textOverlay.trim() && (
         <motion.div
-          className={cn("absolute z-20 select-none text-center drop-shadow-2xl touch-none cursor-grab active:cursor-grabbing", fontClass)}
+          className={cn(
+            "absolute z-20 select-none text-center drop-shadow-2xl touch-none cursor-grab active:cursor-grabbing",
+            fontClass,
+          )}
           style={{ left: `${textPos.x}%`, top: `${textPos.y}%`, transform: "translate(-50%, 0)" }}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
@@ -236,9 +280,20 @@ export function StoryMediaEditor({
           onPointerCancel={handlePointerUp}
         >
           {textBgColor !== "transparent" && (
-            <span className="absolute -inset-x-2 -inset-y-1 rounded-lg" style={{ backgroundColor: textBgColor }} />
+            <span
+              className="absolute -inset-x-2 -inset-y-1 rounded-lg"
+              style={{ backgroundColor: textBgColor }}
+            />
           )}
-          <span className="relative" style={{ color: textColor, fontSize: `${textFontSize}px`, fontWeight: textFontWeight, textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>
+          <span
+            className="relative"
+            style={{
+              color: textColor,
+              fontSize: `${textFontSize}px`,
+              fontWeight: textFontWeight,
+              textShadow: "0 2px 8px rgba(0,0,0,0.5)",
+            }}
+          >
             {textOverlay}
           </span>
         </motion.div>
@@ -246,7 +301,11 @@ export function StoryMediaEditor({
 
       {/* Drag hint */}
       {textOverlay.trim() && panelCollapsed && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="pointer-events-none absolute bottom-16 left-0 right-0 z-10 text-center">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="pointer-events-none absolute bottom-16 left-0 right-0 z-10 text-center"
+        >
           <span className="rounded-full bg-black/40 px-3 py-1 text-[10px] text-white/50 backdrop-blur-sm">
             Drag text to reposition
           </span>
@@ -255,7 +314,10 @@ export function StoryMediaEditor({
 
       {/* Bottom Tools Panel */}
       {!createdStoryId && (
-        <StoryCollapsiblePanel collapsed={panelCollapsed} onToggle={() => setPanelCollapsed(!panelCollapsed)}>
+        <StoryCollapsiblePanel
+          collapsed={panelCollapsed}
+          onToggle={() => setPanelCollapsed(!panelCollapsed)}
+        >
           <div className="space-y-3 px-3 pb-2">
             <div className="flex items-center gap-2">
               <Avatar size="sm" className="size-7">
@@ -288,7 +350,9 @@ export function StoryMediaEditor({
             {/* Text Background */}
             {textOverlay.trim() && (
               <div>
-                <label className="mb-1.5 block text-xs font-medium text-white/70">Text Background</label>
+                <label className="mb-1.5 block text-xs font-medium text-white/70">
+                  Text Background
+                </label>
                 <div className="flex gap-2">
                   {textBgColors.map((c) => (
                     <button
@@ -317,7 +381,13 @@ export function StoryMediaEditor({
                     <button
                       key={f.value}
                       onClick={() => setFontFamily(f.value)}
-                      className={cn("rounded-full px-4 py-1.5 text-xs font-semibold transition-all", fontFamily === f.value ? "bg-brand-teal text-white" : "bg-white/10 text-white/70 hover:bg-white/20", f.className)}
+                      className={cn(
+                        "rounded-full px-4 py-1.5 text-xs font-semibold transition-all",
+                        fontFamily === f.value
+                          ? "bg-brand-teal text-white"
+                          : "bg-white/10 text-white/70 hover:bg-white/20",
+                        f.className,
+                      )}
                     >
                       {f.label}
                     </button>
@@ -334,7 +404,12 @@ export function StoryMediaEditor({
                   <button
                     key={fs.value}
                     onClick={() => setTextFontSize(fs.value)}
-                    className={cn("flex size-8 items-center justify-center rounded-full text-xs font-semibold transition-all", textFontSize === fs.value ? "bg-brand-teal text-white" : "bg-white/10 text-white/70 hover:bg-white/20")}
+                    className={cn(
+                      "flex size-8 items-center justify-center rounded-full text-xs font-semibold transition-all",
+                      textFontSize === fs.value
+                        ? "bg-brand-teal text-white"
+                        : "bg-white/10 text-white/70 hover:bg-white/20",
+                    )}
                   >
                     {fs.label}
                   </button>
@@ -350,7 +425,12 @@ export function StoryMediaEditor({
                   <button
                     key={w}
                     onClick={() => setTextFontWeight(w)}
-                    className={cn("rounded-full px-4 py-1.5 text-xs font-semibold transition-all", textFontWeight === w ? "bg-brand-teal text-white" : "bg-white/10 text-white/70 hover:bg-white/20")}
+                    className={cn(
+                      "rounded-full px-4 py-1.5 text-xs font-semibold transition-all",
+                      textFontWeight === w
+                        ? "bg-brand-teal text-white"
+                        : "bg-white/10 text-white/70 hover:bg-white/20",
+                    )}
                   >
                     {w === "bold" ? "Bold" : "Normal"}
                   </button>
@@ -359,7 +439,9 @@ export function StoryMediaEditor({
             </div>
 
             {textOverlay.trim() && (
-              <p className="text-center text-[10px] text-white/30">Collapse panel ↑ to drag text freely</p>
+              <p className="text-center text-[10px] text-white/30">
+                Collapse panel ↑ to drag text freely
+              </p>
             )}
 
             <StoryPrivacySelector value={privacy} onChange={setPrivacy} />
@@ -376,7 +458,11 @@ export function StoryMediaEditor({
       )}
 
       {createdStoryId && (
-        <StoryHighlightPanel createdStoryId={createdStoryId} onClose={onClose} onCreated={onCreated} />
+        <StoryHighlightPanel
+          createdStoryId={createdStoryId}
+          onClose={onClose}
+          onCreated={onCreated}
+        />
       )}
     </div>
   );

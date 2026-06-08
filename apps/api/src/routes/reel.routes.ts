@@ -1,12 +1,12 @@
 import { Router } from "express";
 import { reelController } from "../controllers/reel.controller";
-import { authenticate, cacheControl } from "../middleware";
+import { authenticate } from "../middleware";
 import { upload } from "../middleware/upload";
 
 const router = Router() as ReturnType<typeof Router>;
 
-router.get("/", authenticate, cacheControl(60, 300), reelController.browse);
-router.get("/:id", authenticate, cacheControl(300, 600), reelController.getById);
+router.get("/", authenticate, reelController.browse);
+router.get("/:id", authenticate, reelController.getById);
 
 router.post("/", authenticate, reelController.create);
 router.post("/upload", authenticate, upload.single("video"), reelController.upload);

@@ -9,11 +9,41 @@ export const messagingApi = createApi({
   reducerPath: "messagingApi",
   baseQuery: createBaseQuery(process.env.NEXT_PUBLIC_API_URL + "/api/messages"),
   tagTypes: ["Conversations", "Conversation", "MessageUnread"],
+  refetchOnFocus: false,
+  refetchOnReconnect: true,
   endpoints: (builder) => ({
-    getConversations: builder.query<Conversation[], void>({
-      query: () => "/conversations",
+    getConversations: builder.query<
+      { data: Conversation[]; nextCursor: string | null; hasMore: boolean },
+      { cursor?: string } | void
+    >({
+      query: (args) => {
+        const cursor = (args as { cursor?: string })?.cursor;
+        return cursor ? `/conversations?cursor=${cursor}` : "/conversations";
+      },
       providesTags: ["Conversations"],
-      transformResponse: (response: { success: boolean; data: Conversation[] }) => response.data,
+      transformResponse: (response: {
+        success: boolean;
+        data: { data: Conversation[]; nextCursor: string | null; hasMore: boolean };
+      }) => response.data,
+      serializeQueryArgs: ({ queryArgs }) => {
+        const arg = queryArgs as { cursor?: string } | undefined;
+        return arg?.cursor ? "1" : "0";
+      },
+      merge: (currentCache, newItems) => {
+        if (!newItems) return;
+        if (!currentCache) return newItems;
+        const existingIds = new Set(currentCache.data.map((c) => c.id));
+        return {
+          data: [...currentCache.data, ...newItems.data.filter((c) => !existingIds.has(c.id))],
+          nextCursor: newItems.nextCursor,
+          hasMore: newItems.hasMore,
+        };
+      },
+      forceRefetch: ({ currentArg, previousArg }) => {
+        const cur = (currentArg as { cursor?: string } | undefined)?.cursor;
+        const prev = (previousArg as { cursor?: string } | undefined)?.cursor;
+        return cur !== prev;
+      },
       keepUnusedDataFor: 300,
     }),
 
@@ -34,18 +64,59 @@ export const messagingApi = createApi({
         body,
       }),
       transformResponse: (response: { success: boolean; data: Conversation }) => response.data,
-      onQueryStarted: async (_args, { dispatch, queryFulfilled }) => {
+      onQueryStarted: async (args, { dispatch, getState, queryFulfilled }) => {
+        const user = (getState() as RootState).auth.user;
+        if (!user) return;
+        const tempId = `temp-${Date.now()}`;
+
+        const participants = [
+          ...args.participantIds.map((pid) => ({
+            userId: pid,
+            user: { id: pid, name: "", username: "", avatar: null as string | null },
+            role: (pid === user.id ? "admin" : "member") as string,
+            joinedAt: new Date().toISOString(),
+            isMuted: false,
+            lastReadAt: null as string | null,
+          })),
+        ];
+
+        const optimistic: Conversation = {
+          id: tempId,
+          isGroup: args.isGroup || false,
+          groupName: args.groupName || null,
+          groupAvatar: null,
+          participants,
+          lastMessage: null,
+          unreadCount: 0,
+          isMuted: false,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+
+        const patch = dispatch(
+          messagingApi.util.updateQueryData("getConversations", undefined, (draft) => {
+            if (!draft?.data) return;
+            draft.data.unshift(optimistic);
+          }),
+        );
+
         try {
           const { data: conv } = await queryFulfilled;
-          if (!conv) return;
-          dispatch(
-            messagingApi.util.updateQueryData("getConversations", undefined, (draft) => {
-              if (!Array.isArray(draft)) return;
-              const exists = draft.find((c) => c.id === conv.id);
-              if (!exists) draft.unshift(conv);
-            }),
-          );
-        } catch {}
+          if (conv?.id) {
+            dispatch(
+              messagingApi.util.updateQueryData("getConversations", undefined, (draft) => {
+                if (!draft?.data) return;
+                const idx = draft.data.findIndex((c) => c.id === tempId);
+                if (idx >= 0) {
+                  draft.data[idx] = conv;
+                }
+              }),
+            );
+          }
+        } catch {
+          patch.undo();
+          soundManager.playError();
+        }
       },
     }),
 
@@ -89,35 +160,36 @@ export const messagingApi = createApi({
         const tempId = `temp-${Date.now()}`;
 
         const patchMessages = dispatch(
-          messagingApi.util.updateQueryData(
-            "getConversation",
-            { id: conversationId },
-            (draft) => {
-              if (!draft) return;
-              const optimistic: Message & { messageType: string } = {
-                id: tempId,
-                conversationId,
-                senderId: user.id,
-                sender: { id: user.id, name: user.name, username: user.username, avatar: user.avatar },
-                content: content || null,
-                mediaUrl: mediaUrl || null,
-                sharedPostId: (sharedPostId as string | null) || null,
-                messageType: messageType || "text",
-                storyId: storyId || undefined,
-                storyReplyData: storyReplyData as Record<string, unknown> | undefined,
-                isDeleted: false,
-                createdAt: new Date().toISOString(),
-              };
-              draft.messages.push(optimistic);
-            },
-          ),
+          messagingApi.util.updateQueryData("getConversation", { id: conversationId }, (draft) => {
+            if (!draft) return;
+            const optimistic: Message & { messageType: string } = {
+              id: tempId,
+              conversationId,
+              senderId: user.id,
+              sender: {
+                id: user.id,
+                name: user.name,
+                username: user.username,
+                avatar: user.avatar,
+              },
+              content: content || null,
+              mediaUrl: mediaUrl || null,
+              sharedPostId: (sharedPostId as string | null) || null,
+              messageType: messageType || "text",
+              storyId: storyId || undefined,
+              storyReplyData: storyReplyData as Record<string, unknown> | undefined,
+              isDeleted: false,
+              createdAt: new Date().toISOString(),
+            };
+            draft.messages.push(optimistic);
+          }),
         );
 
         // Also update conversation list preview
         const patchConvList = dispatch(
           messagingApi.util.updateQueryData("getConversations", undefined, (draft) => {
-            if (!Array.isArray(draft)) return;
-            const conv = draft.find((c) => c.id === conversationId);
+            if (!draft?.data) return;
+            const conv = draft.data.find((c) => c.id === conversationId);
             if (conv) {
               (conv as any).lastMessage = {
                 content: content || null,
@@ -182,8 +254,8 @@ export const messagingApi = createApi({
       onQueryStarted: async (conversationId, { dispatch, queryFulfilled }) => {
         const patch = dispatch(
           messagingApi.util.updateQueryData("getConversations", undefined, (draft) => {
-            if (!Array.isArray(draft)) return;
-            const conv = draft.find((c) => c.id === conversationId);
+            if (!draft?.data) return;
+            const conv = draft.data.find((c) => c.id === conversationId);
             if (!conv) return;
             conv.isMuted = !conv.isMuted;
           }),
@@ -204,8 +276,8 @@ export const messagingApi = createApi({
       onQueryStarted: async (conversationId, { dispatch, queryFulfilled }) => {
         const patchConv = dispatch(
           messagingApi.util.updateQueryData("getConversations", undefined, (draft) => {
-            if (!Array.isArray(draft)) return;
-            const conv = draft.find((c) => c.id === conversationId);
+            if (!draft?.data) return;
+            const conv = draft.data.find((c) => c.id === conversationId);
             if (!conv) return;
             (conv as any).unreadCount = 0;
           }),
@@ -221,6 +293,7 @@ export const messagingApi = createApi({
         } catch {
           patchConv.undo();
           patchUnread.undo();
+          soundManager.playError();
         }
       },
     }),
@@ -237,15 +310,16 @@ export const messagingApi = createApi({
       onQueryStarted: async ({ conversationId }, { dispatch, queryFulfilled }) => {
         const patch = dispatch(
           messagingApi.util.updateQueryData("getConversations", undefined, (draft) => {
-            if (!Array.isArray(draft)) return;
-            const idx = draft.findIndex((c) => c.id === conversationId);
-            if (idx >= 0) draft.splice(idx, 1);
+            if (!draft?.data) return;
+            const idx = draft.data.findIndex((c) => c.id === conversationId);
+            if (idx >= 0) draft.data.splice(idx, 1);
           }),
         );
         try {
           await queryFulfilled;
         } catch {
           patch.undo();
+          soundManager.playError();
         }
       },
     }),
@@ -258,6 +332,22 @@ export const messagingApi = createApi({
       invalidatesTags: (_result, _error, conversationId) => [
         { type: "Conversation", id: conversationId },
       ],
+      onQueryStarted: async (conversationId, { dispatch, queryFulfilled }) => {
+        const patch = dispatch(
+          messagingApi.util.updateQueryData("getConversation", { id: conversationId }, (draft) => {
+            if (!draft) return;
+            draft.messages = [];
+            draft.nextCursor = null;
+            draft.hasMore = false;
+          }),
+        );
+        try {
+          await queryFulfilled;
+        } catch {
+          patch.undo();
+          soundManager.playError();
+        }
+      },
     }),
 
     addParticipant: builder.mutation<
@@ -272,6 +362,34 @@ export const messagingApi = createApi({
       invalidatesTags: (_result, _error, { conversationId }) => [
         { type: "Conversation", id: conversationId },
       ],
+      onQueryStarted: async (
+        { conversationId, userId },
+        { getState, dispatch, queryFulfilled },
+      ) => {
+        const currentUser = (getState() as RootState).auth.user;
+        if (!currentUser) return;
+        const patch = dispatch(
+          messagingApi.util.updateQueryData("getConversations", undefined, (draft) => {
+            if (!draft?.data) return;
+            const conv = draft.data.find((c) => c.id === conversationId);
+            if (!conv || conv.participants.some((p) => p.userId === userId)) return;
+            conv.participants.push({
+              userId,
+              user: { id: userId, name: "", username: "", avatar: null },
+              role: "member",
+              joinedAt: new Date().toISOString(),
+              isMuted: false,
+              lastReadAt: null,
+            });
+          }),
+        );
+        try {
+          await queryFulfilled;
+        } catch {
+          patch.undo();
+          soundManager.playError();
+        }
+      },
     }),
 
     removeParticipant: builder.mutation<void, { conversationId: string; userId: string }>({
@@ -282,6 +400,23 @@ export const messagingApi = createApi({
       invalidatesTags: (_result, _error, { conversationId }) => [
         { type: "Conversation", id: conversationId },
       ],
+      onQueryStarted: async ({ conversationId, userId }, { dispatch, queryFulfilled }) => {
+        const patch = dispatch(
+          messagingApi.util.updateQueryData("getConversations", undefined, (draft) => {
+            if (!draft?.data) return;
+            const conv = draft.data.find((c) => c.id === conversationId);
+            if (!conv) return;
+            const idx = conv.participants.findIndex((p) => p.userId === userId);
+            if (idx !== -1) conv.participants.splice(idx, 1);
+          }),
+        );
+        try {
+          await queryFulfilled;
+        } catch {
+          patch.undo();
+          soundManager.playError();
+        }
+      },
     }),
 
     promoteToAdmin: builder.mutation<void, { conversationId: string; userId: string }>({
@@ -292,6 +427,23 @@ export const messagingApi = createApi({
       invalidatesTags: (_result, _error, { conversationId }) => [
         { type: "Conversation", id: conversationId },
       ],
+      onQueryStarted: async ({ conversationId, userId }, { dispatch, queryFulfilled }) => {
+        const patch = dispatch(
+          messagingApi.util.updateQueryData("getConversations", undefined, (draft) => {
+            if (!draft?.data) return;
+            const conv = draft.data.find((c) => c.id === conversationId);
+            if (!conv) return;
+            const participant = conv.participants.find((p) => p.userId === userId);
+            if (participant) participant.role = "admin";
+          }),
+        );
+        try {
+          await queryFulfilled;
+        } catch {
+          patch.undo();
+          soundManager.playError();
+        }
+      },
     }),
 
     updateGroupInfo: builder.mutation<
@@ -306,6 +458,26 @@ export const messagingApi = createApi({
       invalidatesTags: (_result, _error, { conversationId }) => [
         { type: "Conversation", id: conversationId },
       ],
+      onQueryStarted: async (
+        { conversationId, groupName, groupAvatar },
+        { dispatch, queryFulfilled },
+      ) => {
+        const patch = dispatch(
+          messagingApi.util.updateQueryData("getConversations", undefined, (draft) => {
+            if (!draft?.data) return;
+            const conv = draft.data.find((c) => c.id === conversationId);
+            if (!conv) return;
+            if (groupName !== undefined) conv.groupName = groupName;
+            if (groupAvatar !== undefined) conv.groupAvatar = groupAvatar;
+          }),
+        );
+        try {
+          await queryFulfilled;
+        } catch {
+          patch.undo();
+          soundManager.playError();
+        }
+      },
     }),
   }),
 });

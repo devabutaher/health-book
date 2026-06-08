@@ -3,6 +3,7 @@
 import { memo, useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { getImageUrl } from "@/lib/utils";
 import {
   UserPlus,
   Heart,
@@ -137,10 +138,17 @@ const NotificationItem = memo(function NotificationItem({ notif }: { notif: Noti
         <div className="relative shrink-0">
           {notif.fromUser?.avatar ? (
             <Image
-              src={notif.fromUser.avatar}
+              src={
+                getImageUrl(notif.fromUser.avatar, "q_auto:good,f_auto") ?? notif.fromUser.avatar
+              }
               alt={notif.fromUser.name ?? ""}
               width={36}
               height={36}
+              placeholder="blur"
+              blurDataURL={
+                getImageUrl(notif.fromUser.avatar, "w_20,e_blur:2000,q_auto:low,f_auto") ??
+                undefined
+              }
               className="size-9 rounded-full object-cover ring-1 ring-[var(--border-default)]"
             />
           ) : (

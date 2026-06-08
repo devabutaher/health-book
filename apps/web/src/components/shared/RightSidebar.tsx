@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CURATED_TAGS } from "@/lib/constants";
 import { useBrowseChallengesQuery } from "@/redux/api/challengesApi";
@@ -184,7 +185,7 @@ function TagsSection() {
   );
 }
 
-export default function RightSidebar() {
+function RightSidebar() {
   return (
     <aside className="hidden xl:flex fixed right-0 top-14 bottom-0 w-96 flex-col bg-[var(--glass-bg)] backdrop-blur-md md:backdrop-blur-2xl border-l border-[var(--glass-border)] p-4">
       <nav className="flex flex-1 flex-col gap-2 overflow-y-auto scrollbar-none">
@@ -212,3 +213,5 @@ export default function RightSidebar() {
     </aside>
   );
 }
+
+export default memo(RightSidebar);

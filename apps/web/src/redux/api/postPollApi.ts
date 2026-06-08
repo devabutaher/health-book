@@ -1,11 +1,14 @@
 import { createApi } from "@reduxjs/toolkit/query/react";
 import { createBaseQuery } from "../baseQuery";
 import type { PostPoll } from "@/types/post";
+import { soundManager } from "@/lib/soundManager";
 
 export const postPollApi = createApi({
   reducerPath: "postPollApi",
   baseQuery: createBaseQuery(`${process.env["NEXT_PUBLIC_API_URL"]}/api/post-polls`),
   tagTypes: ["PostPoll"],
+  refetchOnFocus: false,
+  refetchOnReconnect: true,
   endpoints: (builder) => ({
     getPostPoll: builder.query<PostPoll, string>({
       query: (pollId) => `/${pollId}`,
@@ -42,6 +45,7 @@ export const postPollApi = createApi({
         try {
           await queryFulfilled;
         } catch {
+          soundManager.playError();
           patch.undo();
         }
       },
@@ -68,6 +72,7 @@ export const postPollApi = createApi({
         try {
           await queryFulfilled;
         } catch {
+          soundManager.playError();
           patch.undo();
         }
       },
@@ -75,5 +80,4 @@ export const postPollApi = createApi({
   }),
 });
 
-export const { useGetPostPollQuery, useVotePostPollMutation, useUnvotePostPollMutation } =
-  postPollApi;
+export const { useVotePostPollMutation, useUnvotePostPollMutation } = postPollApi;

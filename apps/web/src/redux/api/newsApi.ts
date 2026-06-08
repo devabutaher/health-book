@@ -6,6 +6,8 @@ export const newsApi = createApi({
   reducerPath: "newsApi",
   baseQuery: createBaseQuery(`${process.env["NEXT_PUBLIC_API_URL"]}/api/news`),
   tagTypes: ["News"],
+  refetchOnFocus: false,
+  refetchOnReconnect: true,
   endpoints: (builder) => ({
     getNews: builder.query<NewsArticle[], string | undefined>({
       query: (category) => (category ? `/?category=${category}` : "/"),

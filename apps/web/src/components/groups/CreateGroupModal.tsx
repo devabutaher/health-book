@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { motion, AnimatePresence } from "framer-motion";
 import { scaleIn } from "@/lib/motion/variants";
 import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/getErrorMessage";
 
 export function CreateGroupModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const router = useRouter();
@@ -20,6 +21,7 @@ export function CreateGroupModal({ open, onClose }: { open: boolean; onClose: ()
   const [coverUrl, setCoverUrl] = useState("");
   const [createGroup, { isLoading }] = useCreateGroupMutation();
   const [uploadMedia, { isLoading: uploading }] = useUploadGroupMediaMutation();
+  const isSubmitting = uploading || isLoading;
 
   const avatarRef = useRef<HTMLInputElement>(null);
   const coverRef = useRef<HTMLInputElement>(null);
@@ -31,8 +33,8 @@ export function CreateGroupModal({ open, onClose }: { open: boolean; onClose: ()
       const { url } = await uploadMedia(fd).unwrap();
       if (target === "avatar") setAvatarUrl(url);
       else setCoverUrl(url);
-    } catch {
-      toast.error("Failed to upload image");
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Failed to upload image"));
     }
   };
 
@@ -56,8 +58,8 @@ export function CreateGroupModal({ open, onClose }: { open: boolean; onClose: ()
       setAvatarUrl("");
       setCoverUrl("");
       router.push(`/groups/${result.id}`);
-    } catch {
-      toast.error("Failed to create group");
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Failed to create group"));
     }
   };
 
@@ -202,10 +204,10 @@ export function CreateGroupModal({ open, onClose }: { open: boolean; onClose: ()
                 <Button
                   type="submit"
                   variant="gradient"
-                  disabled={!name.trim() || isLoading || uploading}
+                  disabled={!name.trim() || isSubmitting}
                   className="flex-1"
                 >
-                  {isLoading || uploading ? "Creating..." : "Create Group"}
+                  {isSubmitting ? "Creating..." : "Create Group"}
                 </Button>
               </div>
             </form>

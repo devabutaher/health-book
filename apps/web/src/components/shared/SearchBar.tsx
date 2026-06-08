@@ -8,7 +8,7 @@ import { useSearchUsersQuery } from "@/redux/api/searchApi";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
-import { cn } from "@/lib/utils";
+import { cn, getImageUrl } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface UserHit {
@@ -155,6 +155,10 @@ export default function SearchBar() {
                           alt={u.name}
                           width={28}
                           height={28}
+                          placeholder="blur"
+                          blurDataURL={
+                            getImageUrl(u.avatar, "w_20,e_blur:2000,q_auto:low,f_auto") ?? undefined
+                          }
                           className="size-7 shrink-0 rounded-full object-cover ring-1 ring-[var(--border-default)]"
                         />
                       ) : (

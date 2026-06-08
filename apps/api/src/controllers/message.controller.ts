@@ -1,5 +1,10 @@
 import type { Request, Response, NextFunction } from "express";
-import { createConversationSchema, sendMessageSchema } from "../utils/validators";
+import {
+  createConversationSchema,
+  sendMessageSchema,
+  addParticipantSchema,
+  updateGroupInfoSchema,
+} from "../utils/validators";
 import { messageService } from "../services/message.service";
 
 type P = Record<string, string>;
@@ -16,8 +21,10 @@ export const messageController = {
 
   async listConversations(req: Request<P>, res: Response, next: NextFunction) {
     try {
-      const conversations = await messageService.listConversations(req.user!.id);
-      res.json({ success: true, data: conversations });
+      const cursor = req.query.cursor as string | undefined;
+      const limit = Number(req.query.limit) || 50;
+      const result = await messageService.listConversations(req.user!.id, cursor, limit);
+      res.json({ success: true, data: result });
     } catch (err) {
       next(err);
     }
@@ -126,7 +133,7 @@ export const messageController = {
 
   async addParticipant(req: Request<P>, res: Response, next: NextFunction) {
     try {
-      const { userId } = req.body;
+      const { userId } = addParticipantSchema.parse(req.body);
       const participant = await messageService.addParticipant(req.params.id, userId, req.user!.id);
       res.status(201).json({ success: true, data: participant });
     } catch (err) {
@@ -145,11 +152,8 @@ export const messageController = {
 
   async updateGroupInfo(req: Request<P>, res: Response, next: NextFunction) {
     try {
-      const conversation = await messageService.updateGroupInfo(
-        req.params.id,
-        req.body,
-        req.user!.id,
-      );
+      const data = updateGroupInfoSchema.parse(req.body);
+      const conversation = await messageService.updateGroupInfo(req.params.id, data, req.user!.id);
       res.json({ success: true, data: conversation });
     } catch (err) {
       next(err);

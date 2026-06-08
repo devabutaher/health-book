@@ -1,4 +1,5 @@
 import { prisma } from "../lib/prisma";
+import { broadcastRealtime } from "../utils/realtime";
 import { notificationService } from "./notification.service";
 
 const calcStreak = (logDates: Set<string>): number => {
@@ -26,25 +27,26 @@ export const userService = {
 
     if (!user) return null;
 
-    let isFollowing = false;
-    if (currentUserId) {
-      const follow = await prisma.follow.findUnique({
-        where: {
-          followerId_followingId: {
-            followerId: currentUserId,
-            followingId: user.id,
-          },
-        },
-      });
-      isFollowing = !!follow;
-    }
-
-    const recentLogs = await prisma.healthLog.findMany({
-      where: { userId: user.id, isPublic: true },
-      select: { date: true, score: true },
-      orderBy: { date: "desc" },
-      take: 100,
-    });
+    // Parallelize follow check + healthLog query
+    const [follow, recentLogs] = await Promise.all([
+      currentUserId
+        ? prisma.follow.findUnique({
+            where: {
+              followerId_followingId: {
+                followerId: currentUserId,
+                followingId: user.id,
+              },
+            },
+          })
+        : Promise.resolve(null),
+      prisma.healthLog.findMany({
+        where: { userId: user.id, isPublic: true },
+        select: { date: true, score: true },
+        orderBy: { date: "desc" },
+        take: 100,
+      }),
+    ]);
+    const isFollowing = !!follow;
     const logDates = new Set(recentLogs.map((l) => l.date.toISOString().split("T")[0]));
     const streak = calcStreak(logDates);
     const avgScore =
@@ -69,7 +71,10 @@ export const userService = {
     };
   },
 
-  async updateProfile(userId: string, data: { name?: string; bio?: string; isPrivate?: boolean; gender?: string }) {
+  async updateProfile(
+    userId: string,
+    data: { name?: string; bio?: string; isPrivate?: boolean; gender?: string },
+  ) {
     return prisma.user.update({
       where: { id: userId },
       data,
@@ -132,6 +137,11 @@ export const userService = {
       data: { followerId, followingId },
     });
 
+    broadcastRealtime(`hb-user:${followingId}`, "NEW_FOLLOWER", {
+      followerId,
+      followingId,
+    }).catch(() => {});
+
     if (followerId !== followingId) {
       notificationService
         .create({
@@ -147,6 +157,11 @@ export const userService = {
     await prisma.follow.deleteMany({
       where: { followerId, followingId },
     });
+
+    broadcastRealtime(`hb-user:${followingId}`, "UNFOLLOWED", {
+      followerId,
+      followingId,
+    }).catch(() => {});
   },
 
   async getSuggested(currentUserId: string, limit = 5) {

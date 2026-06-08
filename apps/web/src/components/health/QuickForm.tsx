@@ -65,7 +65,10 @@ export default function QuickForm({
               <button
                 key={m.value}
                 type="button"
-                onClick={() => { playTabSound(); setMood(m.value); }}
+                onClick={() => {
+                  playTabSound();
+                  setMood(m.value);
+                }}
                 className="flex flex-1 flex-col items-center gap-1 rounded-xl border-2 p-2 transition-all"
                 style={
                   mood === m.value
@@ -94,7 +97,10 @@ export default function QuickForm({
             max={10}
             step={1}
             value={[energy]}
-            onValueChange={([v]) => { playTabSound(); setEnergy(v); }}
+            onValueChange={([v]) => {
+              playTabSound();
+              setEnergy(v);
+            }}
           />
           <div className="flex justify-between text-[10px] text-muted-foreground">
             <span>Drained</span>

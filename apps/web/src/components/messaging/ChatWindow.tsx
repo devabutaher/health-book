@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useEffect, useState, useMemo } from "react";
+import { useRef, useEffect, useState, useMemo, useCallback } from "react";
+import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
 import {
   useGetConversationQuery,
   useSendMessageMutation,
@@ -13,6 +14,7 @@ import { ChatBubble } from "./ChatBubble";
 import { ChatInput } from "./ChatInput";
 import { ChevronUp } from "lucide-react";
 import { toast } from "sonner";
+import { ErrorBoundary } from "@/components/ui/error-boundary";
 
 export function ChatWindow({
   conversationId,
@@ -24,12 +26,11 @@ export function ChatWindow({
   const { data, isLoading, error, isError } = useGetConversationQuery({ id: conversationId });
   const [sendMessage] = useSendMessageMutation();
   const [markRead] = useMarkReadMutation();
-  const scrollRef = useRef<HTMLDivElement>(null);
   const loadingOlderRef = useRef(false);
-  const isNearBottomRef = useRef(true);
   const { play } = useSound();
   const dispatch = useAppDispatch();
   const [loadingMore, setLoadingMore] = useState(false);
+  const virtuosoRef = useRef<VirtuosoHandle>(null);
 
   const allMessages = useMemo(() => {
     const msgs = data?.messages || [];
@@ -44,24 +45,22 @@ export function ChatWindow({
     }
   }, [conversationId, markRead]);
 
-  const handleScroll = () => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const threshold = 60;
-    isNearBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
-  };
+  const handleSend = useCallback(
+    async (content: string, mediaUrl?: string) => {
+      play("message-send");
+      try {
+        await sendMessage({ conversationId, content: content || undefined, mediaUrl }).unwrap();
+      } catch {
+        toast.error("Failed to send message");
+      }
+    },
+    [play, sendMessage, conversationId],
+  );
 
-  useEffect(() => {
-    if (!isNearBottomRef.current || loadingOlderRef.current) return;
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "instant" });
-  });
-
-  const handleLoadMore = async () => {
+  const handleLoadMore = useCallback(async () => {
     if (!data?.nextCursor || loadingMore) return;
     loadingOlderRef.current = true;
     setLoadingMore(true);
-    const scrollEl = scrollRef.current;
-    const prevScrollHeight = scrollEl?.scrollHeight ?? 0;
 
     try {
       const result = await dispatch(
@@ -80,19 +79,13 @@ export function ChatWindow({
           draft.hasMore = result.hasMore;
         }),
       );
-
-      requestAnimationFrame(() => {
-        if (scrollEl) {
-          scrollEl.scrollTop = scrollEl.scrollHeight - prevScrollHeight;
-        }
-      });
     } catch {
       // handled below
     } finally {
       loadingOlderRef.current = false;
       setLoadingMore(false);
     }
-  };
+  }, [data?.nextCursor, loadingMore, dispatch, conversationId]);
 
   if (isLoading) {
     return (
@@ -123,45 +116,52 @@ export function ChatWindow({
     );
   }
 
-  const handleSend = async (content: string, mediaUrl?: string) => {
-    play("message-send");
-    try {
-      await sendMessage({ conversationId, content: content || undefined, mediaUrl }).unwrap();
-    } catch {
-      toast.error("Failed to send message");
-    }
-  };
+  const MESSAGE_ESTIMATED_HEIGHT = 72;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <div
-        ref={scrollRef}
-        onScroll={handleScroll}
-        className="flex-1 space-y-1 overflow-y-auto py-3"
-      >
-        {data?.hasMore && (
-          <div className="flex justify-center py-2">
-            <button
-              onClick={handleLoadMore}
-              disabled={loadingMore}
-              className="flex items-center gap-1.5 rounded-full bg-[var(--bg-subtle)] px-3 py-1.5 text-xs text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-overlay)] hover:text-[var(--text-secondary)] disabled:opacity-50"
-            >
-              <ChevronUp className="size-3" />
-              {loadingMore ? "Loading..." : "Load older messages"}
-            </button>
-          </div>
-        )}
-        {allMessages.map((msg) => (
-          <ChatBubble key={msg.id} message={msg} isGroup={isGroup} />
-        ))}
-        {allMessages.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
-            <p className="text-sm text-[var(--text-secondary)]">No messages yet</p>
-            <p className="text-xs text-[var(--text-muted)]">Say hello!</p>
-          </div>
-        )}
+    <ErrorBoundary>
+      <div className="flex min-h-0 flex-1 flex-col">
+        <Virtuoso
+          ref={virtuosoRef}
+          className="flex-1 overflow-y-auto"
+          data={allMessages}
+          initialTopMostItemIndex={allMessages.length > 0 ? allMessages.length - 1 : 0}
+          followOutput="smooth"
+          alignToBottom
+          increaseViewportBy={200}
+          itemContent={(_index, msg) => (
+            <div className="px-3 py-0.5">
+              <ChatBubble key={msg.id} message={msg} isGroup={isGroup} />
+            </div>
+          )}
+          components={{
+            Header: () => (
+              <>
+                {data?.hasMore ? (
+                  <div className="flex justify-center py-2">
+                    <button
+                      onClick={handleLoadMore}
+                      disabled={loadingMore}
+                      className="flex items-center gap-1.5 rounded-full bg-[var(--bg-subtle)] px-3 py-1.5 text-xs text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-overlay)] hover:text-[var(--text-secondary)] disabled:opacity-50"
+                    >
+                      <ChevronUp className="size-3" />
+                      {loadingMore ? "Loading..." : "Load older messages"}
+                    </button>
+                  </div>
+                ) : null}
+              </>
+            ),
+            EmptyPlaceholder: () => (
+              <div className="flex flex-col items-center justify-center py-20 text-center">
+                <p className="text-sm text-[var(--text-secondary)]">No messages yet</p>
+                <p className="text-xs text-[var(--text-muted)]">Say hello!</p>
+              </div>
+            ),
+          }}
+          defaultItemHeight={MESSAGE_ESTIMATED_HEIGHT}
+        />
+        <ChatInput onSend={handleSend} />
       </div>
-      <ChatInput onSend={handleSend} />
-    </div>
+    </ErrorBoundary>
   );
 }

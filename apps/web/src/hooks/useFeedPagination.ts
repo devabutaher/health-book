@@ -23,17 +23,20 @@ function reducer(state: State, action: Action): State {
     case "set-cursor":
       return { ...state, cursor: action.cursor };
     case "merge-page": {
-      const deduped = action.append
-        ? action.posts.filter(
-            (p) =>
-              !(state.allPosts as { id?: string }[]).find(
-                (existing) => existing.id === (p as { id?: string }).id,
-              ),
-          )
-        : action.posts;
+      if (action.append) {
+        // Merge: update existing posts when they reappear (e.g. RTK cache patches)
+        const map = new Map((state.allPosts as { id?: string }[]).map((p) => [p.id, p]));
+        for (const post of action.posts as { id?: string }[]) {
+          if (post.id) map.set(post.id, post);
+        }
+        return {
+          cursor: action.cursor,
+          allPosts: Array.from(map.values()),
+        };
+      }
       return {
         cursor: action.cursor,
-        allPosts: action.append ? [...state.allPosts, ...deduped] : deduped,
+        allPosts: action.posts,
       };
     }
     case "reset":

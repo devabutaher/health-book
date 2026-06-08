@@ -1,44 +1,51 @@
-const CACHE = "healthbook-v2"
-const API_CACHE = "healthbook-api-v2"
-const STATIC_CACHE = "healthbook-static-v2"
+const CACHE = "healthbook-v2";
+const API_CACHE = "healthbook-api-v2";
+const STATIC_CACHE = "healthbook-static-v2";
 
 self.addEventListener("install", () => {
-  self.skipWaiting()
-})
+  self.skipWaiting();
+});
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(
-        keys.filter((k) => ![CACHE, API_CACHE, STATIC_CACHE].includes(k)).map((k) => caches.delete(k)),
+    caches
+      .keys()
+      .then((keys) =>
+        Promise.all(
+          keys
+            .filter((k) => ![CACHE, API_CACHE, STATIC_CACHE].includes(k))
+            .map((k) => caches.delete(k)),
+        ),
       ),
-    ),
-  )
-})
+  );
+});
 
 self.addEventListener("fetch", (event) => {
-  if (event.request.method !== "GET") return
+  if (event.request.method !== "GET") return;
 
-  const url = new URL(event.request.url)
+  const url = new URL(event.request.url);
 
   // Network-first for API calls: try network, fall back to cache
   if (url.pathname.startsWith("/api/")) {
     event.respondWith(
       caches.open(API_CACHE).then(async (cache) => {
         try {
-          const response = await fetch(event.request)
-          if (response.status === 200) cache.put(event.request, response.clone())
-          return response
+          const response = await fetch(event.request);
+          if (response.status === 200) cache.put(event.request, response.clone());
+          return response;
         } catch {
-          const cached = await cache.match(event.request)
-          return cached || new Response(JSON.stringify({ success: false, message: "Offline" }), {
-            status: 503,
-            headers: { "Content-Type": "application/json" },
-          })
+          const cached = await cache.match(event.request);
+          return (
+            cached ||
+            new Response(JSON.stringify({ success: false, message: "Offline" }), {
+              status: 503,
+              headers: { "Content-Type": "application/json" },
+            })
+          );
         }
       }),
-    )
-    return
+    );
+    return;
   }
 
   // Cache-first for static assets (images, fonts, icons)
@@ -48,24 +55,24 @@ self.addEventListener("fetch", (event) => {
   ) {
     event.respondWith(
       caches.open(STATIC_CACHE).then(async (cache) => {
-        const cached = await cache.match(event.request)
-        if (cached) return cached
-        const response = await fetch(event.request)
-        if (response.status === 200) cache.put(event.request, response.clone())
-        return response
+        const cached = await cache.match(event.request);
+        if (cached) return cached;
+        const response = await fetch(event.request);
+        if (response.status === 200) cache.put(event.request, response.clone());
+        return response;
       }),
-    )
-    return
+    );
+    return;
   }
-})
+});
 
 self.addEventListener("push", (event) => {
-  let data = { title: "HealthBook", body: "", url: "/feed" }
+  let data = { title: "HealthBook", body: "", url: "/feed" };
   try {
-    data = event.data?.json() ?? data
+    data = event.data?.json() ?? data;
   } catch {}
 
-  const { title, body, url } = data
+  const { title, body, url } = data;
 
   event.waitUntil(
     self.registration.showNotification(title, {
@@ -77,22 +84,22 @@ self.addEventListener("push", (event) => {
       tag: "healthbook-notification",
       renotify: true,
     }),
-  )
-})
+  );
+});
 
 self.addEventListener("notificationclick", (event) => {
-  event.notification.close()
-  const url = event.notification.data?.url || "/feed"
+  event.notification.close();
+  const url = event.notification.data?.url || "/feed";
 
   event.waitUntil(
     clients.matchAll({ type: "window", includeUncontrolled: true }).then((windowClients) => {
       for (const client of windowClients) {
         if (client.url === url) {
-          client.focus()
-          return
+          client.focus();
+          return;
         }
       }
-      return clients.openWindow(url)
+      return clients.openWindow(url);
     }),
-  )
-})
+  );
+});

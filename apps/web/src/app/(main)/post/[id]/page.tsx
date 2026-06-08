@@ -11,9 +11,11 @@ import {
   useUpdateCommentMutation,
   useDeleteCommentMutation,
 } from "@/redux/api/commentApi";
+import { usePostRealtime } from "@/hooks/usePostRealtime";
 import { useAppSelector } from "@/hooks";
 import { useState } from "react";
 import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/getErrorMessage";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -38,6 +40,7 @@ import type { Comment } from "@/types/comment";
 export default function PostDetailPage() {
   const { id } = useParams<{ id: string }>();
   const user = useAppSelector((s) => s.auth.user);
+  usePostRealtime(id);
   const { data, isLoading, error } = useGetPostQuery(id);
   const { data: commentsData, isLoading: commentsLoading } = useGetCommentsQuery(
     { postId: id },
@@ -66,8 +69,8 @@ export default function PostDetailPage() {
       }).unwrap();
       setContent("");
       setReplyTo(null);
-    } catch {
-      toast.error("Failed to post comment");
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Failed to post comment"));
     }
   };
 
@@ -100,24 +103,24 @@ export default function PostDetailPage() {
 
   if (isLoading) {
     return (
-        <div className="mx-auto max-w-[600px]">
-          <Skeleton className="mb-4 h-6 w-32" />
-          <Skeleton className="h-64 rounded-2xl" />
-        </div>
+      <div className="mx-auto max-w-[600px]">
+        <Skeleton className="mb-4 h-6 w-32" />
+        <Skeleton className="h-64 rounded-2xl" />
+      </div>
     );
   }
 
   if (error || !post) {
     return (
-        <div className="mx-auto max-w-[600px]">
-          <Alert variant="destructive">
-            <MessageCircleX />
-            <AlertTitle>Post not found</AlertTitle>
-            <AlertDescription>
-              This post may have been deleted or you don&apos;t have access.
-            </AlertDescription>
-          </Alert>
-        </div>
+      <div className="mx-auto max-w-[600px]">
+        <Alert variant="destructive">
+          <MessageCircleX />
+          <AlertTitle>Post not found</AlertTitle>
+          <AlertDescription>
+            This post may have been deleted or you don&apos;t have access.
+          </AlertDescription>
+        </Alert>
+      </div>
     );
   }
 

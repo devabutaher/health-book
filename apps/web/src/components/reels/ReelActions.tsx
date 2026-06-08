@@ -7,10 +7,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import {
-  useDeleteReelMutation,
-  useUpdateReelMutation,
-} from "@/redux/api/reelsApi";
+import { useDeleteReelMutation, useUpdateReelMutation } from "@/redux/api/reelsApi";
 import { Heart, Loader2, MessageCircle, MoreVertical, Pencil, Share2, Trash2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState } from "react";
@@ -129,7 +126,9 @@ export function ReelActions({
               liked ? "fill-red-500 text-red-500" : "text-white",
             )}
           />
-          <span className="text-[10px] font-semibold text-white">{likesCount.toLocaleString()}</span>
+          <span className="text-[10px] font-semibold text-white">
+            {likesCount.toLocaleString()}
+          </span>
         </button>
 
         <button
@@ -138,7 +137,9 @@ export function ReelActions({
           aria-label="Comments"
         >
           <MessageCircle className="size-7 text-white drop-shadow-lg" />
-          <span className="text-[10px] font-semibold text-white">{commentsCount.toLocaleString()}</span>
+          <span className="text-[10px] font-semibold text-white">
+            {commentsCount.toLocaleString()}
+          </span>
         </button>
 
         <button

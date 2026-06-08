@@ -1,11 +1,14 @@
 import { createApi } from "@reduxjs/toolkit/query/react";
 import { createBaseQuery } from "../baseQuery";
 import type { GroupEvent } from "@/types/groupEvent";
+import { soundManager } from "@/lib/soundManager";
 
 export const groupEventApi = createApi({
   reducerPath: "groupEventApi",
   baseQuery: createBaseQuery(`${process.env["NEXT_PUBLIC_API_URL"]}/api/groups`),
-  tagTypes: ["GroupEvents", "GroupEvent"],
+  tagTypes: ["GroupEvents"],
+  refetchOnFocus: false,
+  refetchOnReconnect: true,
   endpoints: (builder) => ({
     getGroupEvents: builder.query<GroupEvent[], string>({
       query: (groupId) => `/${groupId}/events`,
@@ -38,7 +41,9 @@ export const groupEventApi = createApi({
               draft.unshift(data);
             }),
           );
-        } catch {}
+        } catch {
+          soundManager.playError();
+        }
       },
     }),
     rsvpEvent: builder.mutation<GroupEvent, { groupId: string; eventId: string; status: string }>({
@@ -51,7 +56,12 @@ export const groupEventApi = createApi({
       onQueryStarted: async ({ groupId, eventId, status }, { dispatch, queryFulfilled }) => {
         const patch = dispatch(
           groupEventApi.util.updateQueryData("getGroupEvents", groupId, (draft) => {
-            const event = draft.find((e) => e.id === eventId) as (GroupEvent & { attendeeCount?: number; attendees?: { status: string; userId?: string }[] }) | undefined;
+            const event = draft.find((e) => e.id === eventId) as
+              | (GroupEvent & {
+                  attendeeCount?: number;
+                  attendees?: { status: string; userId?: string }[];
+                })
+              | undefined;
             if (!event) return;
             if (status === "going") {
               event.attendeeCount = (event.attendeeCount || 0) + 1;
@@ -60,7 +70,9 @@ export const groupEventApi = createApi({
             } else if (status === "maybe") {
               event.attendeeCount = Math.max(0, (event.attendeeCount || 0) - 1);
               if (event.attendees) {
-                event.attendees = event.attendees.filter((a) => a.userId !== (event as GroupEvent & { userId?: string }).userId);
+                event.attendees = event.attendees.filter(
+                  (a) => a.userId !== (event as GroupEvent & { userId?: string }).userId,
+                );
               }
             }
           }),
@@ -68,6 +80,7 @@ export const groupEventApi = createApi({
         try {
           await queryFulfilled;
         } catch {
+          soundManager.playError();
           patch.undo();
         }
       },
@@ -78,6 +91,20 @@ export const groupEventApi = createApi({
         method: "DELETE",
       }),
       invalidatesTags: (_result, _error, { groupId }) => [{ type: "GroupEvents", id: groupId }],
+      onQueryStarted: async ({ eventId, groupId }, { dispatch, queryFulfilled }) => {
+        const patch = dispatch(
+          groupEventApi.util.updateQueryData("getGroupEvents", groupId, (draft) => {
+            const idx = draft.findIndex((e) => e.id === eventId);
+            if (idx >= 0) draft.splice(idx, 1);
+          }),
+        );
+        try {
+          await queryFulfilled;
+        } catch {
+          soundManager.playError();
+          patch.undo();
+        }
+      },
     }),
   }),
 });

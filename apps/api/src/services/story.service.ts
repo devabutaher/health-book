@@ -1,5 +1,7 @@
+import { Prisma } from "../../generated/prisma";
 import { prisma } from "../lib/prisma";
 import { AppError } from "../utils/AppError";
+import { broadcastRealtime } from "../utils/realtime";
 import { deleteImage, extractPublicId } from "./cloudinary";
 
 export const storyService = {
@@ -28,7 +30,7 @@ export const storyService = {
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + 24);
 
-    return prisma.story.create({
+    const story = await prisma.story.create({
       data: {
         userId: data.userId,
         type: data.type ?? "media",
@@ -50,12 +52,20 @@ export const storyService = {
         user: { select: { id: true, name: true, username: true, avatar: true } },
       },
     });
+
+    broadcastRealtime(`hb-stories`, "STORY_CREATED", {
+      storyId: story.id,
+      userId: data.userId,
+    }).catch(() => {});
+
+    return story;
   },
 
   async getFriendsStories(userId: string) {
     const following = await prisma.follow.findMany({
       where: { followerId: userId },
       select: { followingId: true },
+      take: 200,
     });
     const followingIds = [...following.map((f) => f.followingId), userId];
 
@@ -64,11 +74,9 @@ export const storyService = {
     const stories = await prisma.story.findMany({
       where: {
         expiresAt: { gt: now },
-        OR: [
-          { userId: { in: followingIds } },
-          { privacy: "public" },
-        ],
+        OR: [{ userId: { in: followingIds } }, { privacy: "public" }],
       },
+      take: 50,
       include: {
         user: { select: { id: true, name: true, username: true, avatar: true } },
         views: {
@@ -124,20 +132,24 @@ export const storyService = {
   async addView(storyId: string, userId: string) {
     await prisma.story.findUniqueOrThrow({ where: { id: storyId } });
 
-    await prisma.storyView.upsert({
-      where: { storyId_userId: { storyId, userId } },
-      create: { storyId, userId },
-      update: {},
-    });
+    try {
+      await prisma.storyView.create({ data: { storyId, userId } });
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+        // Already viewed this story — silently ignore duplicate
+      } else {
+        throw err;
+      }
+    }
     return { viewed: true };
   },
 
   async react(storyId: string, userId: string, emoji: string) {
-    const story = await prisma.story.findUniqueOrThrow({ where: { id: storyId } })
+    const story = await prisma.story.findUniqueOrThrow({ where: { id: storyId } });
 
     const existing = await prisma.storyReaction.findUnique({
       where: { storyId_userId: { storyId, userId } },
-    })
+    });
 
     if (existing && existing.emoji === emoji) {
       // Same emoji — toggle off (use deleteMany to avoid race condition)
@@ -205,6 +217,7 @@ export const storyService = {
       if (publicId) deleteImage(publicId).catch(() => {});
     }
     await prisma.story.delete({ where: { id: storyId } });
+    broadcastRealtime("hb-stories", "STORY_DELETED", { storyId, userId }).catch(() => {});
   },
 
   async cleanupExpired() {

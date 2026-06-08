@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import type { GroupMember, GroupRole } from "@/types/group";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
@@ -28,7 +29,7 @@ const roleOptions: RoleOption[] = [
   { value: "MEMBER", label: "Member", icon: User },
 ];
 
-export function GroupMemberItem({
+export const GroupMemberItem = memo(function GroupMemberItem({
   member,
   currentUserRole,
   onRoleChange,
@@ -39,7 +40,7 @@ export function GroupMemberItem({
   onRoleChange?: (userId: string, role: GroupRole) => void;
   onRemove?: (userId: string) => void;
 }) {
-  const currentUserId = useAppSelector((s) => s.auth.user?.id)
+  const currentUserId = useAppSelector((s) => s.auth.user?.id);
   const showActions = currentUserRole === "ADMIN" && member.userId !== currentUserId;
   const RoleIcon = roleOptions.find((r) => r.value === member.role)?.icon || User;
 
@@ -105,4 +106,4 @@ export function GroupMemberItem({
       )}
     </div>
   );
-}
+});

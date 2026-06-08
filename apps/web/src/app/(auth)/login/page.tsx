@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Mail, ArrowRight, Sparkles } from "lucide-react";
@@ -21,6 +21,17 @@ export default function LoginPage() {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const [login, { isLoading }] = useLoginMutation();
+
+  // Clear stale auth on mount to prevent unnecessary API call
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("hb_auth");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed.accessToken) localStorage.removeItem("hb_auth");
+      }
+    } catch {}
+  }, []);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [oauthLoading, setOauthLoading] = useState(false);

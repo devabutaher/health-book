@@ -1,14 +1,14 @@
 import { prisma } from "../lib/prisma";
-import { supabase } from "../lib/supabase";
 import { AppError } from "../utils/AppError";
+import { broadcastRealtime } from "../utils/realtime";
 import type { NotificationType } from "../../generated/prisma";
 import { sendPushNotification } from "./push.service";
 
-function notifToPush(data: {
-  type: NotificationType;
-  fromUserName?: string;
-  message?: string;
-}): { title: string; body: string; url: string } {
+function notifToPush(data: { type: NotificationType; fromUserName?: string; message?: string }): {
+  title: string;
+  body: string;
+  url: string;
+} {
   const name = data.fromUserName ?? "Someone";
   switch (data.type) {
     case "NEW_FOLLOWER":
@@ -28,15 +28,47 @@ function notifToPush(data: {
         url: "/messages",
       };
     case "CHALLENGE_INVITE":
-      return { title: "Challenge Invite", body: `${name} invited you to a challenge`, url: "/challenges" };
+      return {
+        title: "Challenge Invite",
+        body: `${name} invited you to a challenge`,
+        url: "/challenges",
+      };
     case "CONSULTATION_BOOKED":
-      return { title: "Consultation", body: data.message ?? "Consultation booked", url: "/my-book" };
+      return {
+        title: "Consultation",
+        body: data.message ?? "Consultation booked",
+        url: "/my-book",
+      };
     case "STREAK_MILESTONE":
-      return { title: "Streak Milestone", body: "You reached a new streak milestone!", url: "/my-book" };
+      return {
+        title: "Streak Milestone",
+        body: "You reached a new streak milestone!",
+        url: "/my-book",
+      };
     case "STREAK_AT_RISK":
-      return { title: "Streak at Risk", body: "Complete today's log to keep your streak!", url: "/my-book" };
+      return {
+        title: "Streak at Risk",
+        body: "Complete today's log to keep your streak!",
+        url: "/my-book",
+      };
+    case "CHECK_IN_REMINDER":
+      return {
+        title: "Challenge Reminder",
+        body: data.message ?? "Don't forget to check in!",
+        url: "/challenges",
+      };
+    case "CHALLENGE_ENDING_SOON":
+      return {
+        title: "Challenge Ending Soon",
+        body: data.message ?? "A challenge is ending soon!",
+        url: "/challenges",
+      };
     default:
-      return { title: "HealthBook", body: data.message ?? "You have a new notification", url: "/feed" };
+      return {
+        title: "HealthBook",
+        body: data.message ?? "You have a new notification",
+        url: "/feed",
+      };
   }
 }
 
@@ -49,37 +81,23 @@ export const notificationService = {
     commentId?: string;
     message?: string;
   }) {
-    const notification = await prisma.notification.create({ data });
+    // Parallelize notification creation with fromUser lookup
+    const [notification, fromUser] = await Promise.all([
+      prisma.notification.create({ data }),
+      data.fromUserId
+        ? prisma.user.findUnique({ where: { id: data.fromUserId }, select: { name: true } })
+        : Promise.resolve(null),
+    ]);
 
-    try {
-      const channel = supabase.channel(`notification:${data.userId}`);
-      const p = new Promise<void>((resolve, reject) => {
-        const t = setTimeout(() => reject(new Error("timeout")), 3000);
-        channel.subscribe((status) => {
-          if (status === "SUBSCRIBED") {
-            clearTimeout(t);
-            resolve();
-          }
-          if (status === "CHANNEL_ERROR") {
-            clearTimeout(t);
-            reject(new Error("channel_error"));
-          }
-        });
-      });
-      await p;
-      channel.send({
-        type: "broadcast",
-        event: "INSERT",
-        payload: notification,
-      });
-      channel.unsubscribe();
-    } catch {}
+    broadcastRealtime(
+      `hb-notification:${data.userId}`,
+      "INSERT",
+      notification as unknown as Record<string, unknown>,
+    ).catch((err) => {
+      console.error(`[notification] realtime broadcast failed for user ${data.userId}`, err);
+    });
 
     // Send push notification (fire-and-forget, no performance impact)
-    const fromUser = data.fromUserId
-      ? await prisma.user.findUnique({ where: { id: data.fromUserId }, select: { name: true } })
-      : null;
-
     const pushData = notifToPush({
       type: data.type,
       fromUserName: fromUser?.name,
@@ -92,15 +110,20 @@ export const notificationService = {
   },
 
   async list(userId: string, cursor?: string, limit = 20) {
-    const notifications = await prisma.notification.findMany({
-      where: { userId, type: { not: "MESSAGE" } },
-      take: limit + 1,
-      ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
-      include: {
-        fromUser: { select: { id: true, name: true, username: true, avatar: true } },
-      },
-      orderBy: { createdAt: "desc" },
-    });
+    const [notifications, totalUnread] = await Promise.all([
+      prisma.notification.findMany({
+        where: { userId, type: { not: "MESSAGE" } },
+        take: limit + 1,
+        ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
+        include: {
+          fromUser: { select: { id: true, name: true, username: true, avatar: true } },
+        },
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.notification.count({
+        where: { userId, read: false, type: { not: "MESSAGE" } },
+      }),
+    ]);
 
     const hasMore = notifications.length > limit;
     const items = hasMore ? notifications.slice(0, limit) : notifications;
@@ -109,7 +132,7 @@ export const notificationService = {
       notifications: items,
       nextCursor: hasMore ? items[items.length - 1]?.id : null,
       hasMore,
-      unreadCount: items.filter((n) => !n.read).length,
+      unreadCount: totalUnread,
     };
   },
 

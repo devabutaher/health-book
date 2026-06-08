@@ -15,15 +15,21 @@ import {
   Trash2,
   Swords,
 } from "lucide-react";
-import { useUpdateChallengeMutation } from "@/redux/api/challengesApi";
+import {
+  useUpdateChallengeMutation,
+  useGetDayPlansQuery,
+  useUpsertDayPlansMutation,
+} from "@/redux/api/challengesApi";
 import { useBrowseGroupsQuery } from "@/redux/api/groupsApi";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { scaleIn } from "@/lib/motion/variants";
 import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/getErrorMessage";
 import type { Challenge, ChallengeMilestone, ChallengeDifficulty } from "@/types/challenge";
 import { cn } from "@/lib/utils";
 import { useSound } from "@/hooks/useSound";
+import { DayPlanEditor } from "./DayPlanEditor";
 
 const types = [
   { value: "SOLO", label: "Solo", icon: Target, desc: "Personal goal, just you" },
@@ -80,6 +86,8 @@ export function EditChallengeModal({
   );
   const [groupId, setGroupId] = useState(challenge.groupId || "");
   const [updateChallenge, { isLoading }] = useUpdateChallengeMutation();
+  const [upsertDayPlans, { isLoading: savingPlans }] = useUpsertDayPlansMutation();
+  const { data: dayPlansData } = useGetDayPlansQuery(challenge.id);
   const { data: groupsData } = useBrowseGroupsQuery({}, { skip: type !== "GROUP" });
   const { play } = useSound();
 
@@ -124,9 +132,9 @@ export function EditChallengeModal({
       play("success");
       toast.success("Challenge updated!");
       onClose();
-    } catch {
+    } catch (err) {
       play("error");
-      toast.error("Failed to update challenge");
+      toast.error(getErrorMessage(err, "Failed to update challenge"));
     }
   };
 
@@ -465,6 +473,38 @@ export function EditChallengeModal({
                 ))}
               </div>
             </div>
+
+            {/* Day Plans */}
+            {dayCount && Number(dayCount) > 0 && (
+              <div className="border-t border-[var(--border-default)] pt-4">
+                <DayPlanEditor
+                  dayCount={Number(dayCount)}
+                  initialPlans={dayPlansData?.map((p) => ({
+                    dayNumber: p.dayNumber,
+                    title: p.title ?? "",
+                    description: p.description ?? "",
+                    tips: p.tips ?? "",
+                    mediaUrls: p.mediaUrls ?? [],
+                    duration: p.duration ?? 0,
+                  }))}
+                  onSave={async (plans) => {
+                    await upsertDayPlans({
+                      challengeId: challenge.id,
+                      plans: plans.map((p) => ({
+                        dayNumber: p.dayNumber,
+                        title: p.title,
+                        description: p.description,
+                        tips: p.tips,
+                        mediaUrls: p.mediaUrls,
+                        duration: p.duration,
+                      })),
+                    }).unwrap();
+                    toast.success("Day plans saved!");
+                  }}
+                  saving={savingPlans}
+                />
+              </div>
+            )}
 
             <div className="flex gap-2 pt-2">
               <Button type="button" variant="secondary" onClick={onClose} className="flex-1">

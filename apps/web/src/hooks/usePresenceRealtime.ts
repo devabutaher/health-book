@@ -12,7 +12,7 @@ export function usePresenceRealtime() {
   useEffect(() => {
     if (!accessToken || !userId) return;
 
-    const channel = supabase.channel("online-users", {
+    const channel = supabase.channel(`hb-presence-${userId}`, {
       config: { presence: { key: userId } },
     });
 
@@ -28,19 +28,11 @@ export function usePresenceRealtime() {
         removeOnlineUser(key);
       });
 
-    ;(async () => {
-      try {
-        await supabase.realtime.setAuth(accessToken);
-      } catch {
-        return;
+    channel.subscribe(async (status) => {
+      if (status === "SUBSCRIBED") {
+        await channel.track({ onlineAt: new Date().toISOString() });
       }
-
-      channel.subscribe(async (status) => {
-        if (status === "SUBSCRIBED") {
-          await channel.track({ onlineAt: new Date().toISOString() });
-        }
-      });
-    })();
+    });
 
     return () => {
       channel.unsubscribe();

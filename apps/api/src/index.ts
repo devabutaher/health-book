@@ -29,6 +29,7 @@ import { rateLimiter, errorHandler } from "./middleware";
 import { startCleanupJobs } from "./jobs/cleanup.job";
 import { publishScheduledPosts } from "./jobs/publishScheduled";
 import { startStreakAtRiskJob } from "./jobs/streakAtRisk.job";
+import { startChallengeReminderJob } from "./jobs/challengeReminder.job";
 
 const app = express();
 const port = process.env["PORT"] || 5000;
@@ -81,4 +82,5 @@ app.listen(port, () => {
   publishScheduledPosts();
   setInterval(publishScheduledPosts, 60 * 1000);
   startStreakAtRiskJob();
+  startChallengeReminderJob();
 });

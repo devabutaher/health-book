@@ -49,19 +49,22 @@ export function ConversationHeader({
   onBack: () => void;
   onToggleSidebar?: () => void;
 }) {
-  const { data: conversations, isLoading, isFetching } = useGetConversationsQuery();
+  const { data: conversationsData, isLoading, isFetching } = useGetConversationsQuery();
   const [toggleMute] = useToggleMuteMutation();
   const [deleteConversation] = useDeleteConversationMutation();
   const [clearMessages] = useClearMessagesMutation();
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [confirmAction, setConfirmAction] = useState<"clear" | "delete" | "deleteGroup" | null>(null);
+  const [confirmAction, setConfirmAction] = useState<"clear" | "delete" | "deleteGroup" | null>(
+    null,
+  );
   const [membersOpen, setMembersOpen] = useState(false);
   const [addParticipantOpen, setAddParticipantOpen] = useState(false);
   const [updateGroupInfo] = useUpdateGroupInfoMutation();
   const [editingName, setEditingName] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
 
+  const conversations = conversationsData?.data ?? [];
   const conv = conversations?.find((c) => c.id === conversationId);
   const currentParticipant = conv?.participants.find((p) => p.userId === currentUserId);
   const isAdmin = currentParticipant?.role === "ADMIN";
@@ -73,7 +76,9 @@ export function ConversationHeader({
     ? conv.groupName || "Group"
     : otherParticipant?.user.name || conv?.participants[0]?.user.name || "Chat";
 
-  const avatar = conv?.isGroup ? conv.groupAvatar : otherParticipant?.user.avatar || conv?.participants[0]?.user.avatar;
+  const avatar = conv?.isGroup
+    ? conv.groupAvatar
+    : otherParticipant?.user.avatar || conv?.participants[0]?.user.avatar;
 
   const initials = displayName.slice(0, 2).toUpperCase();
 
@@ -107,7 +112,9 @@ export function ConversationHeader({
     setConfirmAction(null);
     try {
       await deleteConversation({ conversationId, forEveryone }).unwrap();
-      toast.success(forEveryone ? "Group deleted" : conv?.isGroup ? "Left group" : "Conversation deleted");
+      toast.success(
+        forEveryone ? "Group deleted" : conv?.isGroup ? "Left group" : "Conversation deleted",
+      );
       onBack();
     } catch (err: unknown) {
       const msg =
@@ -198,84 +205,84 @@ export function ConversationHeader({
                     setMenuOpen(false);
                     setMembersOpen(true);
                   }}
-                    className="flex w-full items-center gap-2.5 px-3 py-3 text-sm text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-overlay)]"
-                  >
-                    <Users className="size-4" /> Members
-                  </button>
-                  <button
-                    onClick={() => {
-                      setMenuOpen(false);
-                      setAddParticipantOpen(true);
-                    }}
-                    className="flex w-full items-center gap-2.5 px-3 py-3 text-sm text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-overlay)]"
-                  >
-                    <UserPlus className="size-4" /> Add People
-                  </button>
-                  {isAdmin && (
-                    <button
-                      onClick={() => {
-                        setMenuOpen(false);
-                        setEditingName(true);
-                      }}
-                      className="flex w-full items-center gap-2.5 px-3 py-3 text-sm text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-overlay)]"
-                    >
-                      <Edit3 className="size-4" /> Edit Group Name
-                    </button>
-                  )}
-                </>
-              ) : (
-                <>
-                  <button
-                    onClick={handleViewProfile}
-                    className="flex w-full items-center gap-2.5 px-3 py-3 text-sm text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-overlay)]"
-                  >
-                    <User className="size-4" /> View Profile
-                  </button>
-                  <button
-                    onClick={handleCopyProfileLink}
-                    className="flex w-full items-center gap-2.5 px-3 py-3 text-sm text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-overlay)]"
-                  >
-                    <Link className="size-4" /> Copy Profile Link
-                  </button>
-                </>
-              )}
-              <button
-                onClick={handleMute}
-                className="flex w-full items-center gap-2.5 px-3 py-3 text-sm text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-overlay)]"
-              >
-                {conv?.isMuted ? <Bell className="size-4" /> : <BellOff className="size-4" />}
-                {conv?.isMuted ? "Unmute" : "Mute"}
-              </button>
-              <hr className="border-[var(--border-default)]" />
-              <button
-                onClick={() => {
-                  setMenuOpen(false);
-                  setConfirmAction("clear");
-                }}
-                className="flex w-full items-center gap-2.5 px-3 py-3 text-sm text-red-400 transition-colors hover:bg-red-500/10"
-              >
-                <Eraser className="size-4" /> Clear Messages
-              </button>
-              {conv?.isGroup && isAdmin && (
+                  className="flex w-full items-center gap-2.5 px-3 py-3 text-sm text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-overlay)]"
+                >
+                  <Users className="size-4" /> Members
+                </button>
                 <button
                   onClick={() => {
                     setMenuOpen(false);
-                    setConfirmAction("deleteGroup");
+                    setAddParticipantOpen(true);
                   }}
-                  className="flex w-full items-center gap-2.5 px-3 py-3 text-sm text-red-400 transition-colors hover:bg-red-500/10"
+                  className="flex w-full items-center gap-2.5 px-3 py-3 text-sm text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-overlay)]"
                 >
-                  <Trash2 className="size-4" /> Delete Group
+                  <UserPlus className="size-4" /> Add People
                 </button>
-              )}
+                {isAdmin && (
+                  <button
+                    onClick={() => {
+                      setMenuOpen(false);
+                      setEditingName(true);
+                    }}
+                    className="flex w-full items-center gap-2.5 px-3 py-3 text-sm text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-overlay)]"
+                  >
+                    <Edit3 className="size-4" /> Edit Group Name
+                  </button>
+                )}
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={handleViewProfile}
+                  className="flex w-full items-center gap-2.5 px-3 py-3 text-sm text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-overlay)]"
+                >
+                  <User className="size-4" /> View Profile
+                </button>
+                <button
+                  onClick={handleCopyProfileLink}
+                  className="flex w-full items-center gap-2.5 px-3 py-3 text-sm text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-overlay)]"
+                >
+                  <Link className="size-4" /> Copy Profile Link
+                </button>
+              </>
+            )}
+            <button
+              onClick={handleMute}
+              className="flex w-full items-center gap-2.5 px-3 py-3 text-sm text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-overlay)]"
+            >
+              {conv?.isMuted ? <Bell className="size-4" /> : <BellOff className="size-4" />}
+              {conv?.isMuted ? "Unmute" : "Mute"}
+            </button>
+            <hr className="border-[var(--border-default)]" />
+            <button
+              onClick={() => {
+                setMenuOpen(false);
+                setConfirmAction("clear");
+              }}
+              className="flex w-full items-center gap-2.5 px-3 py-3 text-sm text-red-400 transition-colors hover:bg-red-500/10"
+            >
+              <Eraser className="size-4" /> Clear Messages
+            </button>
+            {conv?.isGroup && isAdmin && (
               <button
                 onClick={() => {
                   setMenuOpen(false);
-                  setConfirmAction("delete");
+                  setConfirmAction("deleteGroup");
                 }}
                 className="flex w-full items-center gap-2.5 px-3 py-3 text-sm text-red-400 transition-colors hover:bg-red-500/10"
               >
-                <Trash2 className="size-4" /> {conv?.isGroup ? "Leave Group" : "Delete Conversation"}
+                <Trash2 className="size-4" /> Delete Group
               </button>
+            )}
+            <button
+              onClick={() => {
+                setMenuOpen(false);
+                setConfirmAction("delete");
+              }}
+              className="flex w-full items-center gap-2.5 px-3 py-3 text-sm text-red-400 transition-colors hover:bg-red-500/10"
+            >
+              <Trash2 className="size-4" /> {conv?.isGroup ? "Leave Group" : "Delete Conversation"}
+            </button>
           </div>
 
           {conv && (

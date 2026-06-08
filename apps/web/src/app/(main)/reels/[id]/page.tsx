@@ -17,7 +17,5 @@ const ReelDetail = dynamic(
 
 export default function ReelDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  return (
-      <ReelDetail id={id} />
-  );
+  return <ReelDetail id={id} />;
 }

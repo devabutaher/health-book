@@ -1,11 +1,11 @@
-import webpush from "web-push"
-import { prisma } from "../lib/prisma"
+import webpush from "web-push";
+import { prisma } from "../lib/prisma";
 
 webpush.setVapidDetails(
   "mailto:hello@healthbook.app",
   process.env.VAPID_PUBLIC_KEY!,
   process.env.VAPID_PRIVATE_KEY!,
-)
+);
 
 export async function sendPushNotification(
   userId: string,
@@ -13,11 +13,11 @@ export async function sendPushNotification(
   body: string,
   url: string,
 ): Promise<void> {
-  const subs = await prisma.pushSubscription.findMany({ where: { userId } })
+  const subs = await prisma.pushSubscription.findMany({ where: { userId } });
 
-  if (subs.length === 0) return
+  if (subs.length === 0) return;
 
-  const payload = JSON.stringify({ title, body, url })
+  const payload = JSON.stringify({ title, body, url });
 
   for (const sub of subs) {
     try {
@@ -27,12 +27,12 @@ export async function sendPushNotification(
           keys: { p256dh: sub.p256dh, auth: sub.auth },
         },
         payload,
-      )
+      );
     } catch (err: unknown) {
       if (err instanceof Error) {
-        const statusCode = (err as { statusCode?: number }).statusCode
+        const statusCode = (err as { statusCode?: number }).statusCode;
         if (statusCode === 410 || statusCode === 404) {
-          await prisma.pushSubscription.delete({ where: { id: sub.id } }).catch(() => {})
+          await prisma.pushSubscription.delete({ where: { id: sub.id } }).catch(() => {});
         }
       }
     }
@@ -40,5 +40,5 @@ export async function sendPushNotification(
 }
 
 export function getVapidPublicKey(): string {
-  return process.env.VAPID_PUBLIC_KEY ?? ""
+  return process.env.VAPID_PUBLIC_KEY ?? "";
 }

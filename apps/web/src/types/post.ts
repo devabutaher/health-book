@@ -63,6 +63,7 @@ export interface Post {
   updatedAt: string;
   user: PostUser;
   reactions?: PostReaction[];
+  isSaved?: boolean;
   _count?: PostCount;
   healthLog?: PostHealthLog | null;
   poll?: PostPoll | null;

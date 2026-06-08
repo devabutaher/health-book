@@ -6,17 +6,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { UserAvatar } from "@/components/shared/UserAvatar";
-import {
-  useGetFollowersQuery,
-  useGetFollowingQuery,
-  useFollowMutation,
-  useUnfollowMutation,
-} from "@/redux/api/userApi";
+import { useGetFollowersQuery, useGetFollowingQuery } from "@/redux/api/userApi";
+import { useFollowActions } from "@/hooks/useFollow";
 import { useAppSelector } from "@/hooks";
 import Link from "next/link";
 import { toast } from "sonner";
 import { UserX } from "lucide-react";
-import { useSound } from "@/hooks/useSound";
 
 interface FollowersModalProps {
   userId: string;
@@ -43,9 +38,7 @@ export function FollowersModal({
     { skip: !open || tab !== "following" },
   );
 
-  const [follow] = useFollowMutation();
-  const [unfollow] = useUnfollowMutation();
-  const { play } = useSound();
+  const { follow, unfollow, play } = useFollowActions();
 
   const followers = followersData?.data?.users || [];
   const following = followingData?.data?.users || [];
@@ -55,7 +48,7 @@ export function FollowersModal({
   const handleFollow = async (targetId: string, currentlyFollowing: boolean) => {
     if (currentlyFollowing) {
       try {
-        await unfollow(targetId).unwrap();
+        await unfollow(targetId);
       } catch {
         play("error");
         toast.error("Failed to update follow status");
@@ -63,7 +56,7 @@ export function FollowersModal({
     } else {
       play("follow");
       try {
-        await follow(targetId).unwrap();
+        await follow(targetId);
       } catch {
         play("error");
         toast.error("Failed to update follow status");

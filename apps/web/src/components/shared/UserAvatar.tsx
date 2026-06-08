@@ -1,6 +1,6 @@
 "use client";
 
-import { cn } from "@/lib/utils";
+import { cn, getImageUrl } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 type Ring = "default" | "premium" | "story";
@@ -84,7 +84,9 @@ export function UserAvatar({
         size={size === "sm" ? "sm" : size === "xl" ? "lg" : "default"}
         className={cn("size-full", size === "xl" && "text-base")}
       >
-        {avatar ? <AvatarImage src={avatar} alt={name ?? ""} /> : null}
+        {avatar ? (
+          <AvatarImage src={getImageUrl(avatar, "q_auto,f_auto") ?? avatar} alt={name ?? ""} />
+        ) : null}
         <AvatarFallback className="bg-gradient-to-br from-brand-teal to-brand-green font-semibold text-white">
           {initials(name)}
         </AvatarFallback>

@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from "express";
-import { createStorySchema, reactStorySchema } from "../utils/validators";
+import { createStorySchema, reactStorySchema, votePollSchema } from "../utils/validators";
 import { storyService } from "../services/story.service";
 
 type P = Record<string, string>;
@@ -63,7 +63,8 @@ export const storyController = {
 
   async votePoll(req: Request<P>, res: Response, next: NextFunction) {
     try {
-      const result = await storyService.votePoll(req.params.id, req.user!.id, req.body.optionIndex);
+      const { optionIndex } = votePollSchema.parse(req.body);
+      const result = await storyService.votePoll(req.params.id, req.user!.id, optionIndex);
       res.json({ success: true, data: result });
     } catch (err) {
       next(err);

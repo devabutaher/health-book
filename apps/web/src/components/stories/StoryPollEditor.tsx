@@ -35,8 +35,22 @@ const bgColors = [
 ];
 
 const commonEmojis = [
-  "😀", "😂", "😍", "😎", "🤔", "🔥", "💯", "❤️",
-  "👍", "👎", "👏", "🙌", "💪", "🎉", "⭐", "🌈",
+  "😀",
+  "😂",
+  "😍",
+  "😎",
+  "🤔",
+  "🔥",
+  "💯",
+  "❤️",
+  "👍",
+  "👎",
+  "👏",
+  "🙌",
+  "💪",
+  "🎉",
+  "⭐",
+  "🌈",
 ];
 
 export function StoryPollEditor({
@@ -119,8 +133,13 @@ export function StoryPollEditor({
       {/* Preview content */}
       <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 px-5">
         {question ? (
-          <motion.div layout className="w-full rounded-2xl bg-black/40 px-5 py-4 text-center backdrop-blur-sm">
-            <p className="font-bold leading-snug" style={{ color: textColor, fontSize: "20px" }}>{question}</p>
+          <motion.div
+            layout
+            className="w-full rounded-2xl bg-black/40 px-5 py-4 text-center backdrop-blur-sm"
+          >
+            <p className="font-bold leading-snug" style={{ color: textColor, fontSize: "20px" }}>
+              {question}
+            </p>
           </motion.div>
         ) : (
           <div className="w-full rounded-2xl border-2 border-dashed border-white/20 px-5 py-4 text-center">
@@ -129,16 +148,18 @@ export function StoryPollEditor({
         )}
 
         <div className="w-full space-y-2.5">
-          {options.filter((o) => o.trim()).map((opt, idx) => (
-            <motion.div
-              key={idx}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-sm text-white/90 backdrop-blur-sm"
-            >
-              {opt}
-            </motion.div>
-          ))}
+          {options
+            .filter((o) => o.trim())
+            .map((opt, idx) => (
+              <motion.div
+                key={idx}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-sm text-white/90 backdrop-blur-sm"
+              >
+                {opt}
+              </motion.div>
+            ))}
           {!options.some((o) => o.trim()) && (
             <div className="rounded-2xl border-2 border-dashed border-white/15 px-4 py-3 text-center text-xs text-white/30">
               Options appear here
@@ -149,7 +170,10 @@ export function StoryPollEditor({
 
       {/* Bottom Tools Panel */}
       {!createdStoryId && (
-        <StoryCollapsiblePanel collapsed={panelCollapsed} onToggle={() => setPanelCollapsed(!panelCollapsed)}>
+        <StoryCollapsiblePanel
+          collapsed={panelCollapsed}
+          onToggle={() => setPanelCollapsed(!panelCollapsed)}
+        >
           <div className="space-y-3 px-3 pb-2">
             <StoryColorPicker
               label="Background"
@@ -223,7 +247,11 @@ export function StoryPollEditor({
       )}
 
       {createdStoryId && (
-        <StoryHighlightPanel createdStoryId={createdStoryId} onClose={onClose} onCreated={onCreated} />
+        <StoryHighlightPanel
+          createdStoryId={createdStoryId}
+          onClose={onClose}
+          onCreated={onCreated}
+        />
       )}
     </div>
   );

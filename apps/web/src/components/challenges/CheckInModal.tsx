@@ -2,44 +2,65 @@
 
 import Image from "next/image";
 import { useState, useRef } from "react";
-import { X, Check, Camera, Upload } from "lucide-react";
-import { useCheckInMutation } from "@/redux/api/challengesApi";
+import { X, Check, Camera, Upload, SkipForward, ArrowLeft } from "lucide-react";
+import { useCheckInMutation, useUploadChallengeMediaMutation } from "@/redux/api/challengesApi";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { scaleIn } from "@/lib/motion/variants";
 import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/getErrorMessage";
 import { useSound } from "@/hooks/useSound";
-import { cn } from "@/lib/utils";
+import type { ChallengeDayPlan } from "@/types/challenge";
+import { getImageUrl } from "@/lib/utils";
+import { useEffect } from "react";
 export function CheckInModal({
   challengeId,
-  dayNumber,
+  currentDay,
   totalDays,
   open,
   onClose,
-  existingEntry,
+  dayPlan,
   goalTarget,
   goalUnit,
+  hasDayPlans,
+  dayNumber,
 }: {
   challengeId: string;
-  dayNumber: number;
+  currentDay: number;
   totalDays: number;
   open: boolean;
   onClose: () => void;
-  existingEntry?: { completed: boolean; value?: number | null } | null;
+  dayPlan?: ChallengeDayPlan | null;
   goalTarget?: number | null;
   goalUnit?: string | null;
+  hasDayPlans?: boolean;
+  dayNumber?: number;
 }) {
-  const [completed, setCompleted] = useState(true);
   const [notes, setNotes] = useState("");
-  const [mediaUrls, setMediaUrls] = useState<string[]>([]);
+  const [mediaPreviews, setMediaPreviews] = useState<
+    Array<{
+      id: string;
+      localUrl: string;
+      remoteUrl?: string;
+      uploading: boolean;
+      error?: boolean;
+    }>
+  >([]);
   const [sharedToFeed, setSharedToFeed] = useState(false);
   const [value, setValue] = useState<number | "">("");
   const [checkIn, { isLoading }] = useCheckInMutation();
+  const [uploadMedia] = useUploadChallengeMediaMutation();
   const { play } = useSound();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
 
-  const alreadyCheckedIn = existingEntry?.completed === true;
+  const isSubmitting = uploading || isLoading;
+
+  // The day to check in — if dayNumber is provided explicitly (e.g. calendar click), use it
+  const targetDay = dayNumber ?? currentDay;
+  const isBackfill = dayNumber != null && dayNumber < currentDay;
+  const isDone = currentDay > totalDays;
+
   const showValueInput = goalTarget != null && goalUnit != null;
 
   const handleImageUpload = () => {
@@ -50,52 +71,87 @@ export function CheckInModal({
     const file = e.target.files?.[0];
     if (!file) return;
 
+    const id = Date.now().toString();
+    const localUrl = URL.createObjectURL(file);
+
+    // Show local preview immediately
+    setMediaPreviews((prev) => [...prev, { id, localUrl, uploading: true }]);
     setUploading(true);
+
     try {
       const formData = new FormData();
-      formData.append("file", file);
-      formData.append("upload_preset", "healthbook");
+      formData.append("image", file);
 
-      const res = await fetch(
-        `https://api.cloudinary.com/v1_1/${process.env["NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME"]}/image/upload`,
-        { method: "POST", body: formData },
+      const { url } = await uploadMedia(formData).unwrap();
+      // Replace local preview with remote URL
+      setMediaPreviews((prev) =>
+        prev.map((m) => (m.id === id ? { ...m, remoteUrl: url, uploading: false } : m)),
       );
-      const data = await res.json();
-      if (data.secure_url) {
-        setMediaUrls((prev) => [...prev, data.secure_url]);
-      } else {
-        toast.error("Upload failed");
-      }
-    } catch {
-      toast.error("Upload failed");
+    } catch (err) {
+      setMediaPreviews((prev) =>
+        prev.map((m) => (m.id === id ? { ...m, uploading: false, error: true } : m)),
+      );
+      toast.error(getErrorMessage(err, "Upload failed"));
     } finally {
       setUploading(false);
       if (e.target) e.target.value = "";
     }
   };
 
-  const handleSubmit = async () => {
-    if (alreadyCheckedIn) return;
+  const removeMedia = (id: string) => {
+    const item = mediaPreviews.find((m) => m.id === id);
+    if (item) URL.revokeObjectURL(item.localUrl);
+    setMediaPreviews((prev) => prev.filter((m) => m.id !== id));
+  };
+
+  // Cleanup object URLs on unmount
+  useEffect(() => {
+    return () => {
+      mediaPreviews.forEach((m) => URL.revokeObjectURL(m.localUrl));
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleCheckIn = async () => {
+    if (isDone) return;
+    const remoteUrls = mediaPreviews
+      .filter((m) => m.remoteUrl && !m.error)
+      .map((m) => m.remoteUrl!);
     try {
       await checkIn({
         challengeId,
-        dayNumber,
-        completed,
+        dayNumber: isBackfill ? targetDay : undefined,
         notes: notes.trim() || undefined,
-        mediaUrls: mediaUrls.length > 0 ? mediaUrls : undefined,
-        sharedToFeed: sharedToFeed && completed,
+        mediaUrls: remoteUrls.length > 0 ? remoteUrls : undefined,
+        sharedToFeed,
         value: value !== "" ? Number(value) : undefined,
       }).unwrap();
       play("success");
-      toast.success(completed ? `Day ${dayNumber} checked in!` : "Progress updated");
+      toast.success(isBackfill ? `Day ${targetDay} logged!` : `Day ${targetDay} checked in!`);
       setNotes("");
-      setMediaUrls([]);
+      setMediaPreviews([]);
       setSharedToFeed(false);
       setValue("");
       onClose();
-    } catch {
+    } catch (err) {
       play("error");
-      toast.error("Failed to check in");
+      toast.error(getErrorMessage(err, "Failed to check in"));
+    }
+  };
+
+  const handleSkip = async () => {
+    if (isDone) return;
+    try {
+      await checkIn({
+        challengeId,
+        skip: true,
+      }).unwrap();
+      play("success");
+      toast.success(`Day ${currentDay} skipped`);
+      onClose();
+    } catch (err) {
+      play("error");
+      toast.error(getErrorMessage(err, "Failed to skip day"));
     }
   };
 
@@ -120,7 +176,9 @@ export function CheckInModal({
           >
             <div className="mb-4 flex items-center justify-between">
               <h2 className="font-display text-lg font-bold text-[var(--text-primary)]">
-                Day {dayNumber} / {totalDays}
+                {isBackfill
+                  ? `Backfill Day ${targetDay} / ${totalDays}`
+                  : `Day ${targetDay} / ${totalDays}`}
               </h2>
               <button
                 onClick={onClose}
@@ -130,111 +188,130 @@ export function CheckInModal({
               </button>
             </div>
 
-            <div className="space-y-4">
-              {alreadyCheckedIn && (
-                <div className="flex items-center gap-2 rounded-xl bg-brand-teal/10 p-3 text-sm font-semibold text-brand-teal">
-                  <Check className="size-4" /> Already checked in for this day
-                </div>
-              )}
-
-              <div className="flex items-center gap-3 rounded-xl bg-[var(--bg-subtle)] p-3">
-                <button
-                  onClick={() => setCompleted(!completed)}
-                  className={cn(
-                    "flex size-10 items-center justify-center rounded-lg transition-all",
-                    completed
-                      ? "bg-gradient-to-r from-brand-teal to-brand-green text-white shadow-[var(--shadow-glow-teal)]"
-                      : "bg-[var(--bg-overlay)] text-[var(--text-muted)]",
-                  )}
-                >
-                  <Check className="size-5" />
-                </button>
-                <div>
-                  <p className="text-sm font-semibold text-[var(--text-primary)]">
-                    {completed ? "Completed" : "Skipped"}
-                  </p>
-                  <p className="text-[10px] text-[var(--text-muted)]">Toggle to mark this day</p>
-                </div>
+            {isDone && (
+              <div className="mb-4 flex items-center gap-2 rounded-xl bg-brand-teal/10 p-3 text-sm font-semibold text-brand-teal">
+                <Check className="size-4" /> You&apos;ve completed all days!
               </div>
+            )}
 
-              {showValueInput && (
+            {isBackfill && (
+              <div className="mb-4 flex items-center gap-2 rounded-xl bg-brand-amber/10 p-3 text-sm font-semibold text-brand-amber">
+                <ArrowLeft className="size-4" /> Backfilling a missed day — your current progress is
+                day {currentDay}
+              </div>
+            )}
+
+            {/* Today's Task from day plan */}
+            {dayPlan && (
+              <div className="mb-4 rounded-xl border border-brand-teal/20 bg-gradient-to-br from-brand-teal/[0.05] to-brand-green/[0.03] p-3">
+                <p className="text-[10px] font-semibold text-brand-teal uppercase tracking-wider">
+                  {isBackfill ? "Missed Day Task" : "Today's Task"}
+                </p>
+                <p className="mt-1 text-sm font-bold text-[var(--text-primary)]">
+                  {dayPlan.title || `Day ${dayPlan.dayNumber}`}
+                </p>
+                {dayPlan.description && (
+                  <p className="mt-1 text-xs text-[var(--text-secondary)]">{dayPlan.description}</p>
+                )}
+                {dayPlan.tips && (
+                  <p className="mt-1 text-xs text-brand-amber/80 italic">{dayPlan.tips}</p>
+                )}
+              </div>
+            )}
+
+            {!isDone && (
+              <div className="space-y-4">
+                {showValueInput && (
+                  <div>
+                    <label className="mb-1.5 block text-xs font-semibold text-[var(--text-secondary)]">
+                      Today&apos;s progress ({goalUnit})
+                    </label>
+                    <input
+                      type="number"
+                      step="any"
+                      min="0"
+                      value={value}
+                      onChange={(e) =>
+                        setValue(e.target.value === "" ? "" : Number(e.target.value))
+                      }
+                      placeholder={`e.g. 2.5 ${goalUnit}`}
+                      className="w-full rounded-xl border border-[var(--border-default)] bg-[var(--bg-subtle)] px-4 py-2.5 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-brand-teal/50 focus:outline-none focus:ring-2 focus:ring-brand-teal/10"
+                    />
+                    <p className="mt-1 text-[10px] text-[var(--text-muted)]">
+                      Total goal: {goalTarget} {goalUnit}
+                    </p>
+                  </div>
+                )}
+
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-[var(--text-secondary)]">
-                    Today&apos;s progress ({goalUnit})
+                    Notes (optional)
                   </label>
-                  <input
-                    type="number"
-                    step="any"
-                    min="0"
-                    value={value}
-                    onChange={(e) => setValue(e.target.value === "" ? "" : Number(e.target.value))}
-                    placeholder={`e.g. 2.5 ${goalUnit}`}
-                    className="w-full rounded-xl border border-[var(--border-default)] bg-[var(--bg-subtle)] px-4 py-2.5 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-brand-teal/50 focus:outline-none focus:ring-2 focus:ring-brand-teal/10"
+                  <textarea
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="How did it go?"
+                    rows={3}
+                    maxLength={2000}
+                    className="w-full resize-none rounded-xl border border-[var(--border-default)] bg-[var(--bg-subtle)] px-4 py-2.5 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-brand-teal/50 focus:outline-none focus:ring-2 focus:ring-brand-teal/10"
                   />
-                  <p className="mt-1 text-[10px] text-[var(--text-muted)]">
-                    Total goal: {goalTarget} {goalUnit}
-                  </p>
                 </div>
-              )}
 
-              <div>
-                <label className="mb-1.5 block text-xs font-semibold text-[var(--text-secondary)]">
-                  Notes (optional)
-                </label>
-                <textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="How did it go today?"
-                  rows={3}
-                  maxLength={2000}
-                  className="w-full resize-none rounded-xl border border-[var(--border-default)] bg-[var(--bg-subtle)] px-4 py-2.5 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-brand-teal/50 focus:outline-none focus:ring-2 focus:ring-brand-teal/10"
-                />
-              </div>
-
-              <div>
-                <label className="mb-1.5 block text-xs font-semibold text-[var(--text-secondary)]">
-                  Photo
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {mediaUrls.map((url, i) => (
-                    <div key={i} className="relative size-16 overflow-hidden rounded-lg">
-                      <Image
-                        src={url}
-                        alt="Check-in photo"
-                        className="size-full object-cover"
-                        width={64}
-                        height={64}
-                      />
-                      <button
-                        onClick={() => setMediaUrls((prev) => prev.filter((_, j) => j !== i))}
-                        className="absolute right-0.5 top-0.5 flex size-4 items-center justify-center rounded-full bg-black/50 text-white"
-                      >
-                        <X className="size-3" />
-                      </button>
-                    </div>
-                  ))}
-                  <button
-                    onClick={handleImageUpload}
-                    disabled={uploading}
-                    className="flex size-16 items-center justify-center rounded-lg border border-dashed border-[var(--border-default)] bg-[var(--bg-subtle)] text-[var(--text-muted)] hover:bg-[var(--bg-overlay)] disabled:opacity-50"
-                  >
-                    {uploading ? (
-                      <Upload className="size-5 animate-pulse" />
-                    ) : (
-                      <Camera className="size-5" />
-                    )}
-                  </button>
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-[var(--text-secondary)]">
+                    Photo
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {mediaPreviews.map((item) => (
+                      <div key={item.id} className="relative size-16 overflow-hidden rounded-lg">
+                        <Image
+                          src={item.localUrl}
+                          alt="Check-in photo"
+                          className="size-full object-cover"
+                          width={64}
+                          height={64}
+                        />
+                        {item.uploading && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                            <Upload className="size-5 animate-pulse text-white" />
+                          </div>
+                        )}
+                        {item.error && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/60">
+                            <span className="text-[9px] font-semibold text-red-400">Failed</span>
+                          </div>
+                        )}
+                        {!item.uploading && (
+                          <button
+                            onClick={() => removeMedia(item.id)}
+                            className="absolute right-0.5 top-0.5 flex size-4 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70"
+                          >
+                            <X className="size-3" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    <button
+                      onClick={handleImageUpload}
+                      disabled={uploading}
+                      className="flex size-16 items-center justify-center rounded-lg border border-dashed border-[var(--border-default)] bg-[var(--bg-subtle)] text-[var(--text-muted)] hover:bg-[var(--bg-overlay)] disabled:opacity-50"
+                    >
+                      {uploading ? (
+                        <Upload className="size-5 animate-pulse" />
+                      ) : (
+                        <Camera className="size-5" />
+                      )}
+                    </button>
+                  </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                  />
                 </div>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
-              </div>
 
-              {completed && (
                 <label className="flex items-center gap-2 rounded-xl bg-[var(--bg-subtle)] p-3 cursor-pointer">
                   <input
                     type="checkbox"
@@ -251,28 +328,37 @@ export function CheckInModal({
                     </p>
                   </div>
                 </label>
-              )}
-            </div>
+              </div>
+            )}
 
             <div className="mt-4 flex gap-2">
               <Button type="button" variant="secondary" onClick={onClose} className="flex-1">
                 Cancel
               </Button>
-              <Button
-                type="submit"
-                variant="gradient"
-                disabled={isLoading || alreadyCheckedIn}
-                onClick={handleSubmit}
-                className="flex-1"
-              >
-                {alreadyCheckedIn
-                  ? "Already Done"
-                  : isLoading
-                    ? "Saving..."
-                    : completed
-                      ? "Check In"
-                      : "Save"}
-              </Button>
+              {!isDone && (
+                <>
+                  {hasDayPlans && !isBackfill && (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={handleSkip}
+                      disabled={isSubmitting}
+                      className="flex-1 gap-1.5"
+                    >
+                      <SkipForward className="size-3.5" /> Skip
+                    </Button>
+                  )}
+                  <Button
+                    type="submit"
+                    variant="gradient"
+                    disabled={isSubmitting}
+                    onClick={handleCheckIn}
+                    className="flex-1"
+                  >
+                    {isSubmitting ? "Saving..." : isBackfill ? "Log Missed Day" : "Check In"}
+                  </Button>
+                </>
+              )}
             </div>
           </motion.div>
         </div>

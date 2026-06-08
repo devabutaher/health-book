@@ -1,27 +1,15 @@
 "use client";
 
 import { useGetFriendsStoriesQuery } from "@/redux/api/storiesApi";
+import { useStoryRealtime } from "@/hooks/useStoryRealtime";
 import { motion } from "framer-motion";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { StoryCircle } from "./StoryCircle";
 import { StoryCreateButton } from "./StoryCreateButton";
 import { StoryViewer } from "./StoryViewer";
 
-function SkeletonCard() {
-  return (
-    <div className="relative h-44 w-28 shrink-0 overflow-hidden rounded-2xl bg-white/5">
-      <motion.div
-        className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent"
-        animate={{ x: ["-100%", "100%"] }}
-        transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
-      />
-      <div className="absolute left-2 top-2 size-8 rounded-full bg-white/10" />
-      <div className="absolute bottom-3 left-2 right-2 h-3 rounded bg-white/10" />
-    </div>
-  );
-}
-
 export function StoryRow() {
+  useStoryRealtime();
   const { data: groups, isLoading } = useGetFriendsStoriesQuery();
   const [viewerOpen, setViewerOpen] = useState(false);
   const [initialIdx, setInitialIdx] = useState(0);
@@ -69,18 +57,25 @@ export function StoryRow() {
           ref={scrollRef}
           onScroll={checkShadow}
           className="flex gap-2 overflow-x-auto pb-2 scrollbar-none"
-          style={showShadow ? {
-            maskImage: "linear-gradient(to right, black 85%, transparent)",
-            WebkitMaskImage: "linear-gradient(to right, black 85%, transparent)",
-          } : undefined}
+          style={
+            showShadow
+              ? {
+                  maskImage: "linear-gradient(to right, black 85%, transparent)",
+                  WebkitMaskImage: "linear-gradient(to right, black 85%, transparent)",
+                }
+              : undefined
+          }
         >
           {isLoading ? (
-            <>
-              <SkeletonCard />
-              <SkeletonCard />
-              <SkeletonCard />
-              <SkeletonCard />
-            </>
+            <div className="flex h-16 w-full items-center">
+              <div className="h-1 w-full overflow-hidden rounded-full bg-white/5">
+                <motion.div
+                  className="h-full w-1/3 rounded-full bg-white/10"
+                  animate={{ x: ["-100%", "300%"] }}
+                  transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                />
+              </div>
+            </div>
           ) : (
             activeGroups?.map((group, idx) => (
               <StoryCircle

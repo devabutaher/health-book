@@ -1,6 +1,7 @@
-import type { StoryGroup, StoryInteractions } from "@/types/story";
+import type { StoryGroup, StoryInteractions, StorySticker } from "@/types/story";
 import { createApi } from "@reduxjs/toolkit/query/react";
 import { createBaseQuery } from "../baseQuery";
+import { soundManager } from "@/lib/soundManager";
 
 export interface PollResults {
   question?: string;
@@ -15,6 +16,8 @@ export const storiesApi = createApi({
   reducerPath: "storiesApi",
   baseQuery: createBaseQuery(`${process.env["NEXT_PUBLIC_API_URL"]}/api/stories`),
   tagTypes: ["Stories"],
+  refetchOnFocus: false,
+  refetchOnReconnect: true,
   endpoints: (builder) => ({
     getFriendsStories: builder.query<StoryGroup[], void>({
       query: () => "/friends",
@@ -53,10 +56,50 @@ export const storiesApi = createApi({
         success: boolean;
         data: { id: string } & Record<string, unknown>;
       }) => response.data,
-      onQueryStarted: async (_body, { queryFulfilled }) => {
+      onQueryStarted: async (args, { getState, dispatch, queryFulfilled }) => {
+        const currentUserId = (getState() as { auth?: { user?: { id: string } } }).auth?.user?.id;
+        if (!currentUserId) return;
+        const tempId = `temp-${Date.now()}`;
+
+        const patch = dispatch(
+          storiesApi.util.updateQueryData("getFriendsStories", undefined, (draft) => {
+            const myGroup = draft.find((g) => g.user.id === currentUserId);
+            if (!myGroup) return;
+            myGroup.stories.unshift({
+              id: tempId,
+              userId: currentUserId,
+              user: { id: currentUserId, name: "", username: "", avatar: null },
+              type: args.type || "media",
+              mediaUrl: args.mediaUrl || null,
+              mediaType: (args.mediaType as "image" | "video" | null) || null,
+              duration: args.duration || null,
+              textOverlay: args.textOverlay || null,
+              stickerData: args.stickerData as StorySticker | undefined,
+              backgroundColor: args.backgroundColor || undefined,
+              viewed: false,
+              createdAt: new Date().toISOString(),
+              expiresAt: new Date(Date.now() + 86400000).toISOString(),
+            });
+          }),
+        );
+
         try {
-          await queryFulfilled;
-        } catch {}
+          const { data: newStory } = (await queryFulfilled) as unknown as {
+            data: { id: string } & Record<string, unknown>;
+          };
+          if (!newStory?.id) return;
+          dispatch(
+            storiesApi.util.updateQueryData("getFriendsStories", undefined, (draft) => {
+              const myGroup = draft.find((g) => g.user.id === currentUserId);
+              if (!myGroup) return;
+              const idx = myGroup.stories.findIndex((s) => s.id === tempId);
+              if (idx >= 0) myGroup.stories[idx].id = newStory.id;
+            }),
+          );
+        } catch {
+          patch.undo();
+          soundManager.playError();
+        }
       },
     }),
 
@@ -78,6 +121,7 @@ export const storiesApi = createApi({
         try {
           await queryFulfilled;
         } catch {
+          soundManager.playError();
           patch.undo();
         }
       },
@@ -106,6 +150,7 @@ export const storiesApi = createApi({
         try {
           await queryFulfilled;
         } catch {
+          soundManager.playError();
           patch.undo();
         }
       },
@@ -114,6 +159,7 @@ export const storiesApi = createApi({
     getStoryInteractions: builder.query<StoryInteractions, string>({
       query: (storyId) => `/${storyId}/interactions`,
       transformResponse: (response: { success: boolean; data: StoryInteractions }) => response.data,
+      providesTags: (_result, _error, storyId) => [{ type: "Stories", id: storyId }],
       keepUnusedDataFor: 60,
     }),
 
@@ -139,6 +185,7 @@ export const storiesApi = createApi({
         try {
           await queryFulfilled;
         } catch {
+          soundManager.playError();
           patch.undo();
         }
       },
@@ -171,6 +218,7 @@ export const storiesApi = createApi({
         try {
           await queryFulfilled;
         } catch {
+          soundManager.playError();
           patch.undo();
         }
       },
@@ -193,5 +241,4 @@ export const {
   useGetStoryInteractionsQuery,
   useDeleteStoryMutation,
   useVoteStoryPollMutation,
-  useGetStoryPollResultsQuery,
 } = storiesApi;

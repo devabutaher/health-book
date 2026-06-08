@@ -253,7 +253,14 @@ export default function WorkoutForm({
         <Button variant="outline" onClick={onCancel}>
           Cancel
         </Button>
-        <Button onClick={() => { setDurStr("30"); setCalStr("0"); onSubmit(data); }} disabled={!data.activityType}>
+        <Button
+          onClick={() => {
+            setDurStr("30");
+            setCalStr("0");
+            onSubmit(data);
+          }}
+          disabled={!data.activityType}
+        >
           <Dumbbell /> Save Workout
         </Button>
       </div>

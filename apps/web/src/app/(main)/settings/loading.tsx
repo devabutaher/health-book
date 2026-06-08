@@ -13,7 +13,10 @@ export default function SettingsLoading() {
         </div>
 
         {[1, 2, 3, 4, 5].map((section) => (
-          <div key={section} className="rounded-2xl border border-[var(--border-default)] bg-[var(--bg-elevated)] p-6">
+          <div
+            key={section}
+            className="rounded-2xl border border-[var(--border-default)] bg-[var(--bg-elevated)] p-6"
+          >
             <div className="mb-4 flex items-center gap-2">
               <Skeleton className="size-8 rounded-xl" />
               <Skeleton className="h-5 w-28" />

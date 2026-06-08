@@ -1,13 +1,15 @@
-import { createApi } from "@reduxjs/toolkit/query/react"
-import { createBaseQuery } from "../baseQuery"
+import { createApi } from "@reduxjs/toolkit/query/react";
+import { createBaseQuery } from "../baseQuery";
 
 export const pushApi = createApi({
   reducerPath: "pushApi",
   baseQuery: createBaseQuery(`${process.env["NEXT_PUBLIC_API_URL"]}/api/push`),
+  refetchOnFocus: false,
+  refetchOnReconnect: true,
   endpoints: (builder) => ({
     getVapidPublicKey: builder.query<{ publicKey: string }, void>({
       query: () => "/vapid-public-key",
-      transformResponse: (res: { success: boolean; publicKey: string }) => res,
+      transformResponse: (res: { success: boolean; data: { publicKey: string } }) => res.data,
     }),
     subscribePush: builder.mutation<void, { endpoint: string; p256dh: string; auth: string }>({
       query: (body) => ({ url: "/subscribe", method: "POST", body }),
@@ -16,6 +18,7 @@ export const pushApi = createApi({
       query: (body) => ({ url: "/unsubscribe", method: "DELETE", body }),
     }),
   }),
-})
+});
 
-export const { useGetVapidPublicKeyQuery, useSubscribePushMutation, useUnsubscribePushMutation } = pushApi
+export const { useGetVapidPublicKeyQuery, useSubscribePushMutation, useUnsubscribePushMutation } =
+  pushApi;

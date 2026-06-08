@@ -1,48 +1,53 @@
 import { Router } from "express";
 import { challengeController } from "../controllers/challenge.controller";
-import { authenticate, cacheControl } from "../middleware";
+import { authenticate } from "../middleware";
+import { upload } from "../middleware/upload";
 
 const router = Router() as ReturnType<typeof Router>;
 
 // Static routes (must be before /:id)
-router.get("/stats/:userId", authenticate, cacheControl(60, 300), challengeController.getUserStats);
-router.get("/stats", authenticate, cacheControl(60, 300), challengeController.getUserStats);
+router.get("/stats/:userId", authenticate, challengeController.getUserStats);
+router.get("/stats", authenticate, challengeController.getUserStats);
 router.post("/duel", authenticate, challengeController.createDuel);
+router.post("/upload", authenticate, upload.single("image"), challengeController.uploadMedia);
 
 // Browse & search
-router.get("/", authenticate, cacheControl(300, 600), challengeController.browse);
-router.get("/search", authenticate, cacheControl(60, 300), challengeController.search);
-router.get("/saved", authenticate, cacheControl(60, 300), challengeController.getSavedChallenges);
-router.get("/mine", authenticate, cacheControl(60, 300), challengeController.getMyChallenges);
-router.get("/templates", cacheControl(600, 1200, true), challengeController.listTemplates);
+router.get("/", authenticate, challengeController.browse);
+router.get("/search", authenticate, challengeController.search);
+router.get("/saved", authenticate, challengeController.getSavedChallenges);
+router.get("/mine", authenticate, challengeController.getMyChallenges);
+router.get("/templates", challengeController.listTemplates);
 router.post("/templates/seed", authenticate, challengeController.seedTemplates);
 
-// Single challenge
-router.get("/:id", authenticate, cacheControl(300, 600), challengeController.getById);
-router.get("/:id/duel", authenticate, cacheControl(60, 300), challengeController.getDuel);
+// Specific sub-routes (must be before /:id to avoid param capture)
+router.get("/:id/duel", authenticate, challengeController.getDuel);
+router.get("/:id/calendar", authenticate, challengeController.getCalendar);
+router.get("/:id/before-after", authenticate, challengeController.getBeforeAfter);
+router.get("/:id/activity", authenticate, challengeController.getActivityFeed);
+router.get("/:id/leaderboard", challengeController.getLeaderboard);
+router.get("/:id/comments", challengeController.getComments);
+router.get("/:id/ratings", authenticate, challengeController.getRatings);
+router.get("/:id/day-plan", authenticate, challengeController.getDayPlans);
+router.get("/:id/day-plan/:day", authenticate, challengeController.getDayPlan);
+router.put("/:id/day-plan/bulk", authenticate, challengeController.upsertDayPlans);
+router.post("/:id/join", authenticate, challengeController.join);
+router.delete("/:id/leave", authenticate, challengeController.leave);
+router.post("/:id/check-in", authenticate, challengeController.checkIn);
+router.post("/:id/save", authenticate, challengeController.toggleSave);
+router.post("/:id/share", authenticate, challengeController.share);
+router.post("/:id/invite", authenticate, challengeController.invite);
+router.post("/:id/before-photo", authenticate, challengeController.uploadBeforePhoto);
+router.post("/:id/after-photo", authenticate, challengeController.uploadAfterPhoto);
+router.post("/:id/comments", authenticate, challengeController.addComment);
+router.post("/:id/rate", authenticate, challengeController.rate);
 router.put("/:id", authenticate, challengeController.update);
 router.delete("/:id", authenticate, challengeController.remove);
 router.post("/", authenticate, challengeController.create);
 
-// Participation
-router.post("/:id/join", authenticate, challengeController.join);
-router.delete("/:id/leave", authenticate, challengeController.leave);
-router.post("/:id/check-in", authenticate, challengeController.checkIn);
-router.get("/:id/calendar", authenticate, cacheControl(60, 300), challengeController.getCalendar);
-router.get("/:id/before-after", authenticate, cacheControl(60, 300), challengeController.getBeforeAfter);
-router.get("/:id/activity", authenticate, cacheControl(10, 30), challengeController.getActivityFeed);
+// Single challenge (must be after all sub-routes)
+router.get("/:id", authenticate, challengeController.getById);
 
-// Leaderboard
-router.get("/:id/leaderboard", cacheControl(60, 300), challengeController.getLeaderboard);
-
-// Social
-router.post("/:id/save", authenticate, challengeController.toggleSave);
-router.post("/:id/share", authenticate, challengeController.share);
-router.post("/:id/invite", authenticate, challengeController.invite);
-
-// Comments
-router.get("/:id/comments", cacheControl(10, 30), challengeController.getComments);
-router.post("/:id/comments", authenticate, challengeController.addComment);
+// Comments (commentId scoped)
 router.post("/comments/:commentId/react", authenticate, challengeController.reactToComment);
 router.delete(
   "/comments/:commentId/react",
@@ -52,7 +57,7 @@ router.delete(
 router.delete("/comments/:commentId", authenticate, challengeController.deleteComment);
 
 // Invites
-router.get("/invites/mine", authenticate, cacheControl(60, 300), challengeController.getMyInvites);
+router.get("/invites/mine", authenticate, challengeController.getMyInvites);
 router.put("/invites/:inviteId", authenticate, challengeController.respondToInvite);
 
 export default router;

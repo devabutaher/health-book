@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { memo, useState, useRef } from "react";
 import type { Message } from "@/types/conversation";
-import { cn, formatRelativeTime } from "@/lib/utils";
+import { cn, formatRelativeTime, getImageUrl } from "@/lib/utils";
 import { useAppSelector } from "@/hooks";
 import { useDeleteMessageMutation } from "@/redux/api/messagingApi";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -63,7 +63,13 @@ function StoryReplyCard({ data }: { data: NonNullable<Message["storyReplyData"]>
   return null;
 }
 
-export const ChatBubble = memo(function ChatBubble({ message, isGroup }: { message: Message; isGroup?: boolean }) {
+export const ChatBubble = memo(function ChatBubble({
+  message,
+  isGroup,
+}: {
+  message: Message;
+  isGroup?: boolean;
+}) {
   const userId = useAppSelector((s) => s.auth.user?.id);
   const isOwn = message.senderId === userId;
   const canDelete = isOwn;
@@ -83,7 +89,11 @@ export const ChatBubble = memo(function ChatBubble({ message, isGroup }: { messa
 
   const handleDelete = async (forAll: boolean) => {
     try {
-      await deleteMessage({ messageId: message.id, conversationId: message.conversationId, forAll }).unwrap();
+      await deleteMessage({
+        messageId: message.id,
+        conversationId: message.conversationId,
+        forAll,
+      }).unwrap();
     } catch {
       toast.error("Failed to delete message");
     }
@@ -158,11 +168,16 @@ export const ChatBubble = memo(function ChatBubble({ message, isGroup }: { messa
                 {message.mediaUrl && (
                   <div className={cn("overflow-hidden rounded-lg", message.content && "mt-2")}>
                     <Image
-                      src={message.mediaUrl}
+                      src={getImageUrl(message.mediaUrl, "q_auto:best,f_auto") ?? message.mediaUrl}
                       alt="Media"
                       className="w-full max-w-60 rounded-lg object-cover"
                       width={240}
                       height={240}
+                      placeholder="blur"
+                      blurDataURL={
+                        getImageUrl(message.mediaUrl, "w_20,e_blur:2000,q_auto:low,f_auto") ??
+                        undefined
+                      }
                     />
                   </div>
                 )}
@@ -187,7 +202,11 @@ export const ChatBubble = memo(function ChatBubble({ message, isGroup }: { messa
               <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
               <div
                 className="fixed z-50 min-w-48 overflow-y-auto rounded-xl border border-[var(--border-default)] bg-[var(--bg-elevated)] shadow-[var(--shadow-lg)] max-h-60"
-                style={menuPos ? { left: menuPos.x, top: menuPos.y, transform: "translate(-50%, -50%)" } : undefined}
+                style={
+                  menuPos
+                    ? { left: menuPos.x, top: menuPos.y, transform: "translate(-50%, -50%)" }
+                    : undefined
+                }
               >
                 {isOwn && (
                   <button

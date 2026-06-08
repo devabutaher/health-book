@@ -2,6 +2,7 @@
 import { createApi } from "@reduxjs/toolkit/query/react";
 import { createBaseQuery } from "../baseQuery";
 import type { RootState } from "../store";
+import { soundManager } from "@/lib/soundManager";
 
 export interface Notification {
   id: string;
@@ -20,6 +21,8 @@ export const notificationApi = createApi({
   reducerPath: "notificationApi",
   baseQuery: createBaseQuery(`${process.env["NEXT_PUBLIC_API_URL"]}/api/notifications`),
   tagTypes: ["Notifications"],
+  refetchOnFocus: false,
+  refetchOnReconnect: true,
   endpoints: (builder) => ({
     getNotifications: builder.query({
       query: (params: { cursor?: string; limit?: number } = {}) => {
@@ -43,7 +46,7 @@ export const notificationApi = createApi({
       }),
       invalidatesTags: ["Notifications"],
       onQueryStarted: async (id, { dispatch, queryFulfilled, getState }) => {
-        const queries = ((getState() as RootState) as any).notificationApi?.queries ?? {};
+        const queries = (getState() as RootState as any).notificationApi?.queries ?? {};
         const patches: { undo: () => void }[] = [];
         for (const key of Object.keys(queries)) {
           const entry = queries[key];
@@ -67,6 +70,7 @@ export const notificationApi = createApi({
         try {
           await queryFulfilled;
         } catch {
+          soundManager.playError();
           patches.forEach((p) => p.undo());
         }
       },
@@ -78,7 +82,7 @@ export const notificationApi = createApi({
       }),
       invalidatesTags: ["Notifications"],
       onQueryStarted: async (_arg, { dispatch, queryFulfilled, getState }) => {
-        const queries = ((getState() as RootState) as any).notificationApi?.queries ?? {};
+        const queries = (getState() as RootState as any).notificationApi?.queries ?? {};
         const patches: { undo: () => void }[] = [];
         for (const key of Object.keys(queries)) {
           const entry = queries[key];
@@ -102,6 +106,7 @@ export const notificationApi = createApi({
         try {
           await queryFulfilled;
         } catch {
+          soundManager.playError();
           patches.forEach((p) => p.undo());
         }
       },
@@ -113,7 +118,7 @@ export const notificationApi = createApi({
       }),
       invalidatesTags: ["Notifications"],
       onQueryStarted: async (id, { dispatch, queryFulfilled, getState }) => {
-        const queries = ((getState() as RootState) as any).notificationApi?.queries ?? {};
+        const queries = (getState() as RootState as any).notificationApi?.queries ?? {};
         const patches: { undo: () => void }[] = [];
         for (const key of Object.keys(queries)) {
           const entry = queries[key];
@@ -124,9 +129,7 @@ export const notificationApi = createApi({
                   "getNotifications",
                   entry.arg,
                   (draft: any) => {
-                    draft.notifications = draft.notifications.filter(
-                      (n: any) => n.id !== id,
-                    );
+                    draft.notifications = draft.notifications.filter((n: any) => n.id !== id);
                   },
                 ),
               );
@@ -138,6 +141,7 @@ export const notificationApi = createApi({
         try {
           await queryFulfilled;
         } catch {
+          soundManager.playError();
           patches.forEach((p) => p.undo());
         }
       },

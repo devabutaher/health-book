@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { motion, AnimatePresence } from "framer-motion";
 import { scaleIn } from "@/lib/motion/variants";
 import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/getErrorMessage";
 
 export function CreatePollModal({
   groupId,
@@ -63,8 +64,8 @@ export function CreatePollModal({
       setOptions(["", ""]);
       setIsMultipleChoice(false);
       setExpiresIn("");
-    } catch {
-      toast.error("Failed to create poll");
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Failed to create poll"));
     }
   };
 

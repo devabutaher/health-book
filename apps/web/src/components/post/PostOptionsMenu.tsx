@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { memo, useState } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,7 +30,7 @@ import {
 import { useDeletePostMutation, useToggleSaveMutation } from "@/redux/api/postApi";
 import { toast } from "sonner";
 
-export function PostOptionsMenu({
+const PostOptionsMenu = memo(function PostOptionsMenu({
   postId,
   isOwner,
   onEdit,
@@ -126,4 +126,6 @@ export function PostOptionsMenu({
       </AlertDialog>
     </>
   );
-}
+});
+
+export { PostOptionsMenu };

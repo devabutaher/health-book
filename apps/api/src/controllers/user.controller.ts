@@ -88,7 +88,7 @@ export const userController = {
     try {
       const userId = req.params.userId;
       if (userId === req.user!.id) {
-        return res.status(400).json({ success: false, message: "Cannot follow yourself" });
+        return res.json({ success: true, message: "Followed" });
       }
       await userService.follow(req.user!.id, userId);
       res.json({ success: true, message: "Followed" });

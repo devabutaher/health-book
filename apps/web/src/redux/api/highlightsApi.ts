@@ -2,11 +2,14 @@
 import { createApi } from "@reduxjs/toolkit/query/react";
 import { createBaseQuery } from "../baseQuery";
 import type { StoryHighlight } from "@/types/story";
+import { soundManager } from "@/lib/soundManager";
 
 export const highlightsApi = createApi({
   reducerPath: "highlightsApi",
   baseQuery: createBaseQuery(`${process.env["NEXT_PUBLIC_API_URL"]}/api/highlights`),
   tagTypes: ["Highlights"],
+  refetchOnFocus: false,
+  refetchOnReconnect: true,
   endpoints: (builder) => ({
     getHighlights: builder.query<StoryHighlight[], void>({
       query: () => "/",
@@ -29,7 +32,9 @@ export const highlightsApi = createApi({
               draft.push(newHighlight);
             }),
           );
-        } catch {}
+        } catch {
+          soundManager.playError();
+        }
       },
     }),
 
@@ -53,6 +58,7 @@ export const highlightsApi = createApi({
         try {
           await queryFulfilled;
         } catch {
+          soundManager.playError();
           patch.undo();
         }
       },
@@ -73,6 +79,7 @@ export const highlightsApi = createApi({
         try {
           await queryFulfilled;
         } catch {
+          soundManager.playError();
           patch.undo();
         }
       },
@@ -104,6 +111,7 @@ export const highlightsApi = createApi({
         try {
           await queryFulfilled;
         } catch {
+          soundManager.playError();
           patch.undo();
         }
       },

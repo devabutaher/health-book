@@ -21,10 +21,7 @@ export function StoryCollapsiblePanel({
       animate={{ height: collapsed ? 48 : "auto" }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
     >
-      <button
-        onClick={onToggle}
-        className="relative flex w-full items-center justify-center py-3"
-      >
+      <button onClick={onToggle} className="relative flex w-full items-center justify-center py-3">
         <div className="h-1 w-10 rounded-full bg-white/20" />
         {collapsed ? (
           <ChevronUp className="absolute right-4 size-4 text-white/40" />

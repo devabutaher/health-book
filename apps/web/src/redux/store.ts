@@ -1,6 +1,15 @@
 import { combineReducers, configureStore, type Middleware } from "@reduxjs/toolkit";
 import { setupListeners } from "@reduxjs/toolkit/query";
-import { persistReducer, persistStore, FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER } from "redux-persist";
+import {
+  persistReducer,
+  persistStore,
+  FLUSH,
+  REHYDRATE,
+  PAUSE,
+  PERSIST,
+  PURGE,
+  REGISTER,
+} from "redux-persist";
 import storage from "./storage";
 import { authApi } from "./api/authApi";
 import { challengesApi } from "./api/challengesApi";
@@ -111,18 +120,42 @@ export const store = configureStore({
 
 export const persistor = persistStore(store);
 
-setupListeners(store.dispatch);
+setupListeners(store.dispatch, (dispatch, { onFocus, onOnline, onOffline }) => {
+  if (typeof window === "undefined") return () => {};
+  // Only handle online/offline, skip refetchOnFocus
+  const handleOnline = () => dispatch(onOnline());
+  const handleOffline = () => dispatch(onOffline());
+  window.addEventListener("online", handleOnline);
+  window.addEventListener("offline", handleOffline);
+  return () => {
+    window.removeEventListener("online", handleOnline);
+    window.removeEventListener("offline", handleOffline);
+  };
+});
 
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;
 
 export const resetApiCache = () => {
   const apis = [
-    authApi, userApi, postApi, commentApi, healthLogApi,
-    searchApi, notificationApi, periodLogApi, weightLogApi,
-    messagingApi, groupsApi, challengesApi, groupEventApi,
-    groupPollApi, storiesApi, reelsApi, highlightsApi,
+    authApi,
+    userApi,
+    postApi,
+    commentApi,
+    healthLogApi,
+    searchApi,
+    notificationApi,
+    periodLogApi,
+    weightLogApi,
+    messagingApi,
+    groupsApi,
+    challengesApi,
+    groupEventApi,
+    groupPollApi,
+    storiesApi,
+    reelsApi,
+    highlightsApi,
     newsApi,
-  ]
-  apis.forEach((api) => store.dispatch(api.util.resetApiState()))
+  ];
+  apis.forEach((api) => store.dispatch(api.util.resetApiState()));
 };

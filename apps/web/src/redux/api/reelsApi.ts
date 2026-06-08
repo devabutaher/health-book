@@ -1,11 +1,15 @@
 import type { Reel, ReelComment } from "@/types/reel";
 import { createApi } from "@reduxjs/toolkit/query/react";
 import { createBaseQuery } from "../baseQuery";
+import { soundManager } from "@/lib/soundManager";
+import type { RootState } from "../store";
 
 export const reelsApi = createApi({
   reducerPath: "reelsApi",
   baseQuery: createBaseQuery(`${process.env["NEXT_PUBLIC_API_URL"]}/api/reels`),
   tagTypes: ["Reels", "Reel"],
+  refetchOnFocus: false,
+  refetchOnReconnect: true,
   endpoints: (builder) => ({
     browseReels: builder.query<
       { reels: Reel[]; nextCursor: string | null; hasMore: boolean },
@@ -36,16 +40,43 @@ export const reelsApi = createApi({
         method: "POST",
         body,
       }),
+      invalidatesTags: ["Reels"],
       transformResponse: (response: { success: boolean; data: Reel }) => response.data,
-      onQueryStarted: async (_args, { dispatch, queryFulfilled }) => {
+      onQueryStarted: async (args, { dispatch, getState, queryFulfilled }) => {
+        const user = (getState() as RootState).auth.user;
+        if (!user) return;
+        const tempId = `temp-${Date.now()}`;
+
+        const optimistic: Reel = {
+          id: tempId,
+          videoUrl: args.videoUrl,
+          caption: args.caption || null,
+          thumbnailUrl: args.thumbnailUrl || null,
+          user: { id: user.id, name: user.name, username: user.username, avatar: user.avatar },
+          likesCount: 0,
+          commentsCount: 0,
+          isLiked: false,
+          createdAt: new Date().toISOString(),
+        };
+
+        const patch = dispatch(
+          reelsApi.util.updateQueryData("browseReels", { cursor: undefined }, (draft) => {
+            draft.reels.unshift(optimistic);
+          }),
+        );
+
         try {
           const { data: newReel } = await queryFulfilled;
           dispatch(
             reelsApi.util.updateQueryData("browseReels", { cursor: undefined }, (draft) => {
-              draft.reels.unshift(newReel);
+              const idx = draft.reels.findIndex((r) => r.id === tempId);
+              if (idx >= 0) draft.reels[idx].id = newReel.id;
             }),
           );
-        } catch {}
+        } catch {
+          patch.undo();
+          soundManager.playError();
+        }
       },
     }),
 
@@ -55,6 +86,7 @@ export const reelsApi = createApi({
         method: "POST",
         body: formData,
       }),
+      invalidatesTags: ["Reels"],
       transformResponse: (response: { success: boolean; data: Reel }) => response.data,
       async onQueryStarted(_formData, { dispatch, queryFulfilled }) {
         try {
@@ -64,7 +96,9 @@ export const reelsApi = createApi({
               draft.reels.unshift(newReel);
             }),
           );
-        } catch {}
+        } catch {
+          soundManager.playError();
+        }
       },
     }),
 
@@ -73,8 +107,8 @@ export const reelsApi = createApi({
         url: `/${reelId}/like`,
         method: "POST",
       }),
+      invalidatesTags: (_result, _error, reelId) => [{ type: "Reel", id: reelId }],
       onQueryStarted: async (reelId, { dispatch, queryFulfilled }) => {
-        // Fix: also update browseReels cache, not just getReel
         const patchBrowse = dispatch(
           reelsApi.util.updateQueryData("browseReels", { cursor: undefined }, (draft) => {
             const reel = draft.reels.find((r) => r.id === reelId);
@@ -93,6 +127,7 @@ export const reelsApi = createApi({
         try {
           await queryFulfilled;
         } catch {
+          soundManager.playError();
           patchBrowse.undo();
           patchSingle.undo();
         }
@@ -105,7 +140,7 @@ export const reelsApi = createApi({
         method: "POST",
         body,
       }),
-      // Fix: no need to invalidate Reels — only update comment count optimistically
+      invalidatesTags: (_result, _error, { reelId }) => [{ type: "Reel", id: reelId }],
       onQueryStarted: async ({ reelId }, { dispatch, queryFulfilled }) => {
         const patchSingle = dispatch(
           reelsApi.util.updateQueryData("getReel", reelId, (draft) => {
@@ -121,6 +156,7 @@ export const reelsApi = createApi({
         try {
           await queryFulfilled;
         } catch {
+          soundManager.playError();
           patchSingle.undo();
           patchBrowse.undo();
         }
@@ -132,6 +168,7 @@ export const reelsApi = createApi({
         url: `/${reelId}/comments/${commentId}`,
         method: "DELETE",
       }),
+      invalidatesTags: (_result, _error, { reelId }) => [{ type: "Reel", id: reelId }],
       onQueryStarted: async ({ reelId }, { dispatch, queryFulfilled }) => {
         const patchSingle = dispatch(
           reelsApi.util.updateQueryData("getReel", reelId, (draft) => {
@@ -147,6 +184,7 @@ export const reelsApi = createApi({
         try {
           await queryFulfilled;
         } catch {
+          soundManager.playError();
           patchSingle.undo();
           patchBrowse.undo();
         }
@@ -158,6 +196,7 @@ export const reelsApi = createApi({
         url: `/${reelId}`,
         method: "DELETE",
       }),
+      invalidatesTags: (_result, _error, reelId) => [{ type: "Reel", id: reelId }, "Reels"],
       onQueryStarted: async (reelId, { dispatch, queryFulfilled }) => {
         const patch = dispatch(
           reelsApi.util.updateQueryData("browseReels", { cursor: undefined }, (draft) => {
@@ -167,6 +206,7 @@ export const reelsApi = createApi({
         try {
           await queryFulfilled;
         } catch {
+          soundManager.playError();
           patch.undo();
         }
       },
@@ -178,6 +218,7 @@ export const reelsApi = createApi({
         method: "PATCH",
         body,
       }),
+      invalidatesTags: (_result, _error, { reelId }) => [{ type: "Reel", id: reelId }],
       transformResponse: (response: { success: boolean; data: Reel }) => response.data,
       onQueryStarted: async ({ reelId, ...body }, { dispatch, queryFulfilled }) => {
         const patchSingle = dispatch(
@@ -194,6 +235,7 @@ export const reelsApi = createApi({
         try {
           await queryFulfilled;
         } catch {
+          soundManager.playError();
           patchSingle.undo();
           patchBrowse.undo();
         }
@@ -204,9 +246,7 @@ export const reelsApi = createApi({
 
 export const {
   useBrowseReelsQuery,
-  useLazyBrowseReelsQuery,
   useGetReelQuery,
-  useCreateReelMutation,
   useUploadReelMutation,
   useToggleReelLikeMutation,
   useAddReelCommentMutation,

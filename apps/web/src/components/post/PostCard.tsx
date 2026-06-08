@@ -1,23 +1,24 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { memo, useCallback, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import dynamic from "next/dynamic";
 import { Bookmark, BookmarkCheck, Share2 } from "lucide-react";
 import { motion } from "framer-motion";
+import { cn, getImageUrl, formatRelativeTime } from "@/lib/utils";
 import { ReactionBar } from "./ReactionBar";
 import { PostOptionsMenu } from "./PostOptionsMenu";
 import { UserAvatar } from "../shared/UserAvatar";
 import { Button } from "../ui/button";
 import { GlassCard } from "../ui/glass-card";
-import { useAppSelector } from "@/hooks";
+import { useAppSelector, useAppDispatch } from "@/hooks";
 import { useCopyHealthLogMutation } from "@/redux/api/healthLogApi";
 import { useToggleSaveMutation, useToggleReactionMutation } from "@/redux/api/postApi";
-import { useFollowMutation, useUnfollowMutation } from "@/redux/api/userApi";
+import { userApi } from "@/redux/api/userApi";
+import { useFollow } from "@/hooks/useFollow";
 import type { Post, ReactionType } from "@/types/post";
 import { toast } from "sonner";
-import { cn, formatRelativeTime } from "@/lib/utils";
 import { staggerItem } from "@/lib/motion/variants";
 import { useSound } from "@/hooks/useSound";
 
@@ -40,7 +41,7 @@ const PostQuizCard = dynamic(() =>
   import("./PostQuizCard").then((m) => ({ default: m.PostQuizCard })),
 );
 
-export function PostCard({ post }: { post: Post }) {
+export const PostCard = memo(function PostCard({ post }: { post: Post }) {
   const user = useAppSelector((s) => s.auth.user);
   const isOwner = user?.id === post.userId;
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
@@ -49,61 +50,36 @@ export function PostCard({ post }: { post: Post }) {
   const [copyLog, { isLoading: copying }] = useCopyHealthLogMutation();
   const [toggleSave] = useToggleSaveMutation();
   const [toggleReaction] = useToggleReactionMutation();
-  const [localReaction, setLocalReaction] = useState<string | undefined>(
-    post.reactions?.find((r) => r.userId === user?.id)?.type,
-  );
-  const [localReactionCount, setLocalReactionCount] = useState(
-    post._count?.reactions ?? post.reactions?.length ?? 0,
-  );
-  const [follow] = useFollowMutation();
-  const [unfollow] = useUnfollowMutation();
-  const [isSaved, setIsSaved] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [isFollowing, setIsFollowing] = useState(() => post.user.isFollowing ?? false);
+  const dispatch = useAppDispatch();
   const { play } = useSound();
+  const prefetchProfile = useCallback(() => {
+    dispatch(userApi.util.prefetch("getProfile", post.user.username, {}));
+  }, [dispatch, post.user.username]);
 
-  const handleToggleFollow = async () => {
-    const wasFollowing = isFollowing;
-    setIsFollowing(!wasFollowing);
-    play("reaction");
-    try {
-      if (wasFollowing) {
-        await unfollow(post.userId).unwrap();
-      } else {
-        await follow(post.userId).unwrap();
-      }
-    } catch {
-      setIsFollowing(wasFollowing);
-      play("error");
-      toast.error("Failed to update follow status");
-    }
-  };
+  const localReaction = post.reactions?.find((r) => r.userId === user?.id)?.type;
+  const localReactionCount = post._count?.reactions ?? post.reactions?.length ?? 0;
+  const isSaved = post.isSaved ?? false;
+
+  const { isFollowing, toggleFollow } = useFollow(post.userId, post.user.isFollowing ?? false, {
+    errorLabel: "update follow status",
+  });
 
   const handleReaction = useCallback(
     async (type: ReactionType) => {
-      const prev = localReaction;
-      if (prev === type) {
-        setLocalReaction(undefined);
-        setLocalReactionCount((c) => Math.max(0, c - 1));
-      } else {
-        if (!prev) setLocalReactionCount((c) => c + 1);
-        setLocalReaction(type);
-      }
       try {
         await toggleReaction({ postId: post.id, type }).unwrap();
       } catch {
-        setLocalReaction(prev);
-        setLocalReactionCount(post._count?.reactions ?? post.reactions?.length ?? 0);
         play("error");
       }
     },
-    [localReaction, post.id, post._count?.reactions, post.reactions, toggleReaction, play],
+    [post.id, toggleReaction, play],
   );
 
   const showBeforeAfter = post.templateType === "BEFORE_AFTER";
   const showRecipe = post.templateType === "RECIPE";
 
-  const handleCopy = async () => {
+  const handleCopy = useCallback(async () => {
     if (!post.healthLog) return;
     play("success");
     try {
@@ -114,21 +90,20 @@ export function PostCard({ post }: { post: Post }) {
       play("error");
       toast.error("Failed to save health log");
     }
-  };
+  }, [post.healthLog, copyLog, play]);
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     play("success");
     try {
       await toggleSave(post.id).unwrap();
-      setIsSaved(!isSaved);
       toast.success(isSaved ? "Removed from saved" : "Post saved");
     } catch {
       play("error");
       toast.error("Failed to save post");
     }
-  };
+  }, [post.id, isSaved, toggleSave, play]);
 
-  const handleShare = () => {
+  const handleShare = useCallback(() => {
     if (navigator.share) {
       navigator
         .share({
@@ -141,7 +116,7 @@ export function PostCard({ post }: { post: Post }) {
       play("success");
       toast.success("Link copied");
     }
-  };
+  }, [post.user.name, post.id, play]);
 
   return (
     <motion.div variants={staggerItem}>
@@ -150,6 +125,7 @@ export function PostCard({ post }: { post: Post }) {
           <Link
             href={`/${post.user.username}`}
             prefetch={false}
+            onMouseEnter={prefetchProfile}
             className="flex items-center gap-3"
           >
             <UserAvatar
@@ -174,9 +150,9 @@ export function PostCard({ post }: { post: Post }) {
           </Link>
           {!isOwner && (
             <button
-              onClick={handleToggleFollow}
+              onClick={toggleFollow}
               className={cn(
-                "ml-auto mr-2 rounded-lg px-2.5 py-1 text-[11px] font-semibold transition-all",
+                "ml-auto mr-2 rounded-lg px-2.5 py-1 text-[11px] font-semibold transition-[colors,opacity]",
                 isFollowing
                   ? "border border-[var(--border-default)] text-muted-foreground hover:border-destructive hover:text-destructive"
                   : "bg-gradient-to-r from-brand-teal to-brand-green text-white",
@@ -224,11 +200,16 @@ export function PostCard({ post }: { post: Post }) {
                     className="group relative aspect-square overflow-hidden bg-[var(--bg-subtle)]"
                   >
                     <Image
-                      src={url}
+                      src={getImageUrl(url, "q_auto:best,f_auto") ?? url}
                       alt=""
+                      placeholder="blur"
+                      blurDataURL={
+                        getImageUrl(url, "w_20,e_blur:2000,q_auto:low,f_auto") ?? undefined
+                      }
                       fill
                       className="object-cover transition-transform duration-500 group-hover:scale-105"
                       sizes="(max-width: 768px) 50vw, 300px"
+                      {...(i === 0 ? { priority: true } : {})}
                     />
                   </button>
                 ))}
@@ -302,7 +283,7 @@ export function PostCard({ post }: { post: Post }) {
 
       {lightboxIndex !== null && (
         <ImageLightbox
-          images={post.mediaUrls}
+          images={post.mediaUrls.map((u: string) => getImageUrl(u, "q_auto:best,f_auto") ?? u)}
           index={lightboxIndex}
           onClose={() => setLightboxIndex(null)}
         />
@@ -316,4 +297,4 @@ export function PostCard({ post }: { post: Post }) {
       )}
     </motion.div>
   );
-}
+});

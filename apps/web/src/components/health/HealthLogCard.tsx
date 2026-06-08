@@ -5,6 +5,7 @@ import { Pencil, Trash2, Copy, Calendar } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/getErrorMessage";
 import { UserAvatar } from "@/components/shared/UserAvatar";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Badge } from "@/components/ui/badge";
@@ -52,16 +53,16 @@ export default function HealthLogCard({
     try {
       await deleteLog(log.id).unwrap();
       toast.success("Log deleted");
-    } catch {
-      toast.error("Failed to delete");
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Failed to delete"));
     }
   };
   const handleCopy = async () => {
     try {
       await copyLog(log.id).unwrap();
       toast.success("Copied to your My Book");
-    } catch {
-      toast.error("Failed to copy");
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Failed to copy"));
     }
   };
   const handleShare = async () => {
@@ -71,8 +72,8 @@ export default function HealthLogCard({
         content: `Just logged my ${tpl.shortLabel}! #healthbook`,
       }).unwrap();
       toast.success("Shared to feed");
-    } catch {
-      toast.error("Failed to share");
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Failed to share"));
     }
   };
 
@@ -96,7 +97,11 @@ export default function HealthLogCard({
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2.5">
             {ownerName && ownerUsername ? (
-              <Link href={`/${ownerUsername}`} prefetch={false} className="flex items-center gap-2.5">
+              <Link
+                href={`/${ownerUsername}`}
+                prefetch={false}
+                className="flex items-center gap-2.5"
+              >
                 <UserAvatar
                   name={ownerName}
                   avatar={ownerAvatar ?? null}

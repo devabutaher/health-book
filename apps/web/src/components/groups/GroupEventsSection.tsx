@@ -24,6 +24,7 @@ import type { GroupEvent } from "@/types/groupEvent";
 import { Calendar, MapPin, Plus, Trash2, Users } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/getErrorMessage";
 import { CreateEventModal } from "./CreateEventModal";
 
 const eventContainerVariants = {
@@ -71,8 +72,8 @@ function EventCard({ event, canManage }: { event: GroupEvent; canManage: boolean
             ? "Marked as maybe"
             : "RSVP updated",
       );
-    } catch {
-      toast.error("Failed to RSVP");
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Failed to RSVP"));
     }
   };
 
@@ -81,8 +82,8 @@ function EventCard({ event, canManage }: { event: GroupEvent; canManage: boolean
       await deleteEvent({ eventId: event.id, groupId: event.groupId }).unwrap();
       toast.success("Event deleted");
       setDeleteOpen(false);
-    } catch {
-      toast.error("Failed to delete event");
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Failed to delete event"));
     }
   };
 

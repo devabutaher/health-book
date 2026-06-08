@@ -1,5 +1,6 @@
 import { prisma } from "../lib/prisma";
 import { AppError } from "../utils/AppError";
+import { broadcastRealtime } from "../utils/realtime";
 import type { HealthLogType, Prisma } from "../../generated/prisma";
 
 const calculateScore = (type: HealthLogType, data: Record<string, unknown>): number => {
@@ -64,7 +65,7 @@ export const healthLogService = {
   ) {
     const score = calculateScore(type, data);
 
-    return prisma.healthLog.create({
+    const log = await prisma.healthLog.create({
       data: {
         userId,
         type,
@@ -74,6 +75,14 @@ export const healthLogService = {
         isPublic,
       },
     });
+
+    broadcastRealtime(`hb-health:${userId}`, "HEALTH_LOG_CREATED", {
+      logId: log.id,
+      userId,
+      type,
+    }).catch(() => {});
+
+    return log;
   },
 
   async list(userId: string, params: { type?: HealthLogType; limit?: number; cursor?: string }) {
@@ -125,7 +134,14 @@ export const healthLogService = {
       );
     }
 
-    return prisma.healthLog.update({ where: { id }, data: updateData });
+    const updated = await prisma.healthLog.update({ where: { id }, data: updateData });
+
+    broadcastRealtime(`hb-health:${userId}`, "HEALTH_LOG_UPDATED", {
+      logId: id,
+      userId,
+    }).catch(() => {});
+
+    return updated;
   },
 
   async remove(userId: string, id: string) {
@@ -133,6 +149,11 @@ export const healthLogService = {
     if (!existing) throw new AppError(404, "Health log not found");
 
     await prisma.healthLog.delete({ where: { id } });
+
+    broadcastRealtime(`hb-health:${userId}`, "HEALTH_LOG_DELETED", {
+      logId: id,
+      userId,
+    }).catch(() => {});
   },
 
   async copyToMyBook(userId: string, logId: string) {

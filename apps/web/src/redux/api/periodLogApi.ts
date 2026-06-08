@@ -1,5 +1,6 @@
 import { createApi } from "@reduxjs/toolkit/query/react";
 import { createBaseQuery } from "../baseQuery";
+import { soundManager } from "@/lib/soundManager";
 
 export interface PeriodLog {
   id: string;
@@ -17,6 +18,8 @@ export const periodLogApi = createApi({
   reducerPath: "periodLogApi",
   baseQuery: createBaseQuery(`${process.env["NEXT_PUBLIC_API_URL"]}/api/period-logs`),
   tagTypes: ["PeriodLogs"],
+  refetchOnFocus: false,
+  refetchOnReconnect: true,
   endpoints: (builder) => ({
     getPeriodLogs: builder.query({
       query: (params: { limit?: number; cursor?: string }) => {
@@ -54,7 +57,9 @@ export const periodLogApi = createApi({
               }
             }),
           );
-        } catch {}
+        } catch {
+          soundManager.playError();
+        }
       },
     }),
     updatePeriodLog: builder.mutation({
@@ -93,6 +98,7 @@ export const periodLogApi = createApi({
         try {
           await queryFulfilled;
         } catch {
+          soundManager.playError();
           patches.forEach((p) => p.undo());
         }
       },
@@ -118,6 +124,7 @@ export const periodLogApi = createApi({
         try {
           await queryFulfilled;
         } catch {
+          soundManager.playError();
           patches.forEach((p) => p.undo());
         }
       },

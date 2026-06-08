@@ -77,7 +77,10 @@ export default function MoodForm({
               <button
                 key={m.value}
                 type="button"
-                onClick={() => { playTabSound(); setData((d) => ({ ...d, mood: m.value })); }}
+                onClick={() => {
+                  playTabSound();
+                  setData((d) => ({ ...d, mood: m.value }));
+                }}
                 className="flex flex-1 flex-col items-center gap-1 rounded-xl border-2 p-2 transition-all"
                 style={
                   data.mood === m.value

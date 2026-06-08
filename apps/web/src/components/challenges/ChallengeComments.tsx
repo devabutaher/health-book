@@ -12,6 +12,7 @@ import { useAppSelector } from "@/hooks";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/getErrorMessage";
 import { useSound } from "@/hooks/useSound";
 import { GlassCard } from "@/components/ui/glass-card";
 import { cn } from "@/lib/utils";
@@ -31,10 +32,12 @@ const reactionEmojis: Record<string, string> = {
 function CommentReactions({
   reactions,
   commentId,
+  challengeId,
   currentUserId,
 }: {
   reactions?: ChallengeCommentReaction[];
   commentId: string;
+  challengeId: string;
   currentUserId?: string;
 }) {
   const [reactToComment] = useReactToChallengeCommentMutation();
@@ -107,9 +110,9 @@ export function ChallengeComments({ challengeId }: { challengeId: string }) {
       setReplyTo(null);
       play("success");
       toast.success("Comment added!");
-    } catch {
+    } catch (err) {
       play("error");
-      toast.error("Failed to add comment");
+      toast.error(getErrorMessage(err, "Failed to add comment"));
     }
   };
 
@@ -118,9 +121,9 @@ export function ChallengeComments({ challengeId }: { challengeId: string }) {
       await deleteComment(commentId).unwrap();
       play("success");
       toast.success("Comment deleted");
-    } catch {
+    } catch (err) {
       play("error");
-      toast.error("Failed to delete");
+      toast.error(getErrorMessage(err, "Failed to delete"));
     }
   };
 
@@ -199,6 +202,7 @@ export function ChallengeComments({ challengeId }: { challengeId: string }) {
                   <CommentReactions
                     reactions={c.reactions}
                     commentId={c.id}
+                    challengeId={challengeId}
                     currentUserId={currentUserId}
                   />
                   <button
@@ -238,6 +242,7 @@ export function ChallengeComments({ challengeId }: { challengeId: string }) {
                         <CommentReactions
                           reactions={r.reactions}
                           commentId={r.id}
+                          challengeId={challengeId}
                           currentUserId={currentUserId}
                         />
                       </div>

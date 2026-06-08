@@ -72,9 +72,7 @@ export function ReelComments({
       >
         <div className="flex w-full flex-col rounded-t-2xl bg-[var(--bg-elevated)] shadow-2xl max-h-[50vh]">
           <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-            <h3 className="text-sm font-bold text-white">
-              Comments ({reel?.commentsCount || 0})
-            </h3>
+            <h3 className="text-sm font-bold text-white">Comments ({reel?.commentsCount || 0})</h3>
             <button
               onClick={onClose}
               className="rounded-full p-2 text-white/60 hover:bg-white/10 hover:text-white transition-colors"

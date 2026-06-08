@@ -44,55 +44,26 @@ export const searchService = {
   },
 
   async searchHashtags(q: string, limit = 20) {
-    const posts = await prisma.post.findMany({
-      where: {
-        content: { contains: `#${q}`, mode: "insensitive" },
-        privacy: "PUBLIC",
-      },
-      select: { content: true },
-      take: 500,
+    const hashtags = await prisma.hashtag.findMany({
+      where: { name: { contains: q.toLowerCase(), mode: "insensitive" } },
+      orderBy: { postCount: "desc" },
+      take: limit,
     });
 
-    const tagCounts = new Map<string, number>();
-    const regex = new RegExp(`#${q}[\\w]+`, "gi");
-    for (const post of posts) {
-      const matches = post.content?.match(regex) || [];
-      for (const tag of matches) {
-        tagCounts.set(tag.toLowerCase(), (tagCounts.get(tag.toLowerCase()) || 0) + 1);
-      }
-    }
-
-    return Array.from(tagCounts.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, limit)
-      .map(([tag, count]) => ({ tag, count }));
+    return hashtags.map((h) => ({ tag: `#${h.name}`, count: h.postCount }));
   },
 
   async getRelatedHashtags(tag: string, limit = 10) {
-    const posts = await prisma.post.findMany({
-      where: {
-        content: { contains: `#${tag}`, mode: "insensitive" },
-        privacy: "PUBLIC",
-      },
-      select: { content: true },
-      take: 500,
-    });
+    const results = await prisma.$queryRaw<Array<{ tag: string; count: bigint }>>`
+      SELECT DISTINCT h2.name AS tag, h2."postCount" AS count
+      FROM post_hashtags ph1
+      JOIN hashtags h1 ON h1.id = ph1."hashtagId" AND h1.name = ${tag.toLowerCase()}
+      JOIN post_hashtags ph2 ON ph2."postId" = ph1."postId"
+      JOIN hashtags h2 ON h2.id = ph2."hashtagId" AND h2.name != ${tag.toLowerCase()}
+      ORDER BY h2."postCount" DESC
+      LIMIT ${limit}
+    `;
 
-    const tagCounts = new Map<string, number>();
-    const allTagsRegex = /#[\w]+/gi;
-    for (const post of posts) {
-      const matches = post.content?.match(allTagsRegex) || [];
-      for (const t of matches) {
-        const normalized = t.toLowerCase();
-        if (normalized !== `#${tag.toLowerCase()}`) {
-          tagCounts.set(normalized, (tagCounts.get(normalized) || 0) + 1);
-        }
-      }
-    }
-
-    return Array.from(tagCounts.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, limit)
-      .map(([t, count]) => ({ tag: t, count }));
+    return results.map((r) => ({ tag: `#${r.tag}`, count: Number(r.count) }));
   },
 };

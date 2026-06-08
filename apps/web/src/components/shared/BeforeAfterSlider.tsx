@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback } from "react";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, getImageUrl } from "@/lib/utils";
 
 interface BeforeAfterSliderProps {
   before: string;
@@ -75,6 +75,8 @@ export default function BeforeAfterSlider({
         sizes="(max-width: 768px) 100vw, 600px"
         className="object-cover"
         loading="eager"
+        placeholder="blur"
+        blurDataURL={getImageUrl(after, "w_20,e_blur:2000,q_auto:low,f_auto") ?? undefined}
       />
 
       <div
@@ -88,6 +90,8 @@ export default function BeforeAfterSlider({
           sizes="(max-width: 768px) 100vw, 600px"
           className="object-cover"
           loading="eager"
+          placeholder="blur"
+          blurDataURL={getImageUrl(before, "w_20,e_blur:2000,q_auto:low,f_auto") ?? undefined}
         />
       </div>
 

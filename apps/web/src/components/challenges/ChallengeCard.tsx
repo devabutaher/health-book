@@ -2,7 +2,19 @@
 
 import { memo, useState } from "react";
 import Link from "next/link";
-import { Trophy, Users, Target, Plus, CheckCircle, Bookmark, Flame, Swords } from "lucide-react";
+import {
+  Trophy,
+  Users,
+  Target,
+  Plus,
+  CheckCircle,
+  Bookmark,
+  Flame,
+  Swords,
+  Star,
+  ShieldAlert,
+  UserPlus,
+} from "lucide-react";
 import type { Challenge } from "@/types/challenge";
 import { cn } from "@/lib/utils";
 import { ChallengeGoalDisplay } from "./ChallengeGoalDisplay";
@@ -28,6 +40,17 @@ const categoryColors: Record<string, string> = {
   SLEEP: "bg-blue-500/10 text-blue-500",
   GENERAL: "bg-gray-500/10 text-gray-400",
 };
+
+function StarRating({ avg, count }: { avg?: number; count?: number }) {
+  if (!count || avg == null) return null;
+  return (
+    <span className="flex items-center gap-1 text-[10px] text-brand-amber">
+      <Star className="size-3 fill-brand-amber" />
+      {avg?.toFixed(1)}
+      <span className="text-[var(--text-muted)]">({count})</span>
+    </span>
+  );
+}
 
 export const ChallengeCard = memo(function ChallengeCard({
   challenge,
@@ -119,12 +142,28 @@ export const ChallengeCard = memo(function ChallengeCard({
             <Users className="size-3" />
             {challenge.participantCount}
           </span>
+          {/* Social proof: friend count */}
+          {challenge.friendCount > 0 && (
+            <span className="flex items-center gap-1 rounded-full bg-brand-blue/10 px-2 py-0.5 font-semibold text-brand-blue">
+              <UserPlus className="size-3" />
+              {challenge.friendCount} friend{challenge.friendCount !== 1 ? "s" : ""}
+            </span>
+          )}
+          {/* Social proof: completion count */}
+          {challenge.totalCompleted > 0 && (
+            <span className="flex items-center gap-1 rounded-full bg-brand-teal/10 px-2 py-0.5 font-semibold text-brand-teal">
+              <CheckCircle className="size-3" />
+              {challenge.totalCompleted} done
+            </span>
+          )}
           {challenge.prize && (
             <span className="flex items-center gap-1">
               <Trophy className="size-3" />
               {challenge.prize}
             </span>
           )}
+          {/* Star rating */}
+          <StarRating avg={challenge.averageRating} count={challenge.ratingCount} />
         </div>
 
         {challenge.isJoined && progress && (
@@ -197,7 +236,20 @@ export const ChallengeCard = memo(function ChallengeCard({
               <CheckCircle className="size-3" /> Done
             </span>
           )}
-          {!challenge.isJoined && (
+          {/* Duel full */}
+          {!challenge.isJoined && challenge.isFull && (
+            <span className="flex items-center gap-1 rounded-lg bg-brand-coral/10 px-2 py-1 text-[10px] font-semibold text-brand-coral">
+              <ShieldAlert className="size-3" /> Duel Full
+            </span>
+          )}
+          {/* Group: must join group first */}
+          {!challenge.isJoined && !challenge.isFull && challenge.requiredGroup && (
+            <span className="flex items-center gap-1 rounded-lg bg-brand-amber/10 px-2 py-1 text-[10px] font-semibold text-brand-amber">
+              <Users className="size-3" /> Join group first
+            </span>
+          )}
+          {/* Default unjoined state */}
+          {!challenge.isJoined && !challenge.isFull && !challenge.requiredGroup && (
             <span className="text-[10px] text-[var(--text-muted)]">
               {challenge.type === "SOLO"
                 ? "Join to start"

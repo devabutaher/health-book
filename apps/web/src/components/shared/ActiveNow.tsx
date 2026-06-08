@@ -29,7 +29,7 @@ interface UserBrief {
 
 function normalizeUsers(raw: unknown): UserBrief[] {
   const list = (raw as { data?: { users?: unknown[] } } | undefined)?.data?.users ?? [];
-  return (list as UserBrief[]);
+  return list as UserBrief[];
 }
 
 function extractConversationPartners(
@@ -59,14 +59,17 @@ function ActiveNowAvatars({ variant = "online" }: { variant?: "online" | "full" 
   const onlineIds = useSyncExternalStore(subscribeOnline, getOnlineSnapshot, () => EMPTY_ARRAY);
   const [createConversation] = useCreateConversationMutation();
 
-  const handleUserClick = useCallback(async (userId: string) => {
-    try {
-      const result = await createConversation({ participantIds: [userId] }).unwrap();
-      router.push(`/messages/${result.id}`);
-    } catch {
-      toast.error("Failed to open conversation");
-    }
-  }, [createConversation, router]);
+  const handleUserClick = useCallback(
+    async (userId: string) => {
+      try {
+        const result = await createConversation({ participantIds: [userId] }).unwrap();
+        router.push(`/messages/${result.id}`);
+      } catch {
+        toast.error("Failed to open conversation");
+      }
+    },
+    [createConversation, router],
+  );
 
   const isSkipped = !currentUserId;
 
@@ -78,21 +81,23 @@ function ActiveNowAvatars({ variant = "online" }: { variant?: "online" | "full" 
     { userId: currentUserId! },
     { skip: isSkipped },
   );
-  const { data: suggested, isLoading: suggestedLoading } = useGetSuggestedQuery(undefined);
-  const { data: conversations, isLoading: convsLoading } = useGetConversationsQuery(undefined, {
+  const { data: suggested, isLoading: suggestedLoading } = useGetSuggestedQuery(undefined, {
+    skip: isSkipped,
+  });
+  const { data: conversationsData, isLoading: convsLoading } = useGetConversationsQuery(undefined, {
     skip: variant !== "full",
   });
 
   const following = useMemo(() => normalizeUsers(followingData), [followingData]);
   const followers = useMemo(() => normalizeUsers(followersData), [followersData]);
   const convPartners = useMemo(
-    () => currentUserId ? extractConversationPartners(conversations, currentUserId) : [],
-    [conversations, currentUserId],
+    () =>
+      currentUserId
+        ? extractConversationPartners(conversationsData?.data ?? [], currentUserId)
+        : [],
+    [conversationsData, currentUserId],
   );
-  const suggestedUsers = useMemo(
-    () => (suggested ?? []) as UserBrief[],
-    [suggested],
-  );
+  const suggestedUsers = useMemo(() => (suggested ?? []) as UserBrief[], [suggested]);
 
   const isLoading = followingLoading || followersLoading || suggestedLoading || convsLoading;
 
@@ -215,10 +220,7 @@ function ActiveNowAvatars({ variant = "online" }: { variant?: "online" | "full" 
                     </Avatar>
                   )}
                   {variant === "full" && (
-                    <OnlineStatus
-                      online={isOnline}
-                      className="absolute -bottom-0.5 -right-0.5"
-                    />
+                    <OnlineStatus online={isOnline} className="absolute -bottom-0.5 -right-0.5" />
                   )}
                   {variant !== "full" && (
                     <span className="absolute -bottom-0.5 -right-0.5 size-3 rounded-full border-2 border-[var(--bg-elevated)] bg-green-500" />

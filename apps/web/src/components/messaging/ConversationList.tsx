@@ -1,8 +1,32 @@
 "use client";
 
+import { memo, useCallback } from "react";
 import { useGetConversationsQuery } from "@/redux/api/messagingApi";
 import { useAppSelector } from "@/hooks";
 import { ConversationItem } from "./ConversationItem";
+import type { Conversation } from "@/types/conversation";
+
+const ConversationListItem = memo(function ConversationListItem({
+  conv,
+  currentUserId,
+  activeId,
+  onSelect,
+}: {
+  conv: Conversation;
+  currentUserId: string;
+  activeId?: string;
+  onSelect: (id: string) => void;
+}) {
+  const handleClick = useCallback(() => onSelect(conv.id), [onSelect, conv.id]);
+  return (
+    <ConversationItem
+      conversation={conv}
+      currentUserId={currentUserId}
+      active={conv.id === activeId}
+      onClick={handleClick}
+    />
+  );
+});
 
 export function ConversationList({
   activeId,
@@ -11,7 +35,8 @@ export function ConversationList({
   activeId?: string;
   onSelect: (id: string) => void;
 }) {
-  const { data: conversations, isLoading } = useGetConversationsQuery();
+  const { data: conversationsData, isLoading } = useGetConversationsQuery();
+  const conversations = conversationsData?.data ?? [];
   const currentUserId = useAppSelector((s) => s.auth.user?.id);
 
   if (isLoading) {
@@ -47,12 +72,12 @@ export function ConversationList({
   return (
     <div className="space-y-0.5 p-2">
       {conversations.map((conv) => (
-        <ConversationItem
+        <ConversationListItem
           key={conv.id}
-          conversation={conv}
+          conv={conv}
           currentUserId={currentUserId || ""}
-          active={conv.id === activeId}
-          onClick={() => onSelect(conv.id)}
+          activeId={activeId}
+          onSelect={onSelect}
         />
       ))}
     </div>

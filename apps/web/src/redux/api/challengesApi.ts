@@ -14,7 +14,9 @@ import type {
   Duel,
   ChallengeDifficulty,
   ChallengeDayEntry,
+  ChallengeDayPlan,
 } from "@/types/challenge";
+import { soundManager } from "@/lib/soundManager";
 
 function removeChallengeFromList(list: Challenge[], challengeId: string): Challenge[] {
   return list.filter((c) => c.id !== challengeId);
@@ -33,6 +35,8 @@ export const challengesApi = createApi({
     "Activities",
     "Stats",
   ],
+  refetchOnFocus: false,
+  refetchOnReconnect: true,
   endpoints: (builder) => ({
     browseChallenges: builder.query<
       { challenges: Challenge[]; nextCursor: string | null; hasMore: boolean },
@@ -168,12 +172,13 @@ export const challengesApi = createApi({
           if (newChallenge) {
             dispatch(
               challengesApi.util.updateQueryData("getMyChallenges", undefined, (draft) => {
-                draft.unshift(newChallenge);
+                if (!draft?.data) return;
+                draft.data.unshift(newChallenge);
               }),
             );
           }
         } catch {
-          /* invalidation handles rollback */
+          soundManager.playError();
         }
       },
     }),
@@ -220,6 +225,7 @@ export const challengesApi = createApi({
         try {
           await queryFulfilled;
         } catch {
+          soundManager.playError();
           patch.undo();
         }
       },
@@ -243,6 +249,7 @@ export const challengesApi = createApi({
         try {
           await queryFulfilled;
         } catch {
+          soundManager.playError();
           patch.undo();
         }
       },
@@ -250,14 +257,15 @@ export const challengesApi = createApi({
 
     deleteChallenge: builder.mutation<void, string>({
       query: (id) => ({ url: `/${id}`, method: "DELETE" }),
-      invalidatesTags: ["Challenges"],
+      invalidatesTags: (_result, _error, id) => [{ type: "Challenge", id }, "Challenges"],
       onQueryStarted: async (challengeId, { dispatch, getState, queryFulfilled }) => {
         const patches: (() => void)[] = [];
         const currentUser = (getState() as RootState).auth.user;
         if (currentUser) {
           const myPatch = dispatch(
             challengesApi.util.updateQueryData("getMyChallenges", undefined, (draft) => {
-              return removeChallengeFromList(draft, challengeId);
+              if (!draft?.data) return;
+              draft.data = draft.data.filter((c) => c.id !== challengeId);
             }),
           );
           patches.push(() => myPatch.undo());
@@ -265,6 +273,7 @@ export const challengesApi = createApi({
         try {
           await queryFulfilled;
         } catch {
+          soundManager.playError();
           patches.forEach((u) => u());
         }
       },
@@ -274,7 +283,8 @@ export const challengesApi = createApi({
       ChallengeDayEntry,
       {
         challengeId: string;
-        dayNumber: number;
+        dayNumber?: number;
+        skip?: boolean;
         completed?: boolean;
         notes?: string;
         mediaUrls?: string[];
@@ -307,6 +317,7 @@ export const challengesApi = createApi({
                   rank: null,
                   completed: false,
                   streak: 0,
+                  currentDayNumber: 0,
                   achievedMilestones: [],
                   dayEntries: [],
                 } as Challenge["myProgress"];
@@ -336,6 +347,7 @@ export const challengesApi = createApi({
         try {
           await queryFulfilled;
         } catch {
+          soundManager.playError();
           patches.forEach((p) => p.undo());
         }
       },
@@ -402,17 +414,73 @@ export const challengesApi = createApi({
       keepUnusedDataFor: 600,
     }),
 
-    getMyChallenges: builder.query<Challenge[], void>({
-      query: () => "/mine",
+    getMyChallenges: builder.query<
+      { data: Challenge[]; nextCursor: string | null; hasMore: boolean },
+      { cursor?: string } | void
+    >({
+      query: (args) => {
+        const cursor = (args as { cursor?: string })?.cursor;
+        return cursor ? `/mine?cursor=${cursor}` : "/mine";
+      },
       providesTags: ["Challenges"],
-      transformResponse: (response: { success: boolean; data: Challenge[] }) => response.data,
+      transformResponse: (response: {
+        success: boolean;
+        data: { data: Challenge[]; nextCursor: string | null; hasMore: boolean };
+      }) => response.data,
+      serializeQueryArgs: ({ queryArgs }) => {
+        const arg = queryArgs as { cursor?: string } | undefined;
+        return arg?.cursor ? "1" : "0";
+      },
+      merge: (currentCache, newItems) => {
+        if (!newItems) return;
+        if (!currentCache) return newItems;
+        const existingIds = new Set(currentCache.data.map((c) => c.id));
+        return {
+          data: [...currentCache.data, ...newItems.data.filter((c) => !existingIds.has(c.id))],
+          nextCursor: newItems.nextCursor,
+          hasMore: newItems.hasMore,
+        };
+      },
+      forceRefetch: ({ currentArg, previousArg }) => {
+        const cur = (currentArg as { cursor?: string } | undefined)?.cursor;
+        const prev = (previousArg as { cursor?: string } | undefined)?.cursor;
+        return cur !== prev;
+      },
       keepUnusedDataFor: 600,
     }),
 
-    getSavedChallenges: builder.query<Challenge[], void>({
-      query: () => "/saved",
+    getSavedChallenges: builder.query<
+      { data: Challenge[]; nextCursor: string | null; hasMore: boolean },
+      { cursor?: string } | void
+    >({
+      query: (args) => {
+        const cursor = (args as { cursor?: string })?.cursor;
+        return cursor ? `/saved?cursor=${cursor}` : "/saved";
+      },
       providesTags: ["Challenges"],
-      transformResponse: (response: { success: boolean; data: Challenge[] }) => response.data,
+      transformResponse: (response: {
+        success: boolean;
+        data: { data: Challenge[]; nextCursor: string | null; hasMore: boolean };
+      }) => response.data,
+      serializeQueryArgs: ({ queryArgs }) => {
+        const arg = queryArgs as { cursor?: string } | undefined;
+        return arg?.cursor ? "1" : "0";
+      },
+      merge: (currentCache, newItems) => {
+        if (!newItems) return;
+        if (!currentCache) return newItems;
+        const existingIds = new Set(currentCache.data.map((c) => c.id));
+        return {
+          data: [...currentCache.data, ...newItems.data.filter((c) => !existingIds.has(c.id))],
+          nextCursor: newItems.nextCursor,
+          hasMore: newItems.hasMore,
+        };
+      },
+      forceRefetch: ({ currentArg, previousArg }) => {
+        const cur = (currentArg as { cursor?: string } | undefined)?.cursor;
+        const prev = (previousArg as { cursor?: string } | undefined)?.cursor;
+        return cur !== prev;
+      },
       keepUnusedDataFor: 600,
     }),
 
@@ -428,6 +496,7 @@ export const challengesApi = createApi({
         try {
           await queryFulfilled;
         } catch {
+          soundManager.playError();
           patch.undo();
         }
       },
@@ -535,6 +604,7 @@ export const challengesApi = createApi({
             );
           }
         } catch {
+          soundManager.playError();
           patch.undo();
         }
       },
@@ -564,6 +634,56 @@ export const challengesApi = createApi({
         body,
       }),
       invalidatesTags: ["Invites"],
+      onQueryStarted: async ({ challengeId }, { dispatch, getState, queryFulfilled }) => {
+        const currentUser = (getState() as RootState).auth.user;
+        if (!currentUser) return;
+
+        // Look up challenge info from cache for optimistic invite data
+        const state = getState() as any;
+        const cachedChallenge =
+          challengesApi.endpoints.getChallenge.select(challengeId)(state)?.data;
+
+        const optimistic: ChallengeInvite = {
+          id: `temp-${Date.now()}`,
+          challengeId,
+          challenge: {
+            id: challengeId,
+            title: cachedChallenge?.title || "",
+            type: (cachedChallenge?.type || "SOLO") as ChallengeInvite["challenge"]["type"],
+            category: (cachedChallenge?.category ||
+              "GENERAL") as ChallengeInvite["challenge"]["category"],
+          },
+          fromUser: {
+            id: currentUser.id,
+            name: currentUser.name,
+            username: currentUser.username,
+            avatar: currentUser.avatar ?? null,
+          },
+          status: "PENDING",
+          createdAt: new Date().toISOString(),
+        };
+
+        const patch = dispatch(
+          challengesApi.util.updateQueryData("getMyInvites", undefined, (draft: any) => {
+            if (!draft) return;
+            const exists = (draft as ChallengeInvite[]).findIndex(
+              (i) =>
+                i.id === optimistic.id ||
+                (i.challengeId === challengeId &&
+                  i.fromUser.id === currentUser.id &&
+                  i.status === "PENDING"),
+            );
+            if (exists < 0) (draft as ChallengeInvite[]).unshift(optimistic);
+          }),
+        );
+
+        try {
+          await queryFulfilled;
+        } catch {
+          patch.undo();
+          soundManager.playError();
+        }
+      },
     }),
 
     getMyInvites: builder.query<ChallengeInvite[], void>({
@@ -625,6 +745,84 @@ export const challengesApi = createApi({
       transformResponse: (response: { success: boolean; data: Duel }) => response.data,
       keepUnusedDataFor: 600,
     }),
+
+    getDayPlans: builder.query<ChallengeDayPlan[], string>({
+      query: (challengeId) => `/${challengeId}/day-plan`,
+      providesTags: (_result, _error, challengeId) => [{ type: "Challenge", id: challengeId }],
+      transformResponse: (response: { success: boolean; data: ChallengeDayPlan[] }) =>
+        response.data,
+      keepUnusedDataFor: 600,
+    }),
+
+    upsertDayPlans: builder.mutation<
+      void,
+      {
+        challengeId: string;
+        plans: Array<{
+          dayNumber: number;
+          title?: string;
+          description?: string;
+          tips?: string;
+          mediaUrls?: string[];
+          duration?: number;
+        }>;
+      }
+    >({
+      query: ({ challengeId, ...body }) => ({
+        url: `/${challengeId}/day-plan/bulk`,
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: (_result, _error, { challengeId }) => [
+        { type: "Challenge", id: challengeId },
+      ],
+    }),
+
+    uploadChallengeMedia: builder.mutation<{ url: string }, FormData>({
+      query: (body) => ({
+        url: "/upload",
+        method: "POST",
+        body,
+        formData: true,
+      }),
+      transformResponse: (response: { success: boolean; data: { url: string } }) => response.data,
+    }),
+
+    uploadBeforePhoto: builder.mutation<void, { challengeId: string; photoUrl: string }>({
+      query: ({ challengeId, photoUrl }) => ({
+        url: `/${challengeId}/before-photo`,
+        method: "POST",
+        body: { photoUrl },
+      }),
+      invalidatesTags: (_result, _error, { challengeId }) => [
+        { type: "Challenge", id: challengeId },
+      ],
+    }),
+
+    uploadAfterPhoto: builder.mutation<void, { challengeId: string; photoUrl: string }>({
+      query: ({ challengeId, photoUrl }) => ({
+        url: `/${challengeId}/after-photo`,
+        method: "POST",
+        body: { photoUrl },
+      }),
+      invalidatesTags: (_result, _error, { challengeId }) => [
+        { type: "Challenge", id: challengeId },
+      ],
+    }),
+
+    rateChallenge: builder.mutation<
+      { averageRating: number; ratingCount: number },
+      { challengeId: string; rating: number; review?: string }
+    >({
+      query: ({ challengeId, ...body }) => ({
+        url: `/${challengeId}/rate`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: (_result, _error, { challengeId }) => [
+        { type: "Challenge", id: challengeId },
+      ],
+    }),
   }),
 });
 
@@ -652,9 +850,14 @@ export const {
   useReactToChallengeCommentMutation,
   useInviteToChallengeMutation,
   useGetMyInvitesQuery,
-  useRespondToInviteMutation,
   useGetChallengeTemplatesQuery,
   useGetUserChallengeStatsQuery,
   useCreateDuelMutation,
   useGetDuelQuery,
+  useGetDayPlansQuery,
+  useUpsertDayPlansMutation,
+  useUploadChallengeMediaMutation,
+  useRateChallengeMutation,
+  useUploadBeforePhotoMutation,
+  useUploadAfterPhotoMutation,
 } = challengesApi;

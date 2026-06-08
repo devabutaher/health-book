@@ -14,7 +14,7 @@ const REACTIONS = [
   { type: "LOVE" as const, label: "Love", icon: "❤️" },
 ] as const;
 
-type ReactionType = typeof REACTIONS[number]["type"];
+type ReactionType = (typeof REACTIONS)[number]["type"];
 
 export function ReactionBar({
   postId,

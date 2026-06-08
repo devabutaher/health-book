@@ -63,10 +63,38 @@ const textBgColors = [
 ];
 
 const commonEmojis = [
-  "😀", "😂", "😍", "🥰", "😎", "🤔", "😢", "😡",
-  "🔥", "💯", "❤️", "💔", "⭐", "🎉", "🎂", "🌈",
-  "👍", "👎", "👏", "🙌", "💪", "🤝", "✌️", "🫶",
-  "🐱", "🐶", "🌸", "🌺", "🍕", "🍔", "☕", "🎵",
+  "😀",
+  "😂",
+  "😍",
+  "🥰",
+  "😎",
+  "🤔",
+  "😢",
+  "😡",
+  "🔥",
+  "💯",
+  "❤️",
+  "💔",
+  "⭐",
+  "🎉",
+  "🎂",
+  "🌈",
+  "👍",
+  "👎",
+  "👏",
+  "🙌",
+  "💪",
+  "🤝",
+  "✌️",
+  "🫶",
+  "🐱",
+  "🐶",
+  "🌸",
+  "🌺",
+  "🍕",
+  "🍔",
+  "☕",
+  "🎵",
 ];
 
 export function StoryTextEditor({
@@ -93,8 +121,10 @@ export function StoryTextEditor({
   const [createdStoryId, setCreatedStoryId] = useState<string | null>(null);
 
   const dragRef = useRef<{
-    startX: number; startY: number;
-    posX: number; posY: number;
+    startX: number;
+    startY: number;
+    posX: number;
+    posY: number;
   } | null>(null);
 
   const handleShare = async () => {
@@ -167,16 +197,30 @@ export function StoryTextEditor({
       {/* Text Overlay Preview */}
       {textOverlay.trim() ? (
         <motion.div
-          className={cn("absolute z-10 select-none text-center drop-shadow-2xl touch-none cursor-grab active:cursor-grabbing", fontFamilies.find((f) => f.value === fontFamily)?.className)}
+          className={cn(
+            "absolute z-10 select-none text-center drop-shadow-2xl touch-none cursor-grab active:cursor-grabbing",
+            fontFamilies.find((f) => f.value === fontFamily)?.className,
+          )}
           style={{ left: `${textPos.x}%`, top: `${textPos.y}%`, transform: "translate(-50%, 0)" }}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
         >
           {textBgColor !== "transparent" && (
-            <span className="absolute inset-0 -inset-x-2 -inset-y-1 rounded-lg" style={{ backgroundColor: textBgColor }} />
+            <span
+              className="absolute inset-0 -inset-x-2 -inset-y-1 rounded-lg"
+              style={{ backgroundColor: textBgColor }}
+            />
           )}
-          <span className="relative" style={{ color: textColor, fontSize: `${textFontSize}px`, fontWeight: textFontWeight, textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>
+          <span
+            className="relative"
+            style={{
+              color: textColor,
+              fontSize: `${textFontSize}px`,
+              fontWeight: textFontWeight,
+              textShadow: "0 2px 8px rgba(0,0,0,0.5)",
+            }}
+          >
             {textOverlay || "Your text here"}
           </span>
         </motion.div>
@@ -199,7 +243,10 @@ export function StoryTextEditor({
 
       {/* Bottom Tools Panel */}
       {!createdStoryId && (
-        <StoryCollapsiblePanel collapsed={panelCollapsed} onToggle={() => setPanelCollapsed(!panelCollapsed)}>
+        <StoryCollapsiblePanel
+          collapsed={panelCollapsed}
+          onToggle={() => setPanelCollapsed(!panelCollapsed)}
+        >
           <div className="space-y-3 px-3 pb-2">
             <StoryColorPicker
               label="Background"
@@ -229,13 +276,20 @@ export function StoryTextEditor({
 
             {/* Text Background */}
             <div>
-              <label className="mb-1.5 block text-xs font-medium text-white/70">Text Background</label>
+              <label className="mb-1.5 block text-xs font-medium text-white/70">
+                Text Background
+              </label>
               <div className="flex gap-2">
                 {textBgColors.map((c) => (
                   <button
                     key={c.label}
                     onClick={() => setTextBgColor(c.color)}
-                    className={cn("rounded-full px-3 py-1 text-xs font-medium transition-all", textBgColor === c.color ? "bg-brand-teal text-white" : "bg-white/10 text-white/70 hover:bg-white/20")}
+                    className={cn(
+                      "rounded-full px-3 py-1 text-xs font-medium transition-all",
+                      textBgColor === c.color
+                        ? "bg-brand-teal text-white"
+                        : "bg-white/10 text-white/70 hover:bg-white/20",
+                    )}
                   >
                     {c.label}
                   </button>
@@ -251,7 +305,13 @@ export function StoryTextEditor({
                   <button
                     key={f.value}
                     onClick={() => setFontFamily(f.value)}
-                    className={cn("rounded-full px-4 py-1.5 text-xs font-semibold transition-all", fontFamily === f.value ? "bg-brand-teal text-white" : "bg-white/10 text-white/70 hover:bg-white/20", f.className)}
+                    className={cn(
+                      "rounded-full px-4 py-1.5 text-xs font-semibold transition-all",
+                      fontFamily === f.value
+                        ? "bg-brand-teal text-white"
+                        : "bg-white/10 text-white/70 hover:bg-white/20",
+                      f.className,
+                    )}
                   >
                     {f.label}
                   </button>
@@ -267,7 +327,12 @@ export function StoryTextEditor({
                   <button
                     key={fs.value}
                     onClick={() => setTextFontSize(fs.value)}
-                    className={cn("flex size-8 items-center justify-center rounded-full text-xs font-semibold transition-all", textFontSize === fs.value ? "bg-brand-teal text-white" : "bg-white/10 text-white/70 hover:bg-white/20")}
+                    className={cn(
+                      "flex size-8 items-center justify-center rounded-full text-xs font-semibold transition-all",
+                      textFontSize === fs.value
+                        ? "bg-brand-teal text-white"
+                        : "bg-white/10 text-white/70 hover:bg-white/20",
+                    )}
                   >
                     {fs.label}
                   </button>
@@ -283,7 +348,12 @@ export function StoryTextEditor({
                   <button
                     key={w}
                     onClick={() => setTextFontWeight(w)}
-                    className={cn("rounded-full px-4 py-1.5 text-xs font-semibold transition-all", textFontWeight === w ? "bg-brand-teal text-white" : "bg-white/10 text-white/70 hover:bg-white/20")}
+                    className={cn(
+                      "rounded-full px-4 py-1.5 text-xs font-semibold transition-all",
+                      textFontWeight === w
+                        ? "bg-brand-teal text-white"
+                        : "bg-white/10 text-white/70 hover:bg-white/20",
+                    )}
                   >
                     {w === "bold" ? "Bold" : "Normal"}
                   </button>
@@ -312,7 +382,11 @@ export function StoryTextEditor({
       )}
 
       {createdStoryId && (
-        <StoryHighlightPanel createdStoryId={createdStoryId} onClose={onClose} onCreated={onCreated} />
+        <StoryHighlightPanel
+          createdStoryId={createdStoryId}
+          onClose={onClose}
+          onCreated={onCreated}
+        />
       )}
     </div>
   );

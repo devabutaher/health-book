@@ -5,6 +5,7 @@ import NextImage from "next/image";
 import { Image as ImageIcon, Send, X, Loader2 } from "lucide-react";
 import { useAppSelector } from "@/hooks";
 import { toast } from "sonner";
+import { getImageUrl } from "@/lib/utils";
 
 export function ChatInput({ onSend }: { onSend: (content: string, mediaUrl?: string) => void }) {
   const [text, setText] = useState("");
@@ -86,6 +87,10 @@ export function ChatInput({ onSend }: { onSend: (content: string, mediaUrl?: str
               className="size-full object-cover"
               width={48}
               height={48}
+              placeholder="blur"
+              blurDataURL={
+                getImageUrl(mediaPreview, "w_20,e_blur:2000,q_auto:low,f_auto") ?? undefined
+              }
             />
           </div>
           <span className="truncate text-xs text-[var(--text-secondary)]">Image ready to send</span>

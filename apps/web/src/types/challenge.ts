@@ -30,6 +30,7 @@ export interface ChallengeProgress {
   goalTarget?: number | null;
   goalUnit?: string | null;
   streak: number;
+  currentDayNumber: number;
   achievedMilestones: string[];
   dayEntries: {
     id: string;
@@ -85,6 +86,12 @@ export interface Challenge {
   participantCount: number;
   isJoined: boolean;
   isSaved: boolean;
+  isFull: boolean;
+  requiredGroup: { id: string; name: string } | null;
+  friendCount: number;
+  totalCompleted: number;
+  averageRating: number;
+  ratingCount: number;
   myProgress: ChallengeProgress | null;
   isActive: boolean;
   createdAt: string;
@@ -173,6 +180,35 @@ export interface DuelParticipant {
   streak: number;
   completed: boolean;
   joinedAt: string;
+}
+
+export interface ChallengeDayPlan {
+  id: string;
+  challengeId: string;
+  dayNumber: number;
+  title: string | null;
+  description: string | null;
+  tips: string | null;
+  mediaUrls: string[];
+  duration: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ChallengeRating {
+  challengeId: string;
+  userId: string;
+  rating: number;
+  review: string | null;
+  createdAt: string;
+  updatedAt: string;
+  user: { id: string; name: string; username: string; avatar: string | null };
+}
+
+export interface ChallengeRatingsResponse {
+  ratings: ChallengeRating[];
+  averageRating: number;
+  ratingCount: number;
 }
 
 export interface Duel {

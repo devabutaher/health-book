@@ -6,11 +6,13 @@ import { Users, Check, Loader2 } from "lucide-react";
 import { memo } from "react";
 import { motion } from "framer-motion";
 import type { Group } from "@/types/group";
+import { getImageUrl } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { GroupTypeBadge } from "./GroupTypeBadge";
 import { useJoinGroupMutation, useLeaveGroupMutation } from "@/redux/api/groupsApi";
 import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/getErrorMessage";
 
 export const GroupCard = memo(function GroupCard({ group }: { group: Group }) {
   const initials = group.name.slice(0, 2).toUpperCase();
@@ -23,8 +25,8 @@ export const GroupCard = memo(function GroupCard({ group }: { group: Group }) {
     try {
       await joinGroup(group.id).unwrap();
       toast.success("Joined group!");
-    } catch {
-      toast.error("Failed to join group");
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Failed to join group"));
     }
   };
 
@@ -34,8 +36,8 @@ export const GroupCard = memo(function GroupCard({ group }: { group: Group }) {
     try {
       await leaveGroup(group.id).unwrap();
       toast.success("Left group");
-    } catch {
-      toast.error("Failed to leave group");
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Failed to leave group"));
     }
   };
 
@@ -53,11 +55,15 @@ export const GroupCard = memo(function GroupCard({ group }: { group: Group }) {
         <div className="aspect-video overflow-hidden bg-[var(--bg-subtle)]">
           {group.coverPhoto ? (
             <Image
-              src={group.coverPhoto}
+              src={getImageUrl(group.coverPhoto, "q_auto:best,f_auto") ?? group.coverPhoto}
               alt=""
               className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
               width={400}
               height={225}
+              placeholder="blur"
+              blurDataURL={
+                getImageUrl(group.coverPhoto, "w_20,e_blur:2000,q_auto:low,f_auto") ?? undefined
+              }
             />
           ) : (
             <div className="size-full bg-gradient-to-br from-brand-teal/20 via-brand-blue/20 to-brand-green/20" />
@@ -67,7 +73,12 @@ export const GroupCard = memo(function GroupCard({ group }: { group: Group }) {
         <div className="relative flex flex-1 flex-col px-4 pb-4 pt-0">
           <div className="flex items-end justify-between">
             <Avatar className="relative -mt-7 size-14 shrink-0 ring-4 ring-[var(--bg-elevated)]">
-              {group.avatar ? <AvatarImage src={group.avatar} alt={group.name} /> : null}
+              {group.avatar ? (
+                <AvatarImage
+                  src={getImageUrl(group.avatar, "q_auto,f_auto") ?? group.avatar}
+                  alt={group.name}
+                />
+              ) : null}
               <AvatarFallback className="bg-gradient-to-br from-brand-teal to-brand-green text-lg font-bold text-white">
                 {initials}
               </AvatarFallback>

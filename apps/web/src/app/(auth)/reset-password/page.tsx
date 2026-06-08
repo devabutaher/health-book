@@ -28,7 +28,7 @@ export default function ResetPasswordPage() {
       setReady(true);
     };
     if (hash && hash.includes("access_token")) {
-      ;(async () => {
+      (async () => {
         const { error } = await supabase.auth.setSession({
           access_token: new URLSearchParams(hash.slice(1)).get("access_token") || "",
           refresh_token: new URLSearchParams(hash.slice(1)).get("refresh_token") || "",
@@ -149,7 +149,11 @@ export default function ResetPasswordPage() {
           ) : null}
 
           <FieldDescription className="pt-6 text-center text-sm">
-            <Link href="/login" prefetch={false} className="font-semibold text-brand-teal hover:underline">
+            <Link
+              href="/login"
+              prefetch={false}
+              className="font-semibold text-brand-teal hover:underline"
+            >
               Back to sign in
             </Link>
           </FieldDescription>

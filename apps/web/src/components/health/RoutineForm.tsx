@@ -202,7 +202,13 @@ export default function RoutineForm({
         <Button variant="outline" onClick={onCancel}>
           Cancel
         </Button>
-        <Button onClick={() => { setScreenTimeStr(""); onSubmit(data); }} disabled={!data.wakeTime || !data.sleepTime}>
+        <Button
+          onClick={() => {
+            setScreenTimeStr("");
+            onSubmit(data);
+          }}
+          disabled={!data.wakeTime || !data.sleepTime}
+        >
           <Moon className="size-4" /> Save Routine
         </Button>
       </div>

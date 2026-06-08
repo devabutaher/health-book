@@ -1,5 +1,6 @@
 import { prisma } from "../lib/prisma";
 import { AppError } from "../utils/AppError";
+import { broadcastRealtime } from "../utils/realtime";
 import { deleteImage, deleteVideo, extractPublicId } from "./cloudinary";
 
 export const reelService = {
@@ -91,12 +92,19 @@ export const reelService = {
     thumbnailUrl?: string;
     userId: string;
   }) {
-    return prisma.reel.create({
+    const reel = await prisma.reel.create({
       data,
       include: {
         user: { select: { id: true, name: true, username: true, avatar: true } },
       },
     });
+
+    broadcastRealtime(`hb-reel:${reel.id}`, "REEL_CREATED", {
+      reelId: reel.id,
+      userId: data.userId,
+    }).catch(() => {});
+
+    return reel;
   },
 
   async toggleLike(reelId: string, userId: string) {
@@ -106,20 +114,30 @@ export const reelService = {
 
     if (existing) {
       await prisma.reelLike.delete({ where: { reelId_userId: { reelId, userId } } });
+      broadcastRealtime(`hb-reel:${reelId}`, "REEL_UNLIKED", { reelId, userId }).catch(() => {});
       return { liked: false };
     }
 
     await prisma.reelLike.create({ data: { reelId, userId } });
+    broadcastRealtime(`hb-reel:${reelId}`, "REEL_LIKED", { reelId, userId }).catch(() => {});
     return { liked: true };
   },
 
   async addComment(reelId: string, userId: string, content: string) {
-    return prisma.reelComment.create({
+    const comment = await prisma.reelComment.create({
       data: { content, reelId, userId },
       include: {
         user: { select: { id: true, name: true, username: true, avatar: true } },
       },
     });
+
+    broadcastRealtime(`hb-reel:${reelId}`, "REEL_COMMENTED", {
+      commentId: comment.id,
+      reelId,
+      userId,
+    }).catch(() => {});
+
+    return comment;
   },
 
   async deleteComment(commentId: string, userId: string) {

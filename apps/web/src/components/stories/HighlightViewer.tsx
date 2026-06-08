@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { X, ChevronLeft, ChevronRight, Pause, Play, Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { getImageUrl } from "@/lib/utils";
 import { useRemoveHighlightItemMutation } from "@/redux/api/highlightsApi";
 import type { StoryHighlight } from "@/types/story";
 import { toast } from "sonner";
@@ -159,12 +160,21 @@ export function HighlightViewer({
               />
             ) : (
               <Image
-                src={currentItem.story?.mediaUrl ?? ""}
+                src={
+                  getImageUrl(currentItem.story?.mediaUrl, "q_auto:best,f_auto") ??
+                  currentItem.story?.mediaUrl ??
+                  ""
+                }
                 alt={highlight.title}
                 className="max-h-full max-w-full object-contain"
                 width={400}
                 height={700}
                 priority
+                placeholder="blur"
+                blurDataURL={
+                  getImageUrl(currentItem.story?.mediaUrl, "w_20,e_blur:2000,q_auto:low,f_auto") ??
+                  undefined
+                }
               />
             )}
           </div>

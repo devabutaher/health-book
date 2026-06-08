@@ -1,5 +1,6 @@
 import { createApi } from "@reduxjs/toolkit/query/react";
 import { createBaseQuery } from "../baseQuery";
+import { soundManager } from "@/lib/soundManager";
 
 export interface WeightLog {
   id: string;
@@ -19,6 +20,8 @@ export const weightLogApi = createApi({
   reducerPath: "weightLogApi",
   baseQuery: createBaseQuery(`${process.env["NEXT_PUBLIC_API_URL"]}/api/weight-logs`),
   tagTypes: ["WeightLogs"],
+  refetchOnFocus: false,
+  refetchOnReconnect: true,
   endpoints: (builder) => ({
     getWeightLogs: builder.query({
       query: (params: { limit?: number; cursor?: string }) => {
@@ -63,7 +66,9 @@ export const weightLogApi = createApi({
               }
             }),
           );
-        } catch {}
+        } catch {
+          soundManager.playError();
+        }
       },
     }),
     updateWeightLog: builder.mutation({
@@ -105,6 +110,7 @@ export const weightLogApi = createApi({
         try {
           await queryFulfilled;
         } catch {
+          soundManager.playError();
           patches.forEach((p) => p.undo());
         }
       },
@@ -130,6 +136,7 @@ export const weightLogApi = createApi({
         try {
           await queryFulfilled;
         } catch {
+          soundManager.playError();
           patches.forEach((p) => p.undo());
         }
       },
@@ -138,7 +145,6 @@ export const weightLogApi = createApi({
 });
 
 export const {
-  useGetWeightLogsQuery,
   useGetWeightHistoryQuery,
   useCreateWeightLogMutation,
   useUpdateWeightLogMutation,

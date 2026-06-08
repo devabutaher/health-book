@@ -1,5 +1,6 @@
 import { createApi } from "@reduxjs/toolkit/query/react";
 import { createBaseQuery } from "../baseQuery";
+import { soundManager } from "@/lib/soundManager";
 import type { RootState } from "../store";
 import type {
   Group,
@@ -21,6 +22,8 @@ export const groupsApi = createApi({
     "MyGroups",
     "MyInvites",
   ],
+  refetchOnFocus: false,
+  refetchOnReconnect: true,
   endpoints: (builder) => ({
     browseGroups: builder.query<GroupListData, { cursor?: string }>({
       query: ({ cursor }) => (cursor ? `/?cursor=${cursor}` : "/"),
@@ -66,18 +69,47 @@ export const groupsApi = createApi({
         method: "POST",
         body,
       }),
-      invalidatesTags: ["Groups", "MyGroups"],
+      // Optimistic update handles cache — no server invalidation needed
+      invalidatesTags: () => [],
       transformResponse: (response: { success: boolean; data: Group }) => response.data,
-      onQueryStarted: async (_, { dispatch, queryFulfilled }) => {
-        const group = (await queryFulfilled).data;
-        dispatch(
-          groupsApi.util.upsertQueryData("getGroup", group.id, {
-            ...group,
-            isMember: true,
-            myRole: "ADMIN",
-            memberCount: 1,
+      onQueryStarted: async (args, { dispatch, getState, queryFulfilled }) => {
+        const user = (getState() as RootState).auth.user;
+        if (!user) return;
+        const tempId = `temp-${Date.now()}`;
+
+        const optimistic: Group = {
+          id: tempId,
+          name: args.name,
+          description: args.description || null,
+          avatar: args.avatar || null,
+          coverPhoto: args.coverPhoto || null,
+          type: args.type || "PUBLIC",
+          createdById: user.id,
+          memberCount: 1,
+          isMember: true,
+          myRole: "ADMIN",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+
+        const patch = dispatch(
+          groupsApi.util.updateQueryData("getMyGroups", undefined, (draft) => {
+            draft.unshift(optimistic);
           }),
         );
+
+        try {
+          const { data } = await queryFulfilled;
+          dispatch(
+            groupsApi.util.updateQueryData("getMyGroups", undefined, (draft) => {
+              const idx = draft.findIndex((g) => g.id === tempId);
+              if (idx >= 0) draft[idx].id = data.id;
+            }),
+          );
+        } catch {
+          patch.undo();
+          soundManager.playError();
+        }
       },
     }),
 
@@ -100,16 +132,20 @@ export const groupsApi = createApi({
       invalidatesTags: (_result, _error, { id }) => [{ type: "Group", id }, "Groups"],
       transformResponse: (response: { success: boolean; data: Group }) => response.data,
       onQueryStarted: async ({ id }, { dispatch, queryFulfilled }) => {
-        const updated = (await queryFulfilled).data;
-        dispatch(
-          groupsApi.util.updateQueryData("getGroup", id, (draft) => {
-            Object.assign(draft, updated, {
-              memberCount: draft.memberCount,
-              isMember: draft.isMember,
-              myRole: draft.myRole,
-            });
-          }),
-        );
+        try {
+          const updated = (await queryFulfilled).data;
+          dispatch(
+            groupsApi.util.updateQueryData("getGroup", id, (draft) => {
+              Object.assign(draft, updated, {
+                memberCount: draft.memberCount,
+                isMember: draft.isMember,
+                myRole: draft.myRole,
+              });
+            }),
+          );
+        } catch {
+          soundManager.playError();
+        }
       },
     }),
 
@@ -118,7 +154,7 @@ export const groupsApi = createApi({
         url: `/${id}`,
         method: "DELETE",
       }),
-      invalidatesTags: ["Groups", "MyGroups"],
+      invalidatesTags: (_result, _error, id) => [{ type: "Group", id }, "Groups", "MyGroups"],
     }),
 
     joinGroup: builder.mutation<void, string>({
@@ -163,6 +199,7 @@ export const groupsApi = createApi({
         } catch {
           patchGroup.undo();
           patchMyGroups.undo();
+          soundManager.playError();
         }
       },
     }),
@@ -192,6 +229,7 @@ export const groupsApi = createApi({
         } catch {
           patchGroup.undo();
           patchMyGroups.undo();
+          soundManager.playError();
         }
       },
     }),
@@ -258,7 +296,7 @@ export const groupsApi = createApi({
         url: `/invites/${inviteId}/accept`,
         method: "PUT",
       }),
-      invalidatesTags: ["MyInvites", "Groups", "MyGroups"],
+      invalidatesTags: ["MyInvites"],
       onQueryStarted: async (inviteId, { dispatch, queryFulfilled }) => {
         const patch = dispatch(
           groupsApi.util.updateQueryData("getMyInvites", undefined, (draft) => {
@@ -270,6 +308,7 @@ export const groupsApi = createApi({
           await queryFulfilled;
         } catch {
           patch.undo();
+          soundManager.playError();
         }
       },
     }),
@@ -291,6 +330,7 @@ export const groupsApi = createApi({
           await queryFulfilled;
         } catch {
           patch.undo();
+          soundManager.playError();
         }
       },
     }),

@@ -6,6 +6,7 @@ import { NewConversationModal } from "@/components/messaging/NewConversationModa
 import { GlassCard } from "@/components/ui/glass-card";
 import { useAppSelector } from "@/hooks";
 import { useUnreadCount } from "@/hooks/useUnreadCount";
+import { useConversationRealtime } from "@/hooks/useConversationRealtime";
 import { MessageCircle, PenLine, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -15,6 +16,7 @@ export default function MessagesPage() {
   const [newConvoOpen, setNewConvoOpen] = useState(false);
   const [newGroupOpen, setNewGroupOpen] = useState(false);
   useUnreadCount();
+  useConversationRealtime();
 
   return (
     <>

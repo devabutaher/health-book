@@ -3,10 +3,7 @@
 import { X, Shield, ShieldPlus, UserMinus } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import {
-  useRemoveParticipantMutation,
-  usePromoteToAdminMutation,
-} from "@/redux/api/messagingApi";
+import { useRemoveParticipantMutation, usePromoteToAdminMutation } from "@/redux/api/messagingApi";
 import { toast } from "sonner";
 import type { Conversation } from "@/types/conversation";
 

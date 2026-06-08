@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { X, LayoutTemplate, Swords, Users as UsersIcon, Target, Trophy } from "lucide-react";
 import {
   useCreateChallengeMutation,
@@ -45,7 +45,6 @@ export function CreateChallengeModal({
   const [type, setType] = useState<"SOLO" | "GROUP" | "PLATFORM" | "DUEL">("SOLO");
   const [category, setCategory] = useState<ChallengeCategory>("GENERAL");
   const [difficulty, setDifficulty] = useState<ChallengeDifficulty>("BEGINNER");
-  const [dayCount, setDayCount] = useState("");
   const [groupId, setGroupId] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -54,6 +53,14 @@ export function CreateChallengeModal({
   const [goalTarget, setGoalTarget] = useState("");
   const [goalUnit, setGoalUnit] = useState("");
   const [createChallenge, { isLoading }] = useCreateChallengeMutation();
+
+  const computedDayCount = useMemo(() => {
+    if (!startDate || !endDate) return 30;
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const diff = Math.ceil((end.getTime() - start.getTime()) / 86400000) + 1;
+    return Math.max(1, diff);
+  }, [startDate, endDate]);
   const { data: groupsData } = useBrowseGroupsQuery({}, { skip: type !== "GROUP" });
   const { data: templates, isLoading: templatesLoading } = useGetChallengeTemplatesQuery({});
   const { play } = useSound();
@@ -72,7 +79,7 @@ export function CreateChallengeModal({
         type,
         category: category !== "GENERAL" ? category : undefined,
         difficulty,
-        dayCount: dayCount ? Number(dayCount) : undefined,
+        dayCount: computedDayCount,
         ...(type === "GROUP" && groupId ? { groupId } : {}),
         startDate: new Date(startDate).toISOString(),
         endDate: new Date(endDate).toISOString(),
@@ -84,8 +91,8 @@ export function CreateChallengeModal({
       }).unwrap();
       play("success");
       toast.success("Challenge created!");
-      const challengeId = (result as { data?: { id: string } }).data?.id;
       onClose();
+      const challengeId = (result as { data?: { id: string } }).data?.id;
       if (challengeId) router.push(`/challenges/${challengeId}`);
       resetForm();
     } catch {
@@ -112,6 +119,7 @@ export function CreateChallengeModal({
             : template.duration >= 14
               ? "INTERMEDIATE"
               : "BEGINNER",
+        dayCount: template.duration,
         startDate: new Date(startStr).toISOString(),
         endDate: new Date(endStr).toISOString(),
         goalTarget: template.goalTarget || undefined,
@@ -144,7 +152,6 @@ export function CreateChallengeModal({
     setEntryFee("");
     setGoalTarget("");
     setGoalUnit("");
-    setDayCount("");
   };
 
   const handleClose = () => {
@@ -391,16 +398,11 @@ export function CreateChallengeModal({
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="mb-1.5 block text-xs font-semibold text-[var(--text-secondary)]">
-                      Day Count
+                      Day Count <span className="text-brand-teal">(auto)</span>
                     </label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={dayCount}
-                      onChange={(e) => setDayCount(e.target.value)}
-                      placeholder="e.g. 30"
-                      className="w-full rounded-xl border border-[var(--border-default)] bg-[var(--bg-subtle)] px-4 py-2.5 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-brand-teal/50 focus:outline-none focus:ring-2 focus:ring-brand-teal/10"
-                    />
+                    <div className="flex h-[42px] items-center rounded-xl border border-[var(--border-default)] bg-[var(--bg-overlay)] px-4 text-sm text-[var(--text-primary)]">
+                      {startDate && endDate ? `${computedDayCount} days` : "Set dates above"}
+                    </div>
                   </div>
                   <div>
                     <label className="mb-1.5 block text-xs font-semibold text-[var(--text-secondary)]">

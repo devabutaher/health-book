@@ -1,11 +1,14 @@
 import { createApi } from "@reduxjs/toolkit/query/react";
 import { createBaseQuery } from "../baseQuery";
 import type { GroupPoll } from "@/types/groupPoll";
+import { soundManager } from "@/lib/soundManager";
 
 export const groupPollApi = createApi({
   reducerPath: "groupPollApi",
   baseQuery: createBaseQuery(`${process.env["NEXT_PUBLIC_API_URL"]}/api/groups`),
-  tagTypes: ["GroupPolls", "GroupPoll"],
+  tagTypes: ["GroupPolls"],
+  refetchOnFocus: false,
+  refetchOnReconnect: true,
   endpoints: (builder) => ({
     getGroupPolls: builder.query<GroupPoll[], string>({
       query: (groupId) => `/${groupId}/polls`,
@@ -29,6 +32,18 @@ export const groupPollApi = createApi({
         body,
       }),
       invalidatesTags: (_result, _error, { groupId }) => [{ type: "GroupPolls", id: groupId }],
+      onQueryStarted: async ({ groupId }, { dispatch, queryFulfilled }) => {
+        try {
+          const { data: newPoll } = await queryFulfilled;
+          dispatch(
+            groupPollApi.util.updateQueryData("getGroupPolls", groupId, (draft) => {
+              draft.unshift(newPoll);
+            }),
+          );
+        } catch {
+          soundManager.playError();
+        }
+      },
     }),
     votePoll: builder.mutation<GroupPoll, { pollId: string; groupId: string; optionIndex: number }>(
       {
@@ -63,6 +78,7 @@ export const groupPollApi = createApi({
           try {
             await queryFulfilled;
           } catch {
+            soundManager.playError();
             patch.undo();
           }
         },
@@ -92,6 +108,7 @@ export const groupPollApi = createApi({
         try {
           await queryFulfilled;
         } catch {
+          soundManager.playError();
           patch.undo();
         }
       },
@@ -112,6 +129,7 @@ export const groupPollApi = createApi({
         try {
           await queryFulfilled;
         } catch {
+          soundManager.playError();
           patch.undo();
         }
       },

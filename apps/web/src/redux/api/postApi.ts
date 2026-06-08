@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import type { Post, PostFeedData } from "@/types/post";
+import type { Post, PostFeedData, PostPrivacy } from "@/types/post";
 import { createApi } from "@reduxjs/toolkit/query/react";
 import { createBaseQuery } from "../baseQuery";
 import type { RootState } from "../store";
@@ -9,6 +9,8 @@ export const postApi = createApi({
   reducerPath: "postApi",
   baseQuery: createBaseQuery(`${process.env["NEXT_PUBLIC_API_URL"]}/api/posts`),
   tagTypes: ["Posts", "Post", "Feed", "Saved", "Drafts"],
+  refetchOnFocus: false,
+  refetchOnReconnect: true,
   endpoints: (builder) => ({
     getFeed: builder.query({
       query: ({ cursor }: { cursor?: string } = {}) => `/feed${cursor ? `?cursor=${cursor}` : ""}`,
@@ -56,46 +58,139 @@ export const postApi = createApi({
         method: "POST",
         body,
       }),
-      // Fix: only invalidate group feed if groupId present, not entire Feed
-      invalidatesTags: (_result, _error, body) => {
-        const tags: any[] = [];
-        if (body.groupId) tags.push({ type: "Posts", id: `group-${body.groupId}` });
-        return tags;
-      },
-      onQueryStarted: async (body, { dispatch, queryFulfilled }) => {
-        try {
-          const { data: res } = await queryFulfilled;
-          const newPost = (res as any)?.data;
-          if (!newPost) return;
-          if (body.isDraft) {
-            dispatch(
-              postApi.util.updateQueryData("getDrafts", undefined, (draft: any) => {
-                if (draft) draft.unshift(newPost);
-              }),
-            );
-          } else {
-            dispatch(
-              postApi.util.updateQueryData("getFeed", { cursor: undefined }, (draft: any) => {
-                if (draft?.data?.posts) {
-                  draft.data.posts.unshift(newPost);
-                }
-              }),
-            );
+      invalidatesTags: () => [],
+      onQueryStarted: async (body, { dispatch, queryFulfilled, getState }) => {
+        const user = (getState() as RootState).auth.user;
+        if (!user) {
+          try {
+            await queryFulfilled;
+          } catch {
+            soundManager.playError();
           }
+          return;
+        }
+
+        const tempId = `temp-${Date.now()}`;
+        const optimisticPost: Post = {
+          id: tempId,
+          content: body.content ?? null,
+          mediaUrls: body.mediaUrls || [],
+          privacy: (body.privacy as PostPrivacy) || "PUBLIC",
+          userId: user.id,
+          groupId: body.groupId || null,
+          templateType: body.templateType || null,
+          templateData: (body.templateData as Record<string, unknown>) || null,
+          healthLogId: body.healthLogId || null,
+          isDraft: !!body.isDraft,
+          scheduledAt: body.scheduledAt || null,
+          publishedAt: null,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          user: {
+            id: user.id,
+            name: user.name,
+            username: user.username,
+            avatar: user.avatar,
+            isVerified: (user as any).isVerified ?? false,
+            isFollowing: false,
+          },
+          _count: { reactions: 0, comments: 0 },
+          reactions: [],
+          isSaved: false,
+          healthLog: null,
+          poll: null,
+        };
+
+        const patches: { undo: () => void }[] = [];
+
+        if (body.isDraft) {
+          // Optimistic insert into drafts cache
+          const p = dispatch(
+            postApi.util.updateQueryData("getDrafts", undefined, (draft: any) => {
+              if (draft) draft.unshift(optimisticPost);
+            }),
+          );
+          patches.push(p);
+        } else {
+          // Optimistic insert into all getFeed caches (all paginated pages)
+          const queries = (getState() as any).postApi?.queries ?? {};
+          for (const key of Object.keys(queries)) {
+            const q = queries[key];
+            if (q?.endpointName === "getFeed" && q?.status === "fulfilled") {
+              const p = dispatch(
+                postApi.util.updateQueryData("getFeed", q.originalArgs, (draft: any) => {
+                  if (draft?.data?.posts) {
+                    draft.data.posts.unshift(optimisticPost);
+                  }
+                }),
+              );
+              patches.push(p);
+            }
+            // Also patch getUserPosts for the current user
+            if (q?.endpointName === "getUserPosts" && q?.status === "fulfilled") {
+              const args = q.originalArgs as { userId: string; cursor?: string } | undefined;
+              if (args?.userId === user.id) {
+                const p = dispatch(
+                  postApi.util.updateQueryData("getUserPosts", q.originalArgs, (draft: any) => {
+                    if (draft?.data?.posts) {
+                      draft.data.posts.unshift(optimisticPost);
+                    }
+                  }),
+                );
+                patches.push(p);
+              }
+            }
+          }
+          // Optimistic insert into getGroupFeed if applicable
           if (body.groupId) {
-            dispatch(
+            const p = dispatch(
               postApi.util.updateQueryData(
                 "getGroupFeed",
                 { groupId: body.groupId },
                 (draft: any) => {
                   if (draft?.data?.posts) {
-                    draft.data.posts.unshift(newPost);
+                    draft.data.posts.unshift(optimisticPost);
                   }
                 },
               ),
             );
+            patches.push(p);
           }
-        } catch {}
+        }
+
+        try {
+          const { data: res } = await queryFulfilled;
+          const newPost = (res as any)?.data;
+          if (newPost?.id && newPost.id !== tempId) {
+            // Replace tempId with real server ID across all cached queries
+            const replaceInPosts = (draft: any) => {
+              if (!draft) return;
+              if (draft.data?.posts) {
+                const idx = draft.data.posts.findIndex((p: any) => p.id === tempId);
+                if (idx >= 0) draft.data.posts[idx].id = newPost.id;
+              }
+              if (Array.isArray(draft)) {
+                const idx = draft.findIndex((p: any) => p.id === tempId);
+                if (idx >= 0) draft[idx].id = newPost.id;
+              }
+            };
+            const queries = (getState() as any).postApi?.queries ?? {};
+            for (const key of Object.keys(queries)) {
+              const q = queries[key];
+              if (
+                q?.status === "fulfilled" &&
+                ["getFeed", "getUserPosts", "getGroupFeed", "getDrafts"].includes(q.endpointName)
+              ) {
+                dispatch(
+                  postApi.util.updateQueryData(q.endpointName, q.originalArgs, replaceInPosts),
+                );
+              }
+            }
+          }
+        } catch {
+          patches.forEach((p) => p.undo());
+          soundManager.playError();
+        }
       },
     }),
     getGroupFeed: builder.query<PostFeedData, { groupId: string; cursor?: string }>({
@@ -121,8 +216,7 @@ export const postApi = createApi({
         method: "PUT",
         body,
       }),
-      // Only invalidate specific post — not entire Feed/Posts
-      invalidatesTags: (_result, _error, { id }) => [{ type: "Post", id }],
+      invalidatesTags: () => [],
       onQueryStarted: async ({ id, ...body }, { dispatch, getState, queryFulfilled }) => {
         // Optimistically update single post cache
         const patchPost = dispatch(
@@ -140,7 +234,7 @@ export const postApi = createApi({
           }),
         );
         // Look up userId from cached post to also update getUserPosts
-        const patches: ReturnType<typeof dispatch>[] = [patchPost, patchFeed];
+        const patches: { undo: () => void }[] = [patchPost, patchFeed];
         try {
           const state = getState();
           const feed = postApi.endpoints.getFeed.select({ cursor: undefined })(state as any)?.data;
@@ -161,7 +255,7 @@ export const postApi = createApi({
           }
           await queryFulfilled;
         } catch {
-          patches.forEach((p) => (p as any).undo?.());
+          patches.forEach((p) => p.undo());
           soundManager.playError();
         }
       },
@@ -173,45 +267,54 @@ export const postApi = createApi({
       }),
       // Fix: only invalidate specific post tag
       invalidatesTags: (_result, _error, id) => [{ type: "Post", id }],
-      onQueryStarted: async (id, { dispatch, queryFulfilled }) => {
+      onQueryStarted: async (id, { dispatch, getState, queryFulfilled }) => {
         const patches: { undo: () => void }[] = [];
-        const apply = (fn: () => void) => {
-          try {
-            fn();
-          } catch {}
-        };
-        apply(() => {
-          const p = dispatch(
-            postApi.util.updateQueryData("getFeed", { cursor: undefined }, (draft: any) => {
-              if (draft?.data?.posts) {
-                draft.data.posts = draft.data.posts.filter((p: any) => p.id !== id);
-              }
-            }),
-          );
-          patches.push(p);
-        });
-        apply(() => {
-          const p = dispatch(
-            postApi.util.updateQueryData("getSaved", {}, (draft: any) => {
-              const target = draft?.data?.posts || draft?.posts;
-              if (!target) return;
-              const filtered = target.filter((p: any) => p.id !== id);
-              if (draft.data) draft.data.posts = filtered;
-              else draft.posts = filtered;
-            }),
-          );
-          patches.push(p);
-        });
-        apply(() => {
-          const p = dispatch(
-            postApi.util.updateQueryData("getDrafts", undefined, (draft: any) => {
-              if (!draft) return;
-              const idx = draft.findIndex((p: any) => p.id === id);
-              if (idx >= 0) draft.splice(idx, 1);
-            }),
-          );
-          patches.push(p);
-        });
+        const state = getState() as any;
+        const queries = state?.postApi?.queries ?? {};
+        for (const key of Object.keys(queries)) {
+          const q = queries[key];
+          if (q?.endpointName === "getFeed" && q?.status === "fulfilled") {
+            const p = dispatch(
+              postApi.util.updateQueryData("getFeed", q.originalArgs, (draft: any) => {
+                if (draft?.data?.posts) {
+                  draft.data.posts = draft.data.posts.filter((p: any) => p.id !== id);
+                }
+              }),
+            );
+            patches.push(p);
+          }
+          if (q?.endpointName === "getUserPosts" && q?.status === "fulfilled") {
+            const p = dispatch(
+              postApi.util.updateQueryData("getUserPosts", q.originalArgs, (draft: any) => {
+                if (draft?.data?.posts) {
+                  draft.data.posts = draft.data.posts.filter((p: any) => p.id !== id);
+                }
+              }),
+            );
+            patches.push(p);
+          }
+          if (q?.endpointName === "getSaved" && q?.status === "fulfilled") {
+            const p = dispatch(
+              postApi.util.updateQueryData("getSaved", q.originalArgs, (draft: any) => {
+                const target = draft?.data?.posts || draft?.posts;
+                if (!target) return;
+                const filtered = target.filter((p: any) => p.id !== id);
+                if (draft.data) draft.data.posts = filtered;
+                else draft.posts = filtered;
+              }),
+            );
+            patches.push(p);
+          }
+        }
+        // Also remove from drafts
+        const dp = dispatch(
+          postApi.util.updateQueryData("getDrafts", undefined, (draft: any) => {
+            if (!draft) return;
+            const idx = draft.findIndex((p: any) => p.id === id);
+            if (idx >= 0) draft.splice(idx, 1);
+          }),
+        );
+        patches.push(dp);
         try {
           await queryFulfilled;
         } catch {
@@ -253,27 +356,50 @@ export const postApi = createApi({
           }
         };
 
+        const patches: { undo: () => void }[] = [];
+
         // Update single post cache
-        const patchPost = dispatch(
-          postApi.util.updateQueryData("getPost", postId, (draft) => {
-            updateReactions(draft);
-          }),
+        patches.push(
+          dispatch(
+            postApi.util.updateQueryData("getPost", postId, (draft) => {
+              updateReactions(draft);
+            }),
+          ),
         );
 
-        // Fix: also update in feed cache
-        const patchFeed = dispatch(
-          postApi.util.updateQueryData("getFeed", { cursor: undefined }, (draft: any) => {
-            if (!draft?.data?.posts) return;
-            const post = draft.data.posts.find((p: any) => p.id === postId);
-            if (post) updateReactions(post);
-          }),
-        );
+        // Loop through all cached queries to patch feed and user posts
+        const state = getState() as any;
+        const queries = state?.postApi?.queries ?? {};
+        for (const key of Object.keys(queries)) {
+          const q = queries[key];
+          if (q?.endpointName === "getFeed" && q?.status === "fulfilled") {
+            patches.push(
+              dispatch(
+                postApi.util.updateQueryData("getFeed", q.originalArgs, (draft: any) => {
+                  if (!draft?.data?.posts) return;
+                  const post = draft.data.posts.find((p: any) => p.id === postId);
+                  if (post) updateReactions(post);
+                }),
+              ),
+            );
+          }
+          if (q?.endpointName === "getUserPosts" && q?.status === "fulfilled") {
+            patches.push(
+              dispatch(
+                postApi.util.updateQueryData("getUserPosts", q.originalArgs, (draft: any) => {
+                  if (!draft?.data?.posts) return;
+                  const post = draft.data.posts.find((p: any) => p.id === postId);
+                  if (post) updateReactions(post);
+                }),
+              ),
+            );
+          }
+        }
 
         try {
           await queryFulfilled;
         } catch {
-          patchPost.undo();
-          patchFeed.undo();
+          patches.forEach((p) => p.undo());
           soundManager.playError();
         }
       },
@@ -285,26 +411,51 @@ export const postApi = createApi({
       }),
       // Fix: only invalidate Saved list — not Post/Posts
       invalidatesTags: ["Saved"],
-      onQueryStarted: async (postId, { dispatch, queryFulfilled }) => {
-        const patchPost = dispatch(
-          postApi.util.updateQueryData("getPost", postId, (draft) => {
-            if (!draft) return;
-            (draft as any).isSaved = !(draft as any).isSaved;
-          }),
+      onQueryStarted: async (postId, { dispatch, getState, queryFulfilled }) => {
+        const patches: { undo: () => void }[] = [];
+
+        patches.push(
+          dispatch(
+            postApi.util.updateQueryData("getPost", postId, (draft) => {
+              if (!draft) return;
+              (draft as any).isSaved = !(draft as any).isSaved;
+            }),
+          ),
         );
-        // Also update in feed
-        const patchFeed = dispatch(
-          postApi.util.updateQueryData("getFeed", { cursor: undefined }, (draft: any) => {
-            if (!draft?.data?.posts) return;
-            const post = draft.data.posts.find((p: any) => p.id === postId);
-            if (post) post.isSaved = !post.isSaved;
-          }),
-        );
+
+        // Loop through all cached queries to patch feed and user posts
+        const state = getState() as any;
+        const queries = state?.postApi?.queries ?? {};
+        for (const key of Object.keys(queries)) {
+          const q = queries[key];
+          if (q?.endpointName === "getFeed" && q?.status === "fulfilled") {
+            patches.push(
+              dispatch(
+                postApi.util.updateQueryData("getFeed", q.originalArgs, (draft: any) => {
+                  if (!draft?.data?.posts) return;
+                  const post = draft.data.posts.find((p: any) => p.id === postId);
+                  if (post) post.isSaved = !post.isSaved;
+                }),
+              ),
+            );
+          }
+          if (q?.endpointName === "getUserPosts" && q?.status === "fulfilled") {
+            patches.push(
+              dispatch(
+                postApi.util.updateQueryData("getUserPosts", q.originalArgs, (draft: any) => {
+                  if (!draft?.data?.posts) return;
+                  const post = draft.data.posts.find((p: any) => p.id === postId);
+                  if (post) post.isSaved = !post.isSaved;
+                }),
+              ),
+            );
+          }
+        }
+
         try {
           await queryFulfilled;
         } catch {
-          patchPost.undo();
-          patchFeed.undo();
+          patches.forEach((p) => p.undo());
           soundManager.playError();
         }
       },

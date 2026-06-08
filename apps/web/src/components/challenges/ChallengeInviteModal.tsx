@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { motion, AnimatePresence } from "framer-motion";
 import { scaleIn } from "@/lib/motion/variants";
 import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/getErrorMessage";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useSearchUsersQuery } from "@/redux/api/searchApi";
 import { useSound } from "@/hooks/useSound";
@@ -34,9 +35,9 @@ export function ChallengeInviteModal({
       await invite({ challengeId, userId }).unwrap();
       play("success");
       toast.success("Invitation sent!");
-    } catch {
+    } catch (err) {
       play("error");
-      toast.error("Failed to invite");
+      toast.error(getErrorMessage(err, "Failed to invite"));
     }
   };
 

@@ -1,7 +1,7 @@
 import { fetchBaseQuery, type BaseQueryFn, type BaseQueryApi } from "@reduxjs/toolkit/query/react";
 import type { RootState } from "./store";
 import type { FetchArgs, FetchBaseQueryError } from "@reduxjs/toolkit/query";
-import { setCredentials, logout, type AuthUser } from "./slices/authSlice";
+import { setCredentials, setLoading, type AuthUser } from "./slices/authSlice";
 import { toast } from "sonner";
 
 interface RefreshResponse {
@@ -97,7 +97,7 @@ export function createBaseQuery(baseUrl: string) {
         if (typeof window !== "undefined" && !window.location.href.includes("/login")) {
           toast.error("Session expired. Please login again.");
         }
-        api.dispatch(logout());
+        api.dispatch(setLoading(false));
       }
     }
 

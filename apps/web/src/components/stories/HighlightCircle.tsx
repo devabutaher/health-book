@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import type { StoryHighlight } from "@/types/story";
-import { cn } from "@/lib/utils";
+import { cn, getImageUrl } from "@/lib/utils";
 
 export function HighlightCircle({
   highlight,
@@ -18,7 +18,7 @@ export function HighlightCircle({
     >
       <div
         className={cn(
-          "flex size-16 items-center justify-center overflow-hidden rounded-full ring-2 ring-brand-teal/40 ring-offset-2 ring-offset-[var(--bg-primary)]",
+          "flex size-16 items-center justify-center overflow-hidden rounded-full ring-2 ring-brand-teal/40 ring-offset-2 ring-offset-[var(--bg-primary)] bg-(--bg-subtle)",
         )}
       >
         {highlight.coverUrl ? (
@@ -28,6 +28,10 @@ export function HighlightCircle({
             className="size-full object-cover"
             width={64}
             height={64}
+            placeholder="blur"
+            blurDataURL={
+              getImageUrl(highlight.coverUrl, "w_20,e_blur:2000,q_auto:low,f_auto") ?? undefined
+            }
           />
         ) : (
           <div className="flex size-full items-center justify-center bg-gradient-to-br from-brand-teal to-brand-green text-lg font-bold text-white">

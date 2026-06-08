@@ -24,3 +24,14 @@ export function formatRelativeTime(date: Date | string | null | undefined): stri
   if (days < 7) return `${days}d ago`;
   return d.toLocaleDateString();
 }
+
+export function getImageUrl(url: string | null | undefined, transforms?: string): string | null {
+  if (!url) return null;
+  if (transforms && url.includes("res.cloudinary.com")) {
+    const parts = url.split("/upload/");
+    if (parts.length === 2) {
+      return `${parts[0]}/upload/${transforms}/${parts[1]}`;
+    }
+  }
+  return url;
+}

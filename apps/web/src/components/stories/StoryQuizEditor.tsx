@@ -36,8 +36,22 @@ const bgColors = [
 ];
 
 const commonEmojis = [
-  "😀", "😂", "😍", "😎", "🤔", "🔥", "💯", "❤️",
-  "👍", "👎", "👏", "🙌", "💪", "🎉", "⭐", "🌈",
+  "😀",
+  "😂",
+  "😍",
+  "😎",
+  "🤔",
+  "🔥",
+  "💯",
+  "❤️",
+  "👍",
+  "👎",
+  "👏",
+  "🙌",
+  "💪",
+  "🎉",
+  "⭐",
+  "🌈",
 ];
 
 export function StoryQuizEditor({
@@ -61,7 +75,11 @@ export function StoryQuizEditor({
   const [createStory] = useCreateStoryMutation();
 
   const validOptions = options.filter((o) => o.trim());
-  const canShare = question.trim() && validOptions.length >= 2 && correctIdx !== null && options[correctIdx]?.trim();
+  const canShare =
+    question.trim() &&
+    validOptions.length >= 2 &&
+    correctIdx !== null &&
+    options[correctIdx]?.trim();
 
   const handleShare = async () => {
     if (!canShare) return;
@@ -122,8 +140,13 @@ export function StoryQuizEditor({
       {/* Preview content */}
       <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 px-5">
         {question ? (
-          <motion.div layout className="w-full rounded-2xl bg-black/40 px-5 py-4 text-center backdrop-blur-sm">
-            <p className="font-bold leading-snug" style={{ color: textColor, fontSize: "20px" }}>{question}</p>
+          <motion.div
+            layout
+            className="w-full rounded-2xl bg-black/40 px-5 py-4 text-center backdrop-blur-sm"
+          >
+            <p className="font-bold leading-snug" style={{ color: textColor, fontSize: "20px" }}>
+              {question}
+            </p>
           </motion.div>
         ) : (
           <div className="w-full rounded-2xl border-2 border-dashed border-white/20 px-5 py-4 text-center">
@@ -141,7 +164,12 @@ export function StoryQuizEditor({
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: idx * 0.05 }}
-                className={cn("flex items-center gap-3 rounded-2xl border px-4 py-3 text-sm backdrop-blur-sm transition-all", isCorrect ? "border-brand-green/50 bg-brand-green/20 text-white" : "border-white/20 bg-white/10 text-white/90")}
+                className={cn(
+                  "flex items-center gap-3 rounded-2xl border px-4 py-3 text-sm backdrop-blur-sm transition-all",
+                  isCorrect
+                    ? "border-brand-green/50 bg-brand-green/20 text-white"
+                    : "border-white/20 bg-white/10 text-white/90",
+                )}
               >
                 {isCorrect && <Check className="size-4 shrink-0 text-brand-green" />}
                 <span className={isCorrect ? "font-semibold" : ""}>{opt}</span>
@@ -156,7 +184,11 @@ export function StoryQuizEditor({
         </div>
 
         {correctIdx === null && options.some((o) => o.trim()) && (
-          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center text-xs text-amber-400/80">
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-center text-xs text-amber-400/80"
+          >
             ↓ Mark the correct answer below
           </motion.p>
         )}
@@ -164,7 +196,10 @@ export function StoryQuizEditor({
 
       {/* Bottom Tools Panel */}
       {!createdStoryId && (
-        <StoryCollapsiblePanel collapsed={panelCollapsed} onToggle={() => setPanelCollapsed(!panelCollapsed)}>
+        <StoryCollapsiblePanel
+          collapsed={panelCollapsed}
+          onToggle={() => setPanelCollapsed(!panelCollapsed)}
+        >
           <div className="space-y-3 px-3 pb-2">
             <StoryColorPicker
               label="Background"
@@ -196,7 +231,12 @@ export function StoryQuizEditor({
                   <div key={idx} className="flex items-center gap-2">
                     <button
                       onClick={() => setCorrectIdx(idx === correctIdx ? null : idx)}
-                      className={cn("flex size-8 shrink-0 items-center justify-center rounded-full border-2 transition-all", correctIdx === idx ? "border-brand-green bg-brand-green text-white" : "border-white/20 bg-white/5 text-white/30 hover:border-white/40 hover:text-white/60")}
+                      className={cn(
+                        "flex size-8 shrink-0 items-center justify-center rounded-full border-2 transition-all",
+                        correctIdx === idx
+                          ? "border-brand-green bg-brand-green text-white"
+                          : "border-white/20 bg-white/5 text-white/30 hover:border-white/40 hover:text-white/60",
+                      )}
                     >
                       <Check className="size-4" />
                     </button>
@@ -208,14 +248,20 @@ export function StoryQuizEditor({
                         setOptions(next);
                       }}
                       placeholder={`Option ${idx + 1}${correctIdx === idx ? " ✓ Correct" : ""}`}
-                      className={cn("flex-1 rounded-xl px-4 py-2.5 text-white placeholder:text-white/50 outline-none focus:ring-2 transition-all", correctIdx === idx ? "bg-brand-green/20 ring-2 ring-brand-green/50 focus:ring-brand-green" : "bg-white/15 focus:ring-amber-500")}
+                      className={cn(
+                        "flex-1 rounded-xl px-4 py-2.5 text-white placeholder:text-white/50 outline-none focus:ring-2 transition-all",
+                        correctIdx === idx
+                          ? "bg-brand-green/20 ring-2 ring-brand-green/50 focus:ring-brand-green"
+                          : "bg-white/15 focus:ring-amber-500",
+                      )}
                     />
                     {options.length > 2 && (
                       <button
                         onClick={() => {
                           setOptions(options.filter((_, i) => i !== idx));
                           if (correctIdx === idx) setCorrectIdx(null);
-                          else if (correctIdx !== null && correctIdx > idx) setCorrectIdx(correctIdx - 1);
+                          else if (correctIdx !== null && correctIdx > idx)
+                            setCorrectIdx(correctIdx - 1);
                         }}
                         className="rounded-xl bg-red-500/20 p-2 text-red-400 hover:bg-red-500/30"
                       >
@@ -242,7 +288,11 @@ export function StoryQuizEditor({
               onChange={setTextColor}
             />
 
-            <StoryPrivacySelector value={privacy} onChange={setPrivacy} activeColor="bg-amber-500" />
+            <StoryPrivacySelector
+              value={privacy}
+              onChange={setPrivacy}
+              activeColor="bg-amber-500"
+            />
           </div>
 
           <StoryActionButtons
@@ -258,7 +308,11 @@ export function StoryQuizEditor({
       )}
 
       {createdStoryId && (
-        <StoryHighlightPanel createdStoryId={createdStoryId} onClose={onClose} onCreated={onCreated} />
+        <StoryHighlightPanel
+          createdStoryId={createdStoryId}
+          onClose={onClose}
+          onCreated={onCreated}
+        />
       )}
     </div>
   );

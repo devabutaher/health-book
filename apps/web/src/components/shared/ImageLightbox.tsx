@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
+import { getImageUrl } from "@/lib/utils";
 
 export function ImageLightbox({
   images,
@@ -86,6 +87,10 @@ export function ImageLightbox({
             width={1200}
             height={900}
             loading="eager"
+            placeholder="blur"
+            blurDataURL={
+              getImageUrl(images[current], "w_20,e_blur:2000,q_auto:low,f_auto") ?? undefined
+            }
             className="max-h-[90vh] max-w-[90vw] rounded-2xl object-contain"
           />
         </motion.div>

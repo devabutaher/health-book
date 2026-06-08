@@ -15,7 +15,10 @@ export default function GroupMembersLoading() {
       </div>
       <div className="overflow-hidden rounded-2xl border border-[var(--border-default)] bg-[var(--bg-elevated)]">
         {[1, 2, 3, 4, 5, 6].map((i) => (
-          <div key={i} className="flex items-center gap-3 border-b border-[var(--border-subtle)] p-4 last:border-b-0">
+          <div
+            key={i}
+            className="flex items-center gap-3 border-b border-[var(--border-subtle)] p-4 last:border-b-0"
+          >
             <Skeleton className="size-10 rounded-full" />
             <div className="flex-1 space-y-1.5">
               <Skeleton className="h-4 w-32" />

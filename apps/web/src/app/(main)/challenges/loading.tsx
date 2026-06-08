@@ -28,7 +28,10 @@ export default function ChallengesLoading() {
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="overflow-hidden rounded-2xl border border-[var(--border-default)] bg-[var(--bg-elevated)]">
+          <div
+            key={i}
+            className="overflow-hidden rounded-2xl border border-[var(--border-default)] bg-[var(--bg-elevated)]"
+          >
             <Skeleton className="aspect-video w-full" />
             <div className="space-y-3 p-4">
               <div className="flex items-center gap-2">

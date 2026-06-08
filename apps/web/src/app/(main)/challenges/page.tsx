@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import {
   Plus,
   Trophy,
@@ -21,6 +22,7 @@ import {
   useGetMyChallengesQuery,
   useGetSavedChallengesQuery,
   useToggleSaveChallengeMutation,
+  useGetDayPlansQuery,
 } from "@/redux/api/challengesApi";
 import { Button } from "@/components/ui/button";
 import { GlassCard } from "@/components/ui/glass-card";
@@ -39,6 +41,10 @@ const categories = [
 ];
 
 export default function ChallengesPage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const tabFromUrl = searchParams.get("tab") || "browse";
+  const [activeTab, setActiveTab] = useState(tabFromUrl);
   const [createOpen, setCreateOpen] = useState(false);
   const [typeFilter, setTypeFilter] = useState<string | undefined>(undefined);
   const [difficultyFilter, setDifficultyFilter] = useState<string | undefined>(undefined);
@@ -47,12 +53,24 @@ export default function ChallengesPage() {
   const [logChallengeId, setLogChallengeId] = useState<string | null>(null);
   const [logDayNumber, setLogDayNumber] = useState(1);
   const [logTotalDays, setLogTotalDays] = useState(30);
+  const [logGoalTarget, setLogGoalTarget] = useState<number | null>(null);
+  const [logGoalUnit, setLogGoalUnit] = useState<string | null>(null);
+  const { data: logDayPlans } = useGetDayPlansQuery(logChallengeId || "", {
+    skip: !logChallengeId,
+  });
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearch = useDebounce(searchQuery, 400);
   const [showTemplates, setShowTemplates] = useState(false);
   const [toggleSave] = useToggleSaveChallengeMutation();
 
   const isSearching = debouncedSearch.trim().length > 0;
+  const wasSearchingRef = useRef(isSearching);
+  useEffect(() => {
+    if (wasSearchingRef.current && !isSearching) {
+      setCursor(undefined);
+    }
+    wasSearchingRef.current = isSearching;
+  }, [isSearching]);
 
   const { data, isLoading, isFetching, isError } = useBrowseChallengesQuery(
     {
@@ -68,12 +86,18 @@ export default function ChallengesPage() {
     isFetching: isSearchingState,
     isError: isSearchError,
   } = useSearchChallengesQuery({ q: debouncedSearch.trim(), cursor }, { skip: !isSearching });
-  const { data: myChallenges, isLoading: myLoading, isError: myError } = useGetMyChallengesQuery();
   const {
-    data: savedChallenges,
+    data: myChallengesData,
+    isLoading: myLoading,
+    isError: myError,
+  } = useGetMyChallengesQuery();
+  const {
+    data: savedChallengesData,
     isLoading: savedLoading,
     isError: savedError,
   } = useGetSavedChallengesQuery();
+  const myChallenges = myChallengesData?.data ?? [];
+  const savedChallenges = savedChallengesData?.data ?? [];
 
   const activeData = isSearching ? searchData : data;
   const activeLoading = isSearching ? isSearchingState : isLoading;
@@ -109,6 +133,8 @@ export default function ChallengesPage() {
       setLogChallengeId(challengeId);
       setLogDayNumber(challenge.myProgress ? challenge.myProgress.score + 1 : 1);
       setLogTotalDays(challenge.dayCount || 30);
+      setLogGoalTarget(challenge.goalTarget);
+      setLogGoalUnit(challenge.goalUnit);
     }
   };
 
@@ -159,7 +185,18 @@ export default function ChallengesPage() {
           />
         </div>
 
-        <Tabs defaultValue="browse" className="mb-6">
+        <Tabs
+          value={activeTab}
+          onValueChange={(val) => {
+            setActiveTab(val);
+            setCursor(undefined);
+            const params = new URLSearchParams(searchParams.toString());
+            if (val === "browse") params.delete("tab");
+            else params.set("tab", val);
+            router.replace(`/challenges?${params.toString()}`, { scroll: false });
+          }}
+          className="mb-6"
+        >
           <TabsList className="mb-4">
             <TabsTrigger value="browse" className="gap-1.5">
               <Trophy className="size-3.5" />
@@ -367,10 +404,14 @@ export default function ChallengesPage() {
 
       <CheckInModal
         challengeId={logChallengeId || ""}
-        dayNumber={logDayNumber}
+        currentDay={logDayNumber}
         totalDays={logTotalDays}
         open={!!logChallengeId}
         onClose={() => setLogChallengeId(null)}
+        goalTarget={logGoalTarget}
+        goalUnit={logGoalUnit}
+        dayPlan={logDayPlans?.find((p) => p.dayNumber === logDayNumber) ?? null}
+        hasDayPlans={!!logDayPlans && logDayPlans.length > 0}
       />
     </>
   );

@@ -8,10 +8,12 @@ export function ReelPlayer({
   videoUrl,
   isActive,
   onDoubleTapLike,
+  thumbnailUrl,
 }: {
   videoUrl: string;
   isActive?: boolean;
   onDoubleTapLike?: () => void;
+  thumbnailUrl?: string | null;
 }) {
   const [playing, setPlaying] = useState(true);
   const [muted, setMuted] = useState(false);
@@ -21,10 +23,19 @@ export function ReelPlayer({
   const videoRef = useRef<HTMLVideoElement>(null);
   const lastTap = useRef(0);
   const heartTimeout = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const singleTapTimeout = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const playingRef = useRef(playing);
   useEffect(() => {
     playingRef.current = playing;
   }, [playing]);
+
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      clearTimeout(heartTimeout.current);
+      clearTimeout(singleTapTimeout.current);
+    };
+  }, []);
 
   useEffect(() => {
     if (!videoRef.current) return;
@@ -64,9 +75,11 @@ export function ReelPlayer({
         heartTimeout.current = setTimeout(() => setShowHeart(false), 800);
         onDoubleTapLike?.();
         lastTap.current = 0;
+        clearTimeout(singleTapTimeout.current);
       } else {
         lastTap.current = now;
-        setTimeout(() => {
+        clearTimeout(singleTapTimeout.current);
+        singleTapTimeout.current = setTimeout(() => {
           if (lastTap.current !== 0) {
             handlePlayPause();
             lastTap.current = 0;
@@ -90,6 +103,7 @@ export function ReelPlayer({
         onClick={handleClick}
         onWaiting={() => setLoading(true)}
         onCanPlay={() => setLoading(false)}
+        poster={thumbnailUrl || undefined}
       />
 
       {/* Loading spinner */}

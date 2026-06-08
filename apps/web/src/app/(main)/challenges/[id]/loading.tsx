@@ -44,7 +44,10 @@ export default function ChallengeDetailLoading() {
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         {[1, 2].map((i) => (
-          <div key={i} className="rounded-2xl border border-[var(--border-default)] bg-[var(--bg-elevated)] p-4">
+          <div
+            key={i}
+            className="rounded-2xl border border-[var(--border-default)] bg-[var(--bg-elevated)] p-4"
+          >
             <Skeleton className="h-5 w-36 mb-3" />
             <div className="space-y-2">
               <div className="flex items-center gap-3">

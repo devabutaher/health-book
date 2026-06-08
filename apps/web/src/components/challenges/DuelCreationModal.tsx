@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { scaleIn } from "@/lib/motion/variants";
 import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/getErrorMessage";
 import { useRouter } from "next/navigation";
 import { useSound } from "@/hooks/useSound";
 
@@ -55,9 +56,9 @@ export function DuelCreationModal({
         (result as { data?: { id: string } })?.data?.id || (result as { id?: string })?.id;
       onClose();
       if (challengeId) router.push(`/challenges/${challengeId}`);
-    } catch {
+    } catch (err) {
       play("error");
-      toast.error("Failed to create duel");
+      toast.error(getErrorMessage(err, "Failed to create duel"));
     }
   };
 

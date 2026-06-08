@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
 import { motion, AnimatePresence } from "framer-motion";
+import { getImageUrl } from "@/lib/utils";
 
 interface UserHit {
   id: string;
@@ -149,6 +150,11 @@ export default function MobileSearch() {
                             alt={u.name}
                             width={32}
                             height={32}
+                            placeholder="blur"
+                            blurDataURL={
+                              getImageUrl(u.avatar, "w_20,e_blur:2000,q_auto:low,f_auto") ??
+                              undefined
+                            }
                             className="size-8 shrink-0 rounded-full object-cover ring-1 ring-[var(--border-default)]"
                           />
                         ) : (

@@ -235,8 +235,8 @@ export const updateChallengeSchema = z.object({
 });
 
 export const checkInSchema = z.object({
-  dayNumber: z.number().int().positive(),
-  completed: z.boolean().default(true),
+  dayNumber: z.number().int().positive().optional(),
+  skip: z.boolean().optional(),
   notes: z.string().max(2000).optional(),
   mediaUrls: z.array(z.string()).max(10).optional(),
   sharedToFeed: z.boolean().default(false),
@@ -259,10 +259,48 @@ export const duelSchema = z.object({
   dayCount: z.number().int().positive().optional(),
 });
 
+export const ratingSchema = z.object({
+  rating: z.number().int().min(1).max(5),
+  review: z.string().max(2000).optional(),
+});
+
+export const shareChallengeSchema = z.object({
+  content: z.string().max(2000).optional(),
+});
+
+export const inviteToChallengeSchema = z.object({
+  userId: z.string().uuid(),
+});
+
+export const respondToInviteSchema = z.object({
+  accept: z.boolean(),
+});
+
+export const upsertDayPlansSchema = z.object({
+  plans: z.array(
+    z.object({
+      dayNumber: z.number().int().positive(),
+      title: z.string().max(200).optional(),
+      description: z.string().max(2000).optional(),
+      tips: z.string().max(2000).optional(),
+      mediaUrls: z.array(z.string()).optional(),
+      duration: z.number().int().positive().optional(),
+    }),
+  ),
+});
+
+export const uploadPhotoSchema = z.object({
+  photoUrl: z.string().min(1, "Photo URL is required"),
+});
+
 // ── Phase 3: Stories ──
 
 export const reactStorySchema = z.object({
   emoji: z.string().min(1, "Emoji is required").max(10),
+});
+
+export const votePollSchema = z.object({
+  optionIndex: z.number().int().nonnegative(),
 });
 
 export const createStorySchema = z
@@ -338,6 +376,11 @@ export const updateReelSchema = z.object({
 
 export const addParticipantSchema = z.object({
   userId: z.string().uuid(),
+});
+
+export const updateGroupInfoSchema = z.object({
+  groupName: z.string().max(100).optional(),
+  groupAvatar: z.string().optional(),
 });
 
 // ── Phase 3: Groups (additional) ──

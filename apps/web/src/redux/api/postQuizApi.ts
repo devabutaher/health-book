@@ -1,11 +1,14 @@
 import { createApi } from "@reduxjs/toolkit/query/react";
 import { createBaseQuery } from "../baseQuery";
 import type { PostQuizResult, PostQuizResults } from "@/types/post";
+import { soundManager } from "@/lib/soundManager";
 
 export const postQuizApi = createApi({
   reducerPath: "postQuizApi",
   baseQuery: createBaseQuery(`${process.env["NEXT_PUBLIC_API_URL"]}/api/post-quiz`),
   tagTypes: ["PostQuiz"],
+  refetchOnFocus: false,
+  refetchOnReconnect: true,
   endpoints: (builder) => ({
     answerQuiz: builder.mutation<PostQuizResult, { postId: string; selectedIndex: number }>({
       query: ({ postId, selectedIndex }) => ({
@@ -25,6 +28,7 @@ export const postQuizApi = createApi({
         try {
           await queryFulfilled;
         } catch {
+          soundManager.playError();
           patch.undo();
         }
       },

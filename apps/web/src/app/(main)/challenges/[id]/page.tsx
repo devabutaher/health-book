@@ -11,6 +11,8 @@ import {
   useShareChallengeMutation,
   useGetCalendarQuery,
   useGetBeforeAfterQuery,
+  useGetDayPlansQuery,
+  useRateChallengeMutation,
 } from "@/redux/api/challengesApi";
 import { ChallengeProgress } from "@/components/challenges/ChallengeProgress";
 import { ChallengeCalendar } from "@/components/challenges/ChallengeCalendar";
@@ -22,6 +24,11 @@ import { ChallengeComments } from "@/components/challenges/ChallengeComments";
 import { ChallengeInviteModal } from "@/components/challenges/ChallengeInviteModal";
 import { DailyStreakTracker } from "@/components/challenges/DailyStreakTracker";
 import { ChallengeBadge } from "@/components/challenges/ChallengeBadge";
+import { ChallengeDayPlan } from "@/components/challenges/ChallengeDayPlan";
+import { ChallengeRating } from "@/components/challenges/ChallengeRating";
+import { ChallengeProgressChart } from "@/components/challenges/ChallengeProgressChart";
+import { ChallengeHeatMap } from "@/components/challenges/ChallengeHeatMap";
+import { ChallengeShareCard } from "@/components/challenges/ChallengeShareCard";
 import { DuelHeader } from "@/components/challenges/DuelHeader";
 import { EditChallengeModal } from "@/components/challenges/EditChallengeModal";
 import { Button } from "@/components/ui/button";
@@ -39,6 +46,7 @@ import {
   UserPlus,
   Swords,
   AlertCircle,
+  ShieldAlert,
 } from "lucide-react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { toast } from "sonner";
@@ -48,7 +56,7 @@ import { useAppSelector } from "@/hooks";
 import { useChallengeRealtime } from "@/hooks/useChallengeRealtime";
 import { useSound } from "@/hooks/useSound";
 import { cn } from "@/lib/utils";
-import { getChallengeDayElapsed } from "@/lib/getChallengeDay";
+import { getErrorMessage } from "@/lib/getErrorMessage";
 
 export default function ChallengeDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -56,17 +64,21 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
   const currentUserId = useAppSelector((s) => s.auth.user?.id);
   const { data: challenge, isLoading, isError } = useGetChallengeQuery(id);
   const { data: leaderboard } = useGetLeaderboardQuery(id, { skip: !id });
-  const { data: calendar } = useGetCalendarQuery(id, { skip: !id });
-  const { data: beforeAfter } = useGetBeforeAfterQuery(id, { skip: !id });
+  const { data: calendar } = useGetCalendarQuery(id, { skip: !id || !challenge?.isJoined });
+  const { data: beforeAfter } = useGetBeforeAfterQuery(id, { skip: !id || !challenge?.isJoined });
+  const { data: dayPlans } = useGetDayPlansQuery(id, { skip: !id || !challenge?.isJoined });
+  const [rateChallenge] = useRateChallengeMutation();
   const [joinChallenge, { isLoading: joining }] = useJoinChallengeMutation();
   const [leaveChallenge, { isLoading: leaving }] = useLeaveChallengeMutation();
   const [deleteChallenge, { isLoading: deleting }] = useDeleteChallengeMutation();
   const [toggleSave] = useToggleSaveChallengeMutation();
   const [shareChallenge] = useShareChallengeMutation();
   const [checkInDay, setCheckInDay] = useState<number | null>(null);
+  const [checkInDayNumber, setCheckInDayNumber] = useState<number | undefined>(undefined);
   const [editOpen, setEditOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [userRating, setUserRating] = useState<number | null>(null);
   const [badgeDismissed, setBadgeDismissed] = useState(false);
   const badgeEarned = !badgeDismissed && challenge?.myProgress?.completed === true;
   const { play } = useSound();
@@ -74,48 +86,49 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
   const streak = challenge?.myProgress?.streak ?? 0;
   const isCreator = challenge?.createdById === currentUserId;
   const isPastEndDate = challenge ? new Date(challenge.endDate) < new Date() : false;
-  const today = challenge
-    ? Math.min(getChallengeDayElapsed(challenge.startDate), challenge.dayCount || 30)
-    : 1;
-  const todayEntry = calendar?.days.find((d) => d.dayNumber === today);
-  const todayCheckedIn = todayEntry?.completed === true;
+  const currentDay = challenge?.myProgress?.currentDayNumber ?? 1;
+  const totalDays = challenge?.dayCount || 30;
+  const todayCheckedIn =
+    currentDay > totalDays ||
+    calendar?.days.find((d) => d.dayNumber === currentDay)?.completed === true;
 
   useChallengeRealtime(id);
 
   const showCheckIn = useCallback((day: number) => {
     setCheckInDay(day);
+    setCheckInDayNumber(day);
   }, []);
 
   if (isLoading) {
     return (
-        <div className="mx-auto max-w-4xl space-y-4">
-          <div className="h-48 animate-pulse rounded-2xl bg-[var(--bg-subtle)]" />
-        </div>
+      <div className="mx-auto max-w-4xl space-y-4">
+        <div className="h-48 animate-pulse rounded-2xl bg-[var(--bg-subtle)]" />
+      </div>
     );
   }
 
   if (isError) {
     return (
-        <div className="mx-auto max-w-4xl py-20 text-center">
-          <AlertCircle className="mx-auto mb-4 size-12 text-[var(--text-muted)]" />
-          <p className="text-[var(--text-secondary)]">Failed to load challenge</p>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => router.push("/challenges")}
-            className="mt-4"
-          >
-            Back to challenges
-          </Button>
-        </div>
+      <div className="mx-auto max-w-4xl py-20 text-center">
+        <AlertCircle className="mx-auto mb-4 size-12 text-[var(--text-muted)]" />
+        <p className="text-[var(--text-secondary)]">Failed to load challenge</p>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => router.push("/challenges")}
+          className="mt-4"
+        >
+          Back to challenges
+        </Button>
+      </div>
     );
   }
 
   if (!challenge) {
     return (
-        <div className="mx-auto max-w-4xl py-20 text-center text-[var(--text-secondary)]">
-          Challenge not found
-        </div>
+      <div className="mx-auto max-w-4xl py-20 text-center text-[var(--text-secondary)]">
+        Challenge not found
+      </div>
     );
   }
 
@@ -126,46 +139,47 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
   );
 
   const handleJoin = async () => {
-    play("success");
     try {
       await joinChallenge(id).unwrap();
+      play("success");
       toast.success("Joined challenge!");
-    } catch {
+    } catch (err) {
       play("error");
-      toast.error("Failed to join");
+      toast.error(getErrorMessage(err));
     }
   };
 
   const handleLeave = async () => {
-    play("success");
     try {
       await leaveChallenge(id).unwrap();
+      play("success");
       toast.success("Left challenge");
       router.push("/challenges");
-    } catch {
+    } catch (err) {
       play("error");
-      toast.error("Failed to leave");
+      toast.error(getErrorMessage(err));
     }
   };
 
   const handleDelete = async () => {
-    play("success");
     try {
       await deleteChallenge(id).unwrap();
+      play("success");
       toast.success("Challenge deleted");
       router.push("/challenges");
-    } catch {
+    } catch (err) {
       play("error");
-      toast.error("Failed to delete");
+      toast.error(getErrorMessage(err));
     }
   };
 
   const handleToggleSave = async () => {
-    play("success");
     try {
       await toggleSave(id).unwrap();
-    } catch {
+      play("success");
+    } catch (err) {
       play("error");
+      toast.error(getErrorMessage(err));
     }
   };
 
@@ -175,8 +189,8 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
       const url = `${window.location.origin}/challenges/${id}`;
       await navigator.clipboard.writeText(url);
       toast.success("Link copied to clipboard!");
-    } catch {
-      toast.error("Failed to share");
+    } catch (err) {
+      toast.error(getErrorMessage(err));
     }
   };
 
@@ -252,8 +266,27 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
             </div>
 
             <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-              {!challenge.isJoined ? (
-                <Button variant="gradient" size="sm" onClick={handleJoin} disabled={joining} className="w-full sm:w-auto">
+              {!challenge.isJoined && challenge.isFull && challenge.type === "DUEL" ? (
+                <span className="inline-flex items-center gap-1 rounded-xl bg-brand-coral/10 px-3 py-1.5 text-xs font-semibold text-brand-coral">
+                  <ShieldAlert className="size-3.5" /> Duel Full — 2 participants
+                </span>
+              ) : !challenge.isJoined && challenge.requiredGroup ? (
+                <Link
+                  href={`/groups/${challenge.requiredGroup.id}`}
+                  prefetch={false}
+                  className="inline-flex items-center gap-1 rounded-xl bg-brand-amber/10 px-3 py-1.5 text-xs font-semibold text-brand-amber hover:underline"
+                >
+                  <Users className="size-3.5" /> Join &ldquo;{challenge.requiredGroup.name}&rdquo;
+                  first
+                </Link>
+              ) : !challenge.isJoined ? (
+                <Button
+                  variant="gradient"
+                  size="sm"
+                  onClick={handleJoin}
+                  disabled={joining}
+                  className="w-full sm:w-auto"
+                >
                   {joining ? "Joining..." : "Join Challenge"}
                 </Button>
               ) : (
@@ -292,6 +325,21 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
               >
                 <Share2 className="size-4" />
               </button>
+              {challenge.isJoined && (
+                <ChallengeShareCard
+                  challenge={challenge}
+                  progress={
+                    challenge.myProgress
+                      ? {
+                          score: challenge.myProgress.score,
+                          goal: challenge.myProgress.goal,
+                          streak: challenge.myProgress.streak,
+                          completed: challenge.myProgress.completed,
+                        }
+                      : null
+                  }
+                />
+              )}
 
               {isCreator && (
                 <div className="relative">
@@ -305,7 +353,7 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
                   {menuOpen && (
                     <>
                       <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-                      <div className="absolute right-0 sm:left-0 top-full z-20 mt-1 w-40 overflow-hidden rounded-xl border border-[var(--border-default)] bg-[var(--bg-elevated)] py-1 shadow-[var(--shadow-lg)]">
+                      <div className="absolute right-0 top-full z-20 mt-1 w-40 overflow-hidden rounded-xl border border-[var(--border-default)] bg-[var(--bg-elevated)] py-1 shadow-[var(--shadow-lg)]">
                         <button
                           onClick={() => {
                             setEditOpen(true);
@@ -352,6 +400,11 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
         {/* Duel Header */}
         {challenge.type === "DUEL" && challenge.isJoined && <DuelHeader challengeId={id} />}
 
+        {/* Day Plan (current day task) */}
+        {challenge.isJoined && dayPlans && dayPlans.length > 0 && (
+          <ChallengeDayPlan plan={dayPlans.find((p) => p.dayNumber === currentDay) ?? null} />
+        )}
+
         {/* Calendar + Check-In */}
         {challenge.isJoined && calendar && (
           <div className="space-y-3">
@@ -364,12 +417,15 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
                 if (!entry?.completed) showCheckIn(day);
               }}
             />
-            {!isPastEndDate && (
+            {!isPastEndDate && challenge.isJoined && currentDay <= totalDays && (
               <Button
                 variant="gradient"
                 size="sm"
                 disabled={todayCheckedIn}
-                onClick={() => showCheckIn(today)}
+                onClick={() => {
+                  setCheckInDayNumber(undefined);
+                  setCheckInDay(currentDay);
+                }}
                 className="w-full"
               >
                 {todayCheckedIn ? "Already Checked In Today" : "Check In Today"}
@@ -378,7 +434,7 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
           </div>
         )}
 
-        {challenge.type !== "SOLO" && (
+        {challenge.type !== "SOLO" && challenge.isJoined && !challenge.isFull && (
           <div className="flex items-center gap-2">
             <Button
               variant="secondary"
@@ -391,15 +447,40 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
           </div>
         )}
 
+        {/* Charts & Heat Map */}
+        {challenge.isJoined && calendar && (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <ChallengeProgressChart days={calendar.days} goalUnit={challenge.goalUnit} />
+            <ChallengeHeatMap days={calendar.days} dayCount={challenge.dayCount || 30} />
+          </div>
+        )}
+
         {/* Activity Feed */}
         <ChallengeActivityFeed challengeId={id} />
 
         {/* Before & After */}
-        {challenge.isJoined && beforeAfter && (beforeAfter.before || beforeAfter.after) && (
-          <BeforeAfterSection data={beforeAfter} challengeId={id} />
+        {challenge.isJoined && beforeAfter && (
+          <BeforeAfterSection
+            data={beforeAfter}
+            challengeId={id}
+            isCompleted={challenge.myProgress?.completed === true}
+          />
         )}
 
         <ChallengeComments challengeId={id} />
+
+        {/* Rating */}
+        {challenge.isJoined && challenge.myProgress?.completed && (
+          <ChallengeRating
+            userRating={userRating}
+            averageRating={challenge.averageRating}
+            ratingCount={challenge.ratingCount}
+            onRate={async (rating) => {
+              await rateChallenge({ challengeId: id, rating }).unwrap();
+              setUserRating(rating);
+            }}
+          />
+        )}
 
         <ChallengeLeaderboard
           entries={leaderboard || []}
@@ -413,13 +494,18 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
       {checkInDay && challenge && (
         <CheckInModal
           challengeId={id}
-          dayNumber={checkInDay}
+          currentDay={currentDay}
           totalDays={challenge.dayCount || 30}
           open={!!checkInDay}
-          onClose={() => setCheckInDay(null)}
-          existingEntry={calendar?.days.find((d) => d.dayNumber === checkInDay) ?? null}
+          onClose={() => {
+            setCheckInDay(null);
+            setCheckInDayNumber(undefined);
+          }}
+          dayNumber={checkInDayNumber}
+          dayPlan={dayPlans?.find((p) => p.dayNumber === checkInDay) ?? null}
           goalTarget={challenge.goalTarget}
           goalUnit={challenge.goalUnit}
+          hasDayPlans={!!dayPlans && dayPlans.length > 0}
         />
       )}
       {editOpen && (

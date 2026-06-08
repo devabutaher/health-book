@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { MessageCircle } from "lucide-react";
@@ -8,7 +9,7 @@ import { useGetUnreadCountQuery } from "@/redux/api/messagingApi";
 import { useAppSelector } from "@/hooks";
 import { cn } from "@/lib/utils";
 
-export default function MessagesBell() {
+const MessagesBell = memo(function MessagesBell() {
   const pathname = usePathname();
   const isAuthLoading = useAppSelector((s) => s.auth.isLoading);
   const { data } = useGetUnreadCountQuery(undefined, {
@@ -53,4 +54,6 @@ export default function MessagesBell() {
       </AnimatePresence>
     </Link>
   );
-}
+});
+
+export default MessagesBell;

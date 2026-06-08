@@ -76,10 +76,14 @@ export function FeatureDiscoveryCards() {
       ref={scrollRef}
       onScroll={checkShadow}
       className="mb-6 flex gap-3 overflow-x-auto scrollbar-none sm:grid sm:grid-cols-5 sm:gap-3"
-      style={showShadow ? {
-        maskImage: "linear-gradient(to right, black 90%, transparent)",
-        WebkitMaskImage: "linear-gradient(to right, black 90%, transparent)",
-      } : undefined}
+      style={
+        showShadow
+          ? {
+              maskImage: "linear-gradient(to right, black 90%, transparent)",
+              WebkitMaskImage: "linear-gradient(to right, black 90%, transparent)",
+            }
+          : undefined
+      }
     >
       {FEATURES.map((feature) => (
         <Link

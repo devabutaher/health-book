@@ -65,19 +65,24 @@ export const authService = {
       throw new AppError(400, "Registration failed. Please check your information.");
     }
 
-    const user = await prisma.user.create({
-      data: {
-        id: authData.user.id,
-        email,
-        name,
-        username,
-        gender,
-      },
-    });
+    try {
+      const user = await prisma.user.create({
+        data: {
+          id: authData.user.id,
+          email,
+          name,
+          username,
+          gender,
+        },
+      });
 
-    sendWelcomeEmail(user.email, user.name).catch(() => {});
+      sendWelcomeEmail(user.email, user.name).catch(() => {});
 
-    return user;
+      return user;
+    } catch (err) {
+      await supabase.auth.admin.deleteUser(authData.user.id).catch(() => {});
+      throw err;
+    }
   },
 
   async login(email: string, password: string) {
@@ -105,7 +110,7 @@ export const authService = {
     const { data, error } = await supabase.auth.refreshSession({ refresh_token: refreshToken });
     if (error) {
       console.error("[auth] refreshSession failed:", error.message, error.code);
-      throw error;
+      throw new AppError(401, "Session expired. Please login again.");
     }
     if (!data.session || !data.user) {
       console.error("[auth] refreshSession returned no session or user");

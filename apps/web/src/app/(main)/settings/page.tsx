@@ -54,9 +54,9 @@ import { useUpdateProfileMutation } from "@/redux/api/userApi";
 import { useTheme } from "@/hooks/useTheme";
 import { staggerContainer, staggerItem } from "@/lib/motion/variants";
 import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/getErrorMessage";
 
 export default function SettingsPage() {
-
   const dispatch = useAppDispatch();
   const { setTheme } = useTheme();
   const currentUser = useAppSelector((s) => s.auth.user);
@@ -91,11 +91,16 @@ export default function SettingsPage() {
 
   const handleSaveProfile = async () => {
     try {
-      const result = await updateProfile({ name: name.trim(), bio: bio.trim() || undefined, isPrivate, gender: gender || undefined }).unwrap();
+      const result = await updateProfile({
+        name: name.trim(),
+        bio: bio.trim() || undefined,
+        isPrivate,
+        gender: gender || undefined,
+      }).unwrap();
       if (result.data) dispatch(setUser(result.data));
       toast.success("Profile updated");
-    } catch {
-      toast.error("Failed to update profile");
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Failed to update profile"));
     }
   };
 
@@ -129,7 +134,6 @@ export default function SettingsPage() {
               </div>
 
               <FieldGroup className="gap-5">
-
                 <Separator />
 
                 <Field>
@@ -380,9 +384,9 @@ export default function SettingsPage() {
                         try {
                           await updateProfile({ isPrivate: v }).unwrap();
                           toast.success(v ? "Account set to private" : "Account set to public");
-                        } catch {
+                        } catch (err) {
                           setIsPrivate(!v);
-                          toast.error("Failed to update privacy");
+                          toast.error(getErrorMessage(err, "Failed to update privacy"));
                         }
                       }}
                       aria-label="Toggle private account"

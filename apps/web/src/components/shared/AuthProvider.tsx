@@ -6,6 +6,7 @@ import { useGetMeQuery } from "@/redux/api/authApi";
 import { setTokens, setCredentials, setLoading, logout } from "@/redux/slices/authSlice";
 import { supabase } from "@/lib/supabase";
 import { usePresenceRealtime } from "@/hooks/usePresenceRealtime";
+import { setRealtimeStatus } from "@/lib/realtimeConnectionStore";
 
 function getCookie(name: string): string | null {
   const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
@@ -44,10 +45,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const dispatch = useAppDispatch();
   const accessToken = useAppSelector((s) => s.auth.accessToken);
   const refreshToken = useAppSelector((s) => s.auth.refreshToken);
-  const isAuthenticated = useAppSelector((s) => s.auth.isAuthenticated);
   const { data, isError, error, refetch } = useGetMeQuery(undefined, { skip: !accessToken });
   const initRef = useRef(false);
   const retryTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const retryCount = useRef(0);
+  const MAX_RETRIES = 3;
 
   usePresenceRealtime();
 
@@ -77,36 +79,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    setAuthCookie(null);
+    clearCookie("hb_rt");
     dispatch(setLoading(false));
   }, [dispatch]);
 
+  // Capture refetch in a ref to stabilize the effect dependency
+  const refetchRef = useRef(refetch);
+  refetchRef.current = refetch;
+
   useEffect(() => {
+    // Guard: don't stack retry timers
+    if (retryTimer.current) return;
+
     if (data && data.data) {
       clearTimeout(retryTimer.current);
-      dispatch(setCredentials({
-        user: data.data,
-        accessToken: accessToken!,
-        refreshToken: refreshToken!,
-      }));
+      retryCount.current = 0;
+      dispatch(
+        setCredentials({
+          user: data.data,
+          accessToken: accessToken!,
+          refreshToken: refreshToken!,
+        }),
+      );
     } else if (isError) {
       const isAuthError = error && "status" in error && error.status === 401;
       if (isAuthError && !refreshToken) {
-        dispatch(logout());
-      } else if (isAuthError) {
+        clearTimeout(retryTimer.current);
         dispatch(setLoading(false));
+        dispatch(logout());
+      } else if (retryCount.current < MAX_RETRIES) {
+        retryCount.current += 1;
+        const delay = retryCount.current === 1 ? 3000 : 5000;
+        retryTimer.current = setTimeout(() => refetchRef.current(), delay);
       } else {
-        // Transient error (network, 5xx). Tokens are likely still valid.
-        // Retry instead of redirecting to login.
-        const stored = loadTokensFromStorage();
-        if (stored.accessToken) {
-          retryTimer.current = setTimeout(() => refetch(), 3000);
-        } else {
-          dispatch(setLoading(false));
-        }
+        clearTimeout(retryTimer.current);
+        dispatch(setLoading(false));
       }
     }
     return () => clearTimeout(retryTimer.current);
-  }, [data, isError, error, dispatch, accessToken, refreshToken, refetch]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, isError, error, dispatch]);
 
   useEffect(() => {
     if (accessToken) {
@@ -115,16 +128,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [accessToken]);
 
   useEffect(() => {
+    const channel = supabase.channel("hb-system");
+    channel.subscribe((status) => {
+      if (status === "SUBSCRIBED") setRealtimeStatus("connected");
+      else if (status === "CHANNEL_ERROR") setRealtimeStatus("error");
+      else if (status === "TIMED_OUT") setRealtimeStatus("disconnected");
+    });
+    return () => {
+      channel.unsubscribe();
+      supabase.removeChannel(channel);
+      setRealtimeStatus("disconnected");
+    };
+  }, [accessToken]);
+
+  useEffect(() => {
     const proto = location.protocol === "https:" ? "; Secure" : "";
     const base = `path=/; maxAge=604800; SameSite=Lax${proto}`;
-    if (isAuthenticated && accessToken) {
+    if (accessToken) {
       setAuthCookie(accessToken);
       document.cookie = `hb_rt=${refreshToken}; ${base}`;
-    } else if (!accessToken) {
+    } else {
       setAuthCookie(null);
       document.cookie = "hb_rt=; path=/; maxAge=0; SameSite=Lax";
     }
-  }, [isAuthenticated, accessToken, refreshToken]);
+  }, [accessToken, refreshToken]);
 
   return <>{children}</>;
 }

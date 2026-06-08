@@ -2,35 +2,54 @@
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import dynamic from "next/dynamic";
-import { FileText, Plus, Users } from "lucide-react";
+import { Component, type ReactNode } from "react";
+import { FileText, Plus, Users, LogIn, LogOut } from "lucide-react";
 import { motion } from "framer-motion";
+import { Virtuoso } from "react-virtuoso";
 import { PostCard } from "@/components/post/PostCard";
 import { PostSkeletonList } from "@/components/shared/PostSkeleton";
 import { useGetDraftsQuery, useGetFeedQuery } from "@/redux/api/postApi";
+import { useFeedRealtime } from "@/hooks/useFeedRealtime";
 import { useAppSelector } from "@/hooks";
 import { useFeedPagination } from "@/hooks/useFeedPagination";
 import type { Post } from "@/types/post";
 import { Button } from "@/components/ui/button";
 import { Empty, EmptyDescription, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
-import { staggerContainer } from "@/lib/motion/variants";
 import { MobilePeoplePanel } from "@/components/shared/MobilePeoplePanel";
+import Link from "next/link";
 
-const CreatePostModal = dynamic(() =>
-  import("@/components/post/CreatePostModal").then((m) => ({ default: m.CreatePostModal })),
+class PostCardErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
+  state = { hasError: false };
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  render() {
+    if (this.state.hasError) {
+      return <p className="p-4 text-center text-sm text-muted-foreground">Failed to load post</p>;
+    }
+    return this.props.children;
+  }
+}
+
+const CreatePostModal = dynamic(
+  () => import("@/components/post/CreatePostModal").then((m) => ({ default: m.CreatePostModal })),
   { ssr: false },
 );
-const DraftsDialog = dynamic(() =>
-  import("@/components/post/DraftsDialog").then((m) => ({ default: m.DraftsDialog })),
+const DraftsDialog = dynamic(
+  () => import("@/components/post/DraftsDialog").then((m) => ({ default: m.DraftsDialog })),
   { ssr: false },
 );
 const StoryRow = dynamic(() =>
   import("@/components/stories/StoryRow").then((m) => ({ default: m.StoryRow })),
 );
 const FeatureDiscoveryCards = dynamic(() =>
-  import("@/components/shared/FeatureDiscoveryCards").then((m) => ({ default: m.FeatureDiscoveryCards })),
+  import("@/components/shared/FeatureDiscoveryCards").then((m) => ({
+    default: m.FeatureDiscoveryCards,
+  })),
 );
 
 export default function FeedPage() {
+  useFeedRealtime();
   const [createOpen, setCreateOpen] = useState(false);
   const [draftsOpen, setDraftsOpen] = useState(false);
   const { data: draftsData } = useGetDraftsQuery();
@@ -38,20 +57,41 @@ export default function FeedPage() {
     ? draftsData.length
     : ((draftsData as { data?: unknown[] } | undefined)?.data?.length ?? 0);
   const accessToken = useAppSelector((s) => s.auth.accessToken);
+  const authLoading = useAppSelector((s) => s.auth.isLoading);
   const { cursor, allPosts, loadMore, applyPage, reset } = useFeedPagination<Post>();
-  const { data, isLoading, isFetching, isError, refetch } = useGetFeedQuery(
+  const { data, isLoading, isFetching, isError, error, refetch } = useGetFeedQuery(
     { cursor },
     { skip: !accessToken },
   );
-  const loaderRef = useRef<HTMLDivElement>(null);
+  const [loadingTimedOut, setLoadingTimedOut] = useState(false);
+  const isFetchingRef = useRef(isFetching);
+  isFetchingRef.current = isFetching;
+  const hasMoreRef = useRef(data?.data?.hasMore);
+  const cursorRef = useRef(data?.data?.nextCursor);
+  hasMoreRef.current = data?.data?.hasMore ?? false;
+  cursorRef.current = data?.data?.nextCursor ?? null;
 
+  const isAuthError = error && "status" in error && error.status === 401;
+
+  useEffect(() => {
+    if (!isLoading) return;
+    const timer = setTimeout(() => setLoadingTimedOut(true), 15000);
+    return () => {
+      clearTimeout(timer);
+      setLoadingTimedOut(false);
+    };
+  }, [isLoading]);
+
+  const appendRef = useRef(false);
   useEffect(() => {
     if (!data?.data) return;
     applyPage(
       { posts: data.data.posts, nextCursor: data.data.nextCursor, hasMore: data.data.hasMore },
-      Boolean(cursor),
+      appendRef.current,
     );
-  }, [data, cursor, applyPage]);
+    appendRef.current = true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data]);
 
   const handlePostCreated = useCallback(() => {
     reset();
@@ -66,23 +106,11 @@ export default function FeedPage() {
     return () => window.removeEventListener("app:pulltorefresh", handler);
   }, [reset, refetch]);
 
-  const handleObserver = useCallback(
-    (entries: IntersectionObserverEntry[]) => {
-      const target = entries[0];
-      if (target.isIntersecting && data?.data?.hasMore && !isFetching && data.data.nextCursor) {
-        loadMore(data.data.nextCursor);
-      }
-    },
-    [data, isFetching, loadMore],
-  );
-
-  useEffect(() => {
-    const el = loaderRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(handleObserver, { threshold: 0.1 });
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [handleObserver]);
+  const endReached = useCallback(() => {
+    if (hasMoreRef.current && cursorRef.current && !isFetchingRef.current) {
+      loadMore(cursorRef.current);
+    }
+  }, [loadMore]);
 
   return (
     <>
@@ -117,18 +145,47 @@ export default function FeedPage() {
 
         <FeatureDiscoveryCards />
 
-        {!accessToken || isLoading ? (
+        {authLoading ? (
           <PostSkeletonList count={3} />
-        ) : isError && allPosts.length === 0 ? (
+        ) : !accessToken ? (
           <Empty>
             <EmptyMedia variant="gradient">
-              <Users />
+              <LogIn />
             </EmptyMedia>
-            <EmptyTitle>Couldn&apos;t load your feed</EmptyTitle>
-            <EmptyDescription>Check your connection and try again.</EmptyDescription>
-            <Button variant="outline" onClick={() => refetch()}>
-              Try again
-            </Button>
+            <EmptyTitle>Sign in to see your feed</EmptyTitle>
+            <EmptyDescription>
+              Log in to follow people and see their health journey posts.
+            </EmptyDescription>
+            <Link href="/login">
+              <Button variant="gradient">
+                <LogIn /> Sign In
+              </Button>
+            </Link>
+          </Empty>
+        ) : isLoading && !loadingTimedOut && allPosts.length === 0 ? (
+          <PostSkeletonList count={3} />
+        ) : (isError || loadingTimedOut) && allPosts.length === 0 ? (
+          <Empty>
+            <EmptyMedia variant="gradient">{isAuthError ? <LogOut /> : <Users />}</EmptyMedia>
+            <EmptyTitle>
+              {isAuthError ? "Session expired" : "Couldn&apos;t load your feed"}
+            </EmptyTitle>
+            <EmptyDescription>
+              {isAuthError
+                ? "Your session has expired. Please log in again to continue."
+                : "Check your connection and try again."}
+            </EmptyDescription>
+            {isAuthError ? (
+              <Link href="/login">
+                <Button variant="gradient">
+                  <LogIn /> Log in
+                </Button>
+              </Link>
+            ) : (
+              <Button variant="outline" onClick={() => refetch()}>
+                Try again
+              </Button>
+            )}
           </Empty>
         ) : allPosts.length === 0 ? (
           <Empty>
@@ -144,26 +201,37 @@ export default function FeedPage() {
             </Button>
           </Empty>
         ) : (
-          <motion.div
-            variants={staggerContainer}
-            initial="initial"
-            animate="animate"
-            className="flex flex-col gap-4"
-          >
-            {allPosts.map((post) => (
-              <PostCard key={post.id} post={post} />
-            ))}
-          </motion.div>
+          <Virtuoso
+            useWindowScroll
+            data={allPosts}
+            endReached={endReached}
+            increaseViewportBy={400}
+            overscan={200}
+            itemContent={(index, post) => (
+              <div key={post.id} className="pb-4">
+                <PostCardErrorBoundary>
+                  <PostCard post={post} />
+                </PostCardErrorBoundary>
+              </div>
+            )}
+            components={{
+              Footer: () => (
+                <>
+                  {isError && allPosts.length > 0 && (
+                    <p className="mb-4 text-center text-sm text-muted-foreground">
+                      Error loading more posts
+                    </p>
+                  )}
+                  {isFetching && allPosts.length > 0 && (
+                    <div className="mb-4 flex justify-center">
+                      <div className="size-5 animate-spin rounded-full border-2 border-brand-teal border-t-transparent" />
+                    </div>
+                  )}
+                </>
+              ),
+            }}
+          />
         )}
-
-        {isError && allPosts.length > 0 && (
-          <p className="mt-4 text-center text-sm text-muted-foreground">Error loading more posts</p>
-        )}
-        {isFetching && allPosts.length > 0 && (
-          <p className="mt-4 text-center text-sm text-muted-foreground">Loading more...</p>
-        )}
-
-        <div ref={loaderRef} className="h-4" />
       </div>
 
       <CreatePostModal

@@ -1,9 +1,11 @@
 "use client";
 
+import { memo } from "react";
 import Image from "next/image";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { motion } from "framer-motion";
 import type { StoryGroup } from "@/types/story";
+import { getImageUrl } from "@/lib/utils";
 import { Type, HelpCircle, BarChart3 } from "lucide-react";
 
 const typeIcons = {
@@ -12,7 +14,7 @@ const typeIcons = {
   poll: BarChart3,
 };
 
-export function StoryCircle({
+export const StoryCircle = memo(function StoryCircle({
   group,
   storyMediaUrl,
   storyType,
@@ -33,16 +35,20 @@ export function StoryCircle({
   return (
     <button
       onClick={onClick}
-      className="relative h-44 w-28 shrink-0 overflow-hidden rounded-2xl transition-transform active:scale-95"
+      className="relative h-44 w-28 shrink-0 overflow-hidden rounded-2xl bg-(--bg-subtle) transition-transform active:scale-95"
     >
       {storyMediaUrl ? (
         <Image
-          src={storyMediaUrl}
+          src={getImageUrl(storyMediaUrl, "q_auto:good,f_auto") ?? storyMediaUrl}
           alt={group.user.name}
           className="absolute inset-0 h-full w-full object-cover"
           width={112}
           height={176}
           priority
+          placeholder="blur"
+          blurDataURL={
+            getImageUrl(storyMediaUrl, "w_20,e_blur:2000,q_auto:low,f_auto") ?? undefined
+          }
         />
       ) : (
         <div
@@ -79,7 +85,10 @@ export function StoryCircle({
         <div className="relative rounded-full bg-black/40 p-[2px]">
           <Avatar size="sm" className="size-7">
             {group.user.avatar ? (
-              <AvatarImage src={group.user.avatar} alt={group.user.name} />
+              <AvatarImage
+                src={getImageUrl(group.user.avatar, "q_auto,f_auto") ?? group.user.avatar}
+                alt={group.user.name}
+              />
             ) : null}
             <AvatarFallback className="bg-gradient-to-br from-brand-teal to-brand-green text-[10px] text-white">
               {group.user.name?.charAt(0)?.toUpperCase() || "?"}
@@ -92,4 +101,4 @@ export function StoryCircle({
       </span>
     </button>
   );
-}
+});

@@ -20,19 +20,13 @@ import { HighlightManager } from "@/components/stories/HighlightManager";
 import { ChallengeStatsCard } from "@/components/challenges/ChallengeStatsCard";
 import { DuelCreationModal } from "@/components/challenges/DuelCreationModal";
 import { useAppSelector } from "@/hooks";
+import { useUserRealtime } from "@/hooks/useUserRealtime";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import HealthLogCard from "@/components/health/HealthLogCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Empty, EmptyDescription, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import {
-  AlertCircle,
-  Bookmark,
-  FileText,
-  Heart,
-  Image as ImageIcon,
-  Swords,
-} from "lucide-react";
+import { AlertCircle, Bookmark, FileText, Heart, Image as ImageIcon, Swords } from "lucide-react";
 import { staggerContainer, staggerItem } from "@/lib/motion/variants";
 import type { HealthLog } from "@/redux/api/healthLogApi";
 
@@ -40,10 +34,11 @@ export default function ProfilePage() {
   const { username } = useParams<{ username: string }>();
   const currentUser = useAppSelector((s) => s.auth.user);
   const { data, isLoading, error } = useGetProfileQuery(username);
+  useUserRealtime();
   const [editOpen, setEditOpen] = useState(false);
   const [followersOpen, setFollowersOpen] = useState(false);
   const [followersTab, setFollowersTab] = useState<"followers" | "following">("followers");
-  const profile = data?.data;
+  const profile = data;
   const isOwner = currentUser?.username === username;
 
   const [highlightsOpen, setHighlightsOpen] = useState(false);
@@ -67,27 +62,27 @@ export default function ProfilePage() {
 
   if (isLoading) {
     return (
-        <div className="mx-auto max-w-3xl">
-          <Skeleton className="h-56 rounded-2xl" />
-          <div className="mt-6 space-y-2 px-6">
-            <Skeleton className="h-6 w-48" />
-            <Skeleton className="h-4 w-32" />
-          </div>
+      <div className="mx-auto max-w-3xl">
+        <Skeleton className="h-56 rounded-2xl" />
+        <div className="mt-6 space-y-2 px-6">
+          <Skeleton className="h-6 w-48" />
+          <Skeleton className="h-4 w-32" />
         </div>
+      </div>
     );
   }
 
   if (error || !profile) {
     return (
-        <div className="mx-auto max-w-3xl">
-          <Alert variant="destructive">
-            <AlertCircle />
-            <AlertTitle>User not found</AlertTitle>
-            <AlertDescription>
-              The user @{username} doesn&apos;t exist or has been removed.
-            </AlertDescription>
-          </Alert>
-        </div>
+      <div className="mx-auto max-w-3xl">
+        <Alert variant="destructive">
+          <AlertCircle />
+          <AlertTitle>User not found</AlertTitle>
+          <AlertDescription>
+            The user @{username} doesn&apos;t exist or has been removed.
+          </AlertDescription>
+        </Alert>
+      </div>
     );
   }
 

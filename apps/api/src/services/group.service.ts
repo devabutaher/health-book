@@ -1,5 +1,6 @@
 import { prisma } from "../lib/prisma";
 import { AppError } from "../utils/AppError";
+import { broadcastRealtime } from "../utils/realtime";
 import { deleteImage, extractPublicId } from "./cloudinary";
 import type { GroupType, GroupRole } from "../../generated/prisma";
 
@@ -92,6 +93,7 @@ export const groupService = {
         },
       },
       orderBy: { joinedAt: "desc" },
+      take: 100,
     });
 
     return memberships.map((m) => ({
@@ -245,9 +247,13 @@ export const groupService = {
       throw new AppError(403, "Private groups require admin approval");
     }
 
-    return prisma.groupMember.create({
+    const membership = await prisma.groupMember.create({
       data: { groupId, userId, role: "MEMBER" },
     });
+
+    broadcastRealtime(`hb-group:${groupId}`, "MEMBER_JOINED", { groupId, userId }).catch(() => {});
+
+    return membership;
   },
 
   async leave(groupId: string, userId: string) {
@@ -266,6 +272,8 @@ export const groupService = {
     await prisma.groupMember.delete({
       where: { groupId_userId: { groupId, userId } },
     });
+
+    broadcastRealtime(`hb-group:${groupId}`, "MEMBER_LEFT", { groupId, userId }).catch(() => {});
   },
 
   async getMembers(groupId: string, requesterId: string | undefined, cursor?: string, limit = 50) {
@@ -355,13 +363,21 @@ export const groupService = {
         where: { groupId, role: "ADMIN" },
       });
       if (adminCount <= 1) {
-        throw new AppError(400, "Cannot remove the only admin. Demote or promote another member first.");
+        throw new AppError(
+          400,
+          "Cannot remove the only admin. Demote or promote another member first.",
+        );
       }
     }
 
     await prisma.groupMember.delete({
       where: { groupId_userId: { groupId, userId: targetUserId } },
     });
+
+    broadcastRealtime(`hb-group:${groupId}`, "MEMBER_REMOVED", {
+      groupId,
+      userId: targetUserId,
+    }).catch(() => {});
   },
 
   // ── Join Requests ──
@@ -411,6 +427,7 @@ export const groupService = {
         user: { select: { id: true, name: true, username: true, avatar: true, isVerified: true } },
       },
       orderBy: { createdAt: "desc" },
+      take: 100,
     });
   },
 
@@ -498,6 +515,7 @@ export const groupService = {
         inviter: { select: { id: true, name: true, username: true, avatar: true } },
       },
       orderBy: { createdAt: "desc" },
+      take: 100,
     });
   },
 
@@ -551,6 +569,7 @@ export const groupService = {
         inviter: { select: { id: true, name: true, username: true, avatar: true } },
       },
       orderBy: { createdAt: "desc" },
+      take: 100,
     });
   },
 };

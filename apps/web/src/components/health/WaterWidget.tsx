@@ -7,6 +7,7 @@ import { useCreateHealthLogMutation } from "@/redux/api/healthLogApi";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/getErrorMessage";
 import { getTemplate } from "./templates";
 import { playSipSound } from "@/lib/sounds";
 import { soundManager } from "@/lib/soundManager";
@@ -40,9 +41,9 @@ export default function WaterWidget() {
       JSON.stringify({ date: new Date().toDateString(), count: next }),
     );
     if (next === 1 || next % 2 === 0) {
-      createLog({ type: "QUICK", data: { type: "water", glasses: next } }).catch(() => {
+      createLog({ type: "QUICK", data: { type: "water", glasses: next } }).catch((err) => {
         soundManager.playError();
-        toast.error("Failed to log");
+        toast.error(getErrorMessage(err, "Failed to log"));
       });
     }
   };

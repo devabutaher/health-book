@@ -4,6 +4,22 @@ import { createBaseQuery } from "../baseQuery";
 import { reelsApi } from "./reelsApi";
 import { postApi } from "./postApi";
 import type { RootState } from "../store";
+import { soundManager } from "@/lib/soundManager";
+
+export interface ProfileData {
+  id: string;
+  name: string;
+  username: string;
+  bio: string | null;
+  avatar: string | null;
+  coverPhoto: string | null;
+  isVerified: boolean;
+  isFollowing: boolean;
+  streak?: number;
+  healthScore?: number;
+  _count: { posts: number; followers: number; following: number };
+  createdAt: string;
+}
 
 export interface SuggestedUser {
   id: string;
@@ -16,11 +32,14 @@ export interface SuggestedUser {
 export const userApi = createApi({
   reducerPath: "userApi",
   baseQuery: createBaseQuery(`${process.env["NEXT_PUBLIC_API_URL"]}/api/users`),
-  tagTypes: ["Profile", "Followers", "Following", "Suggested", "Feed", "Reels"],
+  tagTypes: ["Profile", "Followers", "Following", "Suggested"],
+  refetchOnFocus: false,
+  refetchOnReconnect: true,
   endpoints: (builder) => ({
-    getProfile: builder.query({
-      query: (username: string) => `/${username}`,
+    getProfile: builder.query<ProfileData, string>({
+      query: (username) => `/${username}`,
       providesTags: (_result, _error, username) => [{ type: "Profile", id: username }],
+      transformResponse: (response: { success: boolean; data: ProfileData }) => response.data,
       keepUnusedDataFor: 300,
     }),
     updateProfile: builder.mutation({
@@ -30,6 +49,22 @@ export const userApi = createApi({
         body,
       }),
       invalidatesTags: ["Profile"],
+      onQueryStarted: async (body, { dispatch, getState, queryFulfilled }) => {
+        const username = (getState() as RootState).auth.user?.username;
+        if (!username) return;
+        const patch = dispatch(
+          userApi.util.updateQueryData("getProfile", username, (draft: any) => {
+            if (!draft) return;
+            Object.assign(draft, body);
+          }),
+        );
+        try {
+          await queryFulfilled;
+        } catch {
+          soundManager.playError();
+          patch.undo();
+        }
+      },
     }),
     follow: builder.mutation({
       query: (userId: string) => ({
@@ -61,9 +96,9 @@ export const userApi = createApi({
         if (targetUsername) {
           const p1 = dispatch(
             userApi.util.updateQueryData("getProfile", targetUsername, (draft: any) => {
-              draft.data.isFollowing = true;
-              if (draft.data?._count?.followers !== undefined) {
-                draft.data._count.followers += 1;
+              draft.isFollowing = true;
+              if (draft?._count?.followers !== undefined) {
+                draft._count.followers += 1;
               }
             }),
           );
@@ -73,8 +108,8 @@ export const userApi = createApi({
         // Update current user's following count
         const p2 = dispatch(
           userApi.util.updateQueryData("getProfile", currentUser.username, (draft: any) => {
-            if (draft.data?._count?.following !== undefined) {
-              draft.data._count.following += 1;
+            if (draft?._count?.following !== undefined) {
+              draft._count.following += 1;
             }
           }),
         );
@@ -124,6 +159,7 @@ export const userApi = createApi({
         try {
           await queryFulfilled;
         } catch {
+          soundManager.playError();
           patches.forEach((p) => p.undo());
         }
       },
@@ -157,9 +193,9 @@ export const userApi = createApi({
         if (targetUsername) {
           const p1 = dispatch(
             userApi.util.updateQueryData("getProfile", targetUsername, (draft: any) => {
-              draft.data.isFollowing = false;
-              if (draft.data?._count?.followers !== undefined) {
-                draft.data._count.followers = Math.max(0, draft.data._count.followers - 1);
+              draft.isFollowing = false;
+              if (draft?._count?.followers !== undefined) {
+                draft._count.followers = Math.max(0, draft._count.followers - 1);
               }
             }),
           );
@@ -169,8 +205,8 @@ export const userApi = createApi({
         // Update current user's following count
         const p2 = dispatch(
           userApi.util.updateQueryData("getProfile", currentUser.username, (draft: any) => {
-            if (draft.data?._count?.following !== undefined) {
-              draft.data._count.following = Math.max(0, draft.data._count.following - 1);
+            if (draft?._count?.following !== undefined) {
+              draft._count.following = Math.max(0, draft._count.following - 1);
             }
           }),
         );
@@ -220,6 +256,7 @@ export const userApi = createApi({
         try {
           await queryFulfilled;
         } catch {
+          soundManager.playError();
           patches.forEach((p) => p.undo());
         }
       },
@@ -231,6 +268,22 @@ export const userApi = createApi({
         body,
       }),
       invalidatesTags: ["Profile"],
+      onQueryStarted: async (_body, { dispatch, getState, queryFulfilled }) => {
+        const username = (getState() as RootState).auth.user?.username;
+        if (!username) return;
+        try {
+          const { data: res } = await queryFulfilled;
+          const avatar = (res as any)?.data?.avatar;
+          if (!avatar) return;
+          dispatch(
+            userApi.util.updateQueryData("getProfile", username, (draft: any) => {
+              if (draft) draft.avatar = avatar;
+            }),
+          );
+        } catch {
+          soundManager.playError();
+        }
+      },
     }),
     uploadCover: builder.mutation({
       query: (body: FormData) => ({
@@ -239,6 +292,22 @@ export const userApi = createApi({
         body,
       }),
       invalidatesTags: ["Profile"],
+      onQueryStarted: async (_body, { dispatch, getState, queryFulfilled }) => {
+        const username = (getState() as RootState).auth.user?.username;
+        if (!username) return;
+        try {
+          const { data: res } = await queryFulfilled;
+          const coverPhoto = (res as any)?.data?.coverPhoto;
+          if (!coverPhoto) return;
+          dispatch(
+            userApi.util.updateQueryData("getProfile", username, (draft: any) => {
+              if (draft) draft.coverPhoto = coverPhoto;
+            }),
+          );
+        } catch {
+          soundManager.playError();
+        }
+      },
     }),
     getFollowers: builder.query({
       query: ({ userId, cursor }: { userId: string; cursor?: string }) =>

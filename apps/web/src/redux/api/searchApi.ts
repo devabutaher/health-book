@@ -12,6 +12,8 @@ export const searchApi = createApi({
   reducerPath: "searchApi",
   baseQuery: createBaseQuery(`${process.env["NEXT_PUBLIC_API_URL"]}/api/search`),
   tagTypes: ["Search"],
+  refetchOnFocus: false,
+  refetchOnReconnect: true,
   endpoints: (builder) => ({
     searchUsers: builder.query<SearchUser[], string>({
       query: (q) => `/users?q=${encodeURIComponent(q)}`,

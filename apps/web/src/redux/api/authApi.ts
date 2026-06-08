@@ -4,6 +4,9 @@ import { createBaseQuery } from "../baseQuery";
 export const authApi = createApi({
   reducerPath: "authApi",
   baseQuery: createBaseQuery(`${process.env["NEXT_PUBLIC_API_URL"]}/api/auth`),
+  tagTypes: ["Me"],
+  refetchOnFocus: false,
+  refetchOnReconnect: true,
   endpoints: (builder) => ({
     login: builder.mutation({
       query: (body: { email: string; password: string }) => ({
@@ -33,6 +36,7 @@ export const authApi = createApi({
     }),
     getMe: builder.query({
       query: () => "/me",
+      providesTags: ["Me"],
       keepUnusedDataFor: 600,
     }),
     forgotPassword: builder.mutation({

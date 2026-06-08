@@ -4,20 +4,21 @@ import { useState } from "react";
 import { UserAvatar } from "@/components/shared/UserAvatar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useFollowMutation, useGetSuggestedQuery } from "@/redux/api/userApi";
+import { useGetSuggestedQuery } from "@/redux/api/userApi";
+import { useFollowActions } from "@/hooks/useFollow";
 import Link from "next/link";
 import { toast } from "sonner";
 
 export function SuggestedSection() {
   const { data, isLoading } = useGetSuggestedQuery(undefined);
-  const [follow] = useFollowMutation();
+  const { follow } = useFollowActions();
   const [followedIds, setFollowedIds] = useState<Set<string>>(new Set());
   const users = data || [];
 
   const handleFollow = async (userId: string) => {
     setFollowedIds((prev) => new Set(prev).add(userId));
     try {
-      await follow(userId).unwrap();
+      await follow(userId);
     } catch {
       setFollowedIds((prev) => {
         const next = new Set(prev);

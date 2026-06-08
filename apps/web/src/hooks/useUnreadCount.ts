@@ -28,40 +28,27 @@ export function useUnreadCount() {
     if (!userId || !accessToken) return;
 
     let channel: ReturnType<typeof supabase.channel> | null = null;
-    let cancel = false;
 
-    ;(async () => {
-      try {
-        await supabase.realtime.setAuth(accessToken);
-      } catch (err) {
-        console.error("useUnreadCount Realtime auth failed", err);
-        return;
-      }
+    channel = supabase.channel(`hb-notification:${userId}`, {
+      config: { private: false },
+    });
 
-      if (cancel) return;
+    channel
+      .on("broadcast", { event: "INSERT" }, (payload) => {
+        dispatch(notificationApi.util.invalidateTags(["Notifications"]));
 
-      channel = supabase.channel(`notification:${userId}`, {
-        config: { private: false },
-      });
-
-      channel
-        .on("broadcast", { event: "INSERT" }, (payload) => {
-          dispatch(notificationApi.util.invalidateTags(["Notifications"]));
-
-          const notifType = (payload as Record<string, unknown>).payload as
-            | Record<string, unknown>
-            | undefined;
-          const type = notifType?.type as string | undefined;
-          if (type) {
-            const soundKey = NOTIF_SOUND_MAP[type];
-            if (soundKey) playRef.current(soundKey);
-          }
-        })
-        .subscribe();
-    })();
+        const notifType = (payload as Record<string, unknown>).payload as
+          | Record<string, unknown>
+          | undefined;
+        const type = notifType?.type as string | undefined;
+        if (type) {
+          const soundKey = NOTIF_SOUND_MAP[type];
+          if (soundKey) playRef.current(soundKey);
+        }
+      })
+      .subscribe();
 
     return () => {
-      cancel = true;
       if (channel) supabase.removeChannel(channel);
     };
   }, [userId, accessToken, dispatch]);

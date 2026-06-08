@@ -1,6 +1,6 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { memo, useSyncExternalStore } from "react";
 import type { Conversation } from "@/types/conversation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn, formatRelativeTime } from "@/lib/utils";
@@ -16,7 +16,7 @@ function useIsOnline(userId: string | undefined): boolean {
   );
 }
 
-export function ConversationItem({
+export const ConversationItem = memo(function ConversationItem({
   conversation,
   currentUserId,
   active,
@@ -93,4 +93,4 @@ export function ConversationItem({
       </div>
     </button>
   );
-}
+});

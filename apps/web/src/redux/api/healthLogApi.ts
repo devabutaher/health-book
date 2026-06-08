@@ -1,6 +1,9 @@
 import { createApi } from "@reduxjs/toolkit/query/react";
 import { createBaseQuery } from "../baseQuery";
 import { soundManager } from "@/lib/soundManager";
+import { postApi } from "./postApi";
+import type { RootState } from "../store";
+import type { PostSingleResponse, PostApiResponse } from "@/types/post";
 
 export interface HealthLog {
   id: string;
@@ -42,7 +45,9 @@ export interface CalendarResponse {
 export const healthLogApi = createApi({
   reducerPath: "healthLogApi",
   baseQuery: createBaseQuery(`${process.env["NEXT_PUBLIC_API_URL"]}/api/health-logs`),
-  tagTypes: ["HealthLogs", "HealthStats", "Calendar", "Feed", "Posts"],
+  tagTypes: ["HealthLogs", "HealthStats", "Calendar"],
+  refetchOnFocus: false,
+  refetchOnReconnect: true,
   endpoints: (builder) => ({
     getHealthLogs: builder.query({
       query: (params: { type?: string; limit?: number; cursor?: string }) => {
@@ -74,19 +79,46 @@ export const healthLogApi = createApi({
         body,
       }),
       invalidatesTags: ["HealthLogs", "HealthStats", "Calendar"],
-      onQueryStarted: async (_args, { dispatch, queryFulfilled }) => {
+      onQueryStarted: async (args, { dispatch, getState, queryFulfilled }) => {
+        const user = (getState() as RootState).auth.user;
+        if (!user) return;
+        const tempId = `temp-${Date.now()}`;
+
+        const optimistic: HealthLog = {
+          id: tempId,
+          userId: user.id,
+          type: args.type,
+          date: args.date || new Date().toISOString(),
+          data: args.data,
+          score: null,
+          isPublic: args.isPublic || false,
+          createdAt: new Date().toISOString(),
+        };
+
+        const patch = dispatch(
+          healthLogApi.util.updateQueryData("getHealthLogs", { limit: 50 }, (draft) => {
+            if ((draft as { logs: HealthLog[] }).logs) {
+              (draft as { logs: HealthLog[] }).logs.unshift(optimistic);
+            }
+          }),
+        );
+
         try {
           const { data: res } = await queryFulfilled;
           const log = (res as { data: HealthLog }).data;
-          if (!log) return;
+          if (!log?.id) return;
           dispatch(
             healthLogApi.util.updateQueryData("getHealthLogs", { limit: 50 }, (draft) => {
               if ((draft as { logs: HealthLog[] }).logs) {
-                (draft as { logs: HealthLog[] }).logs.unshift(log);
+                const idx = (draft as { logs: HealthLog[] }).logs.findIndex((l) => l.id === tempId);
+                if (idx >= 0) (draft as { logs: HealthLog[] }).logs[idx].id = log.id;
               }
             }),
           );
-        } catch {}
+        } catch {
+          patch.undo();
+          soundManager.playError();
+        }
       },
     }),
     updateHealthLog: builder.mutation({
@@ -104,7 +136,7 @@ export const healthLogApi = createApi({
         method: "PUT",
         body,
       }),
-      invalidatesTags: ["HealthLogs", "HealthStats", "Calendar"],
+      invalidatesTags: (_result, _error, { id }) => [{ type: "HealthLogs", id }, "HealthStats"],
       onQueryStarted: async ({ id, ...body }, { dispatch, queryFulfilled }) => {
         const patch = dispatch(
           healthLogApi.util.updateQueryData("getHealthLog", id, (draft) => {
@@ -122,21 +154,31 @@ export const healthLogApi = createApi({
     }),
     deleteHealthLog: builder.mutation({
       query: (id: string) => ({ url: `/${id}`, method: "DELETE" }),
-      invalidatesTags: ["HealthLogs", "HealthStats", "Calendar"],
-      onQueryStarted: async (id, { dispatch, queryFulfilled }) => {
+      invalidatesTags: (_result, _error, id) => [{ type: "HealthLogs", id }, "HealthStats"],
+      onQueryStarted: async (id, { dispatch, getState, queryFulfilled }) => {
         const patches: { undo: () => void }[] = [];
-        for (const args of [{ limit: 50 }, {}, { limit: 1 }, { type: "WORKOUT" as const, limit: 100 }]) {
-          try {
-            const p = dispatch(
-              healthLogApi.util.updateQueryData("getHealthLogs", args, (draft) => {
-                const d = draft as { logs?: HealthLog[] };
-                if (d.logs) {
-                  d.logs = d.logs.filter((l) => l.id !== id);
-                }
-              }),
-            );
-            patches.push(p);
-          } catch {}
+        interface HealthLogQueryEntry {
+          endpointName: string;
+          status: string;
+          originalArgs: { type?: string; limit?: number; cursor?: string };
+        }
+        const queries =
+          (getState() as Record<string, { queries: Record<string, HealthLogQueryEntry> }>)
+            ?.healthLogApi?.queries ?? {};
+        for (const q of Object.values(queries)) {
+          if (q?.endpointName === "getHealthLogs" && q?.status === "fulfilled") {
+            try {
+              const p = dispatch(
+                healthLogApi.util.updateQueryData("getHealthLogs", q.originalArgs, (draft) => {
+                  const d = draft as { logs?: HealthLog[] };
+                  if (d.logs) {
+                    d.logs = d.logs.filter((l) => l.id !== id);
+                  }
+                }),
+              );
+              patches.push(p);
+            } catch {}
+          }
         }
         try {
           await queryFulfilled;
@@ -164,7 +206,9 @@ export const healthLogApi = createApi({
               }
             }),
           );
-        } catch {}
+        } catch {
+          soundManager.playError();
+        }
       },
     }),
 
@@ -174,7 +218,27 @@ export const healthLogApi = createApi({
         method: "POST",
         body: { content },
       }),
-      invalidatesTags: ["Feed", "Posts", "HealthLogs"],
+      invalidatesTags: ["HealthLogs"],
+      onQueryStarted: async (_args, { dispatch, queryFulfilled }) => {
+        try {
+          const { data: res } = await queryFulfilled;
+          const newPost = (res as PostSingleResponse)?.data;
+          if (!newPost) return;
+          dispatch(
+            postApi.util.updateQueryData(
+              "getFeed",
+              { cursor: undefined },
+              (draft: PostApiResponse) => {
+                if (draft?.data?.posts) {
+                  draft.data.posts.unshift(newPost);
+                }
+              },
+            ),
+          );
+        } catch {
+          soundManager.playError();
+        }
+      },
     }),
     getHealthStats: builder.query({
       query: () => "/stats",
@@ -189,7 +253,9 @@ export const healthLogApi = createApi({
     getCalendar: builder.query({
       query: ({ year, month }: { year: number; month: number }) =>
         `/calendar?year=${year}&month=${month}`,
-      providesTags: ["Calendar"],
+      providesTags: (_result, _error, { year, month }) => [
+        { type: "Calendar" as const, id: `${year}-${month}` },
+      ],
       keepUnusedDataFor: 300,
     }),
   }),
@@ -197,9 +263,7 @@ export const healthLogApi = createApi({
 
 export const {
   useGetHealthLogsQuery,
-  useGetHealthLogQuery,
   useCreateHealthLogMutation,
-  useUpdateHealthLogMutation,
   useDeleteHealthLogMutation,
   useShareHealthLogMutation,
   useCopyHealthLogMutation,

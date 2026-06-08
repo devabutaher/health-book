@@ -23,6 +23,7 @@ import {
 import { useAppSelector, useAppDispatch } from "@/hooks";
 import { setUser } from "@/redux/slices/authSlice";
 import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/getErrorMessage";
 
 export function EditProfileModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const user = useAppSelector((s) => s.auth.user);
@@ -39,7 +40,7 @@ export function EditProfileModal({ open, onClose }: { open: boolean; onClose: ()
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [gender, setGender] = useState(user?.gender ?? "");
 
   const handleAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -71,37 +72,34 @@ export function EditProfileModal({ open, onClose }: { open: boolean; onClose: ()
       return;
     }
 
-    setSaving(true);
+    setIsSubmitting(true);
     let newAvatar = user.avatar;
     let newCover = user.coverPhoto;
 
     try {
       if (avatarFile) {
-        const avatarToastId = toast.loading("Updating avatar...");
-        try {
-          const fdAvatar = new FormData();
-          fdAvatar.append("avatar", avatarFile);
-          const result = await uploadAvatar(fdAvatar).unwrap();
-          newAvatar = result.data?.avatar ?? newAvatar;
-        } finally {
-          toast.dismiss(avatarToastId);
-        }
+        const fdAvatar = new FormData();
+        fdAvatar.append("avatar", avatarFile);
+        const result = await uploadAvatar(fdAvatar).unwrap();
+        newAvatar = result.data?.avatar ?? newAvatar;
       }
       if (coverFile) {
-        const coverToastId = toast.loading("Updating cover...");
-        try {
-          const fdCover = new FormData();
-          fdCover.append("cover", coverFile);
-          const result = await uploadCover(fdCover).unwrap();
-          newCover = result.data?.coverPhoto ?? newCover;
-        } finally {
-          toast.dismiss(coverToastId);
-        }
+        const fdCover = new FormData();
+        fdCover.append("cover", coverFile);
+        const result = await uploadCover(fdCover).unwrap();
+        newCover = result.data?.coverPhoto ?? newCover;
       }
       await update({ name, bio: bio || undefined, gender: gender || undefined }).unwrap();
 
       dispatch(
-        setUser({ ...user, name, bio: bio || null, avatar: newAvatar, coverPhoto: newCover, gender: gender || null }),
+        setUser({
+          ...user,
+          name,
+          bio: bio || null,
+          avatar: newAvatar,
+          coverPhoto: newCover,
+          gender: gender || null,
+        }),
       );
 
       if (avatarPreview) URL.revokeObjectURL(avatarPreview);
@@ -109,14 +107,14 @@ export function EditProfileModal({ open, onClose }: { open: boolean; onClose: ()
 
       toast.success("Profile updated");
       onClose();
-    } catch {
-      toast.error("Failed to update profile");
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Failed to update profile"));
     } finally {
-      setSaving(false);
+      setIsSubmitting(false);
     }
   };
 
-  const isBusy = saving || isLoading;
+  const isBusy = isSubmitting || isLoading;
   const displayAvatar = avatarPreview ?? user?.avatar ?? null;
   const displayCover = coverPreview ?? user?.coverPhoto ?? null;
 
@@ -142,7 +140,7 @@ export function EditProfileModal({ open, onClose }: { open: boolean; onClose: ()
               type="button"
               onClick={() => coverRef.current?.click()}
               className="group relative size-full cursor-pointer"
-              disabled={saving}
+              disabled={isSubmitting}
             >
               {displayCover ? (
                 <Image
@@ -156,7 +154,7 @@ export function EditProfileModal({ open, onClose }: { open: boolean; onClose: ()
                 <div className="absolute inset-0 bg-gradient-to-br from-brand-teal via-brand-green to-brand-lime" />
               )}
               <div className="absolute inset-0 flex items-center justify-center bg-black/40 text-sm font-medium text-white opacity-0 transition-opacity group-hover:opacity-100">
-                {saving && coverFile ? <Spinner /> : "Change cover"}
+                {isSubmitting && coverFile ? <Spinner /> : "Change cover"}
               </div>
             </button>
 
@@ -164,7 +162,7 @@ export function EditProfileModal({ open, onClose }: { open: boolean; onClose: ()
               type="button"
               onClick={() => avatarRef.current?.click()}
               className="group absolute bottom-4 left-4 size-24 overflow-hidden rounded-full ring-4 ring-[var(--bg-elevated)] transition-all hover:ring-brand-teal/50 cursor-pointer"
-              disabled={saving}
+              disabled={isSubmitting}
             >
               {displayAvatar ? (
                 <div className="relative size-full">
@@ -180,7 +178,7 @@ export function EditProfileModal({ open, onClose }: { open: boolean; onClose: ()
                 <div className="size-full bg-gradient-to-br from-brand-teal to-brand-green" />
               )}
               <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-white opacity-0 transition-opacity group-hover:opacity-100">
-                {saving && avatarFile ? <Spinner /> : <ImagePlus className="size-5" />}
+                {isSubmitting && avatarFile ? <Spinner /> : <ImagePlus className="size-5" />}
               </div>
             </button>
           </div>

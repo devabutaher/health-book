@@ -1,23 +1,41 @@
 "use client";
 
 import Image from "next/image";
-import { Camera, Share2, Trophy, Calendar, Target } from "lucide-react";
+import { useState, useRef } from "react";
+import { Camera, Share2, Trophy, Calendar, Target, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GlassCard } from "@/components/ui/glass-card";
+import { getImageUrl } from "@/lib/utils";
 import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/getErrorMessage";
 import { useSound } from "@/hooks/useSound";
-import { useShareChallengeMutation } from "@/redux/api/challengesApi";
+import {
+  useShareChallengeMutation,
+  useUploadBeforePhotoMutation,
+  useUploadAfterPhotoMutation,
+  useUploadChallengeMediaMutation,
+} from "@/redux/api/challengesApi";
 import type { BeforeAfter } from "@/types/challenge";
 
 export function BeforeAfterSection({
   data,
   challengeId,
+  isCompleted,
 }: {
   data: BeforeAfter;
   challengeId: string;
+  isCompleted?: boolean;
 }) {
   const [shareChallenge] = useShareChallengeMutation();
+  const [uploadBefore] = useUploadBeforePhotoMutation();
+  const [uploadAfter] = useUploadAfterPhotoMutation();
   const { play } = useSound();
+  const [uploadMedia] = useUploadChallengeMediaMutation();
+  const [isSubmitting, setIsSubmitting] = useState<"before" | "after" | null>(null);
+  const [showBeforeUpload, setShowBeforeUpload] = useState(false);
+  const [showAfterUpload, setShowAfterUpload] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadMode, setUploadMode] = useState<"before" | "after">("before");
 
   const handleShare = async () => {
     try {
@@ -28,9 +46,43 @@ export function BeforeAfterSection({
       await shareChallenge({ id: challengeId, content }).unwrap();
       play("success");
       toast.success("Shared to feed!");
-    } catch {
+    } catch (err) {
       play("error");
-      toast.error("Failed to share");
+      toast.error(getErrorMessage(err, "Failed to share"));
+    }
+  };
+
+  const triggerUpload = (mode: "before" | "after") => {
+    setUploadMode(mode);
+    fileInputRef.current?.click();
+  };
+
+  const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsSubmitting(uploadMode);
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+
+      const { url } = await uploadMedia(formData).unwrap();
+
+      if (uploadMode === "before") {
+        await uploadBefore({ challengeId, photoUrl: url }).unwrap();
+        setShowBeforeUpload(false);
+      } else {
+        await uploadAfter({ challengeId, photoUrl: url }).unwrap();
+        setShowAfterUpload(false);
+      }
+      play("success");
+      toast.success(`${uploadMode === "before" ? "Before" : "After"} photo saved!`);
+    } catch (err) {
+      play("error");
+      toast.error(getErrorMessage(err, "Upload failed"));
+    } finally {
+      setIsSubmitting(null);
+      if (e.target) e.target.value = "";
     }
   };
 
@@ -46,18 +98,44 @@ export function BeforeAfterSection({
           <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
             Before
           </p>
-          <div className="aspect-square overflow-hidden rounded-xl bg-[var(--bg-subtle)]">
+          <div className="group relative aspect-square overflow-hidden rounded-xl bg-[var(--bg-subtle)]">
             {data.before ? (
               <Image
-                src={data.before}
+                src={getImageUrl(data.before, "q_auto:best,f_auto") ?? data.before}
                 alt="Before"
                 className="size-full object-cover"
                 width={400}
                 height={400}
+                placeholder="blur"
+                blurDataURL={
+                  getImageUrl(data.before, "w_20,e_blur:2000,q_auto:low,f_auto") ?? undefined
+                }
               />
             ) : (
-              <div className="flex size-full items-center justify-center text-[var(--text-muted)]">
+              <div className="flex size-full flex-col items-center justify-center gap-2 text-[var(--text-muted)]">
                 <Camera className="size-8" />
+                {!showBeforeUpload && (
+                  <button
+                    onClick={() => setShowBeforeUpload(true)}
+                    className="rounded-lg bg-[var(--bg-overlay)] px-3 py-1 text-xs font-semibold hover:bg-brand-teal/20 hover:text-brand-teal"
+                  >
+                    Add Photo
+                  </button>
+                )}
+              </div>
+            )}
+            {showBeforeUpload && !data.before && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                <Button
+                  variant="gradient"
+                  size="sm"
+                  onClick={() => triggerUpload("before")}
+                  disabled={isSubmitting === "before"}
+                  className="gap-1.5"
+                >
+                  <Upload className="size-3.5" />
+                  {isSubmitting === "before" ? "Uploading..." : "Upload Before Photo"}
+                </Button>
               </div>
             )}
           </div>
@@ -66,23 +144,62 @@ export function BeforeAfterSection({
           <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
             After
           </p>
-          <div className="aspect-square overflow-hidden rounded-xl bg-[var(--bg-subtle)]">
+          <div className="group relative aspect-square overflow-hidden rounded-xl bg-[var(--bg-subtle)]">
             {data.after ? (
               <Image
-                src={data.after}
+                src={getImageUrl(data.after, "q_auto:best,f_auto") ?? data.after}
                 alt="After"
                 className="size-full object-cover"
                 width={400}
                 height={400}
+                placeholder="blur"
+                blurDataURL={
+                  getImageUrl(data.after, "w_20,e_blur:2000,q_auto:low,f_auto") ?? undefined
+                }
               />
             ) : (
-              <div className="flex size-full items-center justify-center text-[var(--text-muted)]">
+              <div className="flex size-full flex-col items-center justify-center gap-2 text-[var(--text-muted)]">
                 <Camera className="size-8" />
+                {isCompleted && !showAfterUpload && (
+                  <button
+                    onClick={() => setShowAfterUpload(true)}
+                    className="rounded-lg bg-[var(--bg-overlay)] px-3 py-1 text-xs font-semibold hover:bg-brand-teal/20 hover:text-brand-teal"
+                  >
+                    Add Photo
+                  </button>
+                )}
+                {!isCompleted && !data.after && (
+                  <p className="px-2 text-center text-[10px] text-[var(--text-muted)]">
+                    Complete the challenge to add your after photo
+                  </p>
+                )}
+              </div>
+            )}
+            {showAfterUpload && !data.after && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                <Button
+                  variant="gradient"
+                  size="sm"
+                  onClick={() => triggerUpload("after")}
+                  disabled={isSubmitting === "after"}
+                  className="gap-1.5"
+                >
+                  <Upload className="size-3.5" />
+                  {isSubmitting === "after" ? "Uploading..." : "Upload After Photo"}
+                </Button>
               </div>
             )}
           </div>
         </div>
       </div>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleFileSelected}
+        className="hidden"
+      />
 
       <div className="mt-4 grid grid-cols-3 gap-3">
         <div className="rounded-xl bg-gradient-to-br from-brand-teal/10 to-brand-green/5 p-3 text-center">

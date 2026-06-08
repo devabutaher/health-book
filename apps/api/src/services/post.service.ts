@@ -1,10 +1,12 @@
 import { prisma } from "../lib/prisma";
 import { Prisma } from "../../generated/prisma";
 import { AppError } from "../utils/AppError";
+import { broadcastRealtime } from "../utils/realtime";
 import { deleteImage, deleteVideo, extractPublicId } from "./cloudinary";
 import type { PostPrivacy, ReactionType, HealthLogType } from "../../generated/prisma";
 import { notificationService } from "./notification.service";
 import { notifyMentions } from "../utils/mentions";
+import { syncPostHashtags } from "../utils/hashtags";
 
 const postSelectFields = {
   id: true,
@@ -89,40 +91,35 @@ export const postService = {
     scheduledAt?: string | null;
     poll?: { question: string; options: string[]; isMultipleChoice?: boolean; expiresAt?: string };
   }) {
-    const post = await prisma.post.create({
-      data: {
-        content: data.content,
-        mediaUrls: data.mediaUrls || [],
-        privacy: data.privacy || "PUBLIC",
-        userId: data.userId,
-        templateType: data.templateType,
-        templateData: (data.templateData ?? Prisma.JsonNull) as Prisma.InputJsonValue,
-        healthLogId: data.healthLogId,
-        groupId: data.groupId,
-        isDraft: data.isDraft ?? false,
-        scheduledAt: data.scheduledAt ? new Date(data.scheduledAt) : null,
-      },
-      select: {
-        ...postSelectFields,
-        user: userSelect,
-        _count: { select: { reactions: true, comments: true } },
-      },
-    });
+    const postData = {
+      content: data.content,
+      mediaUrls: data.mediaUrls || [],
+      privacy: data.privacy || "PUBLIC",
+      userId: data.userId,
+      templateType: data.templateType,
+      templateData: (data.templateData ?? Prisma.JsonNull) as Prisma.InputJsonValue,
+      healthLogId: data.healthLogId,
+      groupId: data.groupId,
+      isDraft: data.isDraft ?? false,
+      scheduledAt: data.scheduledAt ? new Date(data.scheduledAt) : null,
+    };
 
     if (data.poll) {
       if (data.poll.options.length < 2) throw new AppError(400, "At least 2 options required");
       if (data.poll.options.length > 10) throw new AppError(400, "Maximum 10 options allowed");
-      await prisma.postPoll.create({
+
+      const post = await prisma.post.create({
         data: {
-          postId: post.id,
-          question: data.poll.question,
-          options: data.poll.options,
-          isMultipleChoice: data.poll.isMultipleChoice ?? false,
-          expiresAt: data.poll.expiresAt ? new Date(data.poll.expiresAt) : null,
+          ...postData,
+          poll: {
+            create: {
+              question: data.poll.question,
+              options: data.poll.options,
+              isMultipleChoice: data.poll.isMultipleChoice ?? false,
+              expiresAt: data.poll.expiresAt ? new Date(data.poll.expiresAt) : null,
+            },
+          },
         },
-      });
-      const withPoll = await prisma.post.findUnique({
-        where: { id: post.id },
         select: {
           ...postSelectFields,
           user: userSelect,
@@ -130,14 +127,95 @@ export const postService = {
           poll: pollWithVotes,
         },
       });
+
+      if (data.content) {
+        syncPostHashtags(post.id, data.content).catch(() => {});
+      }
       if (!post.isDraft && data.content) {
         notifyMentions(data.content, data.userId, post.id).catch(() => {});
       }
-      return withPoll ? enrichPost(withPoll, data.userId) : post;
+      if (!post.isDraft) {
+        broadcastRealtime(`hb-post:${post.id}`, "POST_CREATED", {
+          postId: post.id,
+          userId: data.userId,
+          groupId: data.groupId || null,
+        }).catch(() => {});
+        if (data.groupId) {
+          broadcastRealtime(`hb-group:${data.groupId}`, "POST_CREATED", {
+            groupId: data.groupId,
+          }).catch(() => {});
+        }
+        if (!data.groupId) {
+          prisma.follow
+            .findMany({
+              where: { followingId: data.userId },
+              select: { followerId: true },
+              take: 200,
+            })
+            .then((followers) => {
+              Promise.allSettled(
+                followers.map((f) =>
+                  broadcastRealtime(`hb-feed:${f.followerId}`, "POST_CREATED", {
+                    postId: post.id,
+                    userId: data.userId,
+                  }),
+                ),
+              );
+            })
+            .catch(() => {});
+        }
+      }
+
+      return enrichPost(post, data.userId);
+    }
+
+    const post = await prisma.post.create({
+      data: postData,
+      select: {
+        ...postSelectFields,
+        user: userSelect,
+        _count: { select: { reactions: true, comments: true } },
+      },
+    });
+
+    if (data.content) {
+      syncPostHashtags(post.id, data.content).catch(() => {});
     }
 
     if (!post.isDraft && data.content) {
       notifyMentions(data.content, data.userId, post.id).catch(() => {});
+    }
+
+    if (!post.isDraft) {
+      broadcastRealtime(`hb-post:${post.id}`, "POST_CREATED", {
+        postId: post.id,
+        userId: data.userId,
+        groupId: data.groupId || null,
+      }).catch(() => {});
+      if (data.groupId) {
+        broadcastRealtime(`hb-group:${data.groupId}`, "POST_CREATED", {
+          groupId: data.groupId,
+        }).catch(() => {});
+      }
+      if (!data.groupId) {
+        prisma.follow
+          .findMany({
+            where: { followingId: data.userId },
+            select: { followerId: true },
+            take: 200,
+          })
+          .then((followers) => {
+            Promise.allSettled(
+              followers.map((f) =>
+                broadcastRealtime(`hb-feed:${f.followerId}`, "POST_CREATED", {
+                  postId: post.id,
+                  userId: data.userId,
+                }),
+              ),
+            );
+          })
+          .catch(() => {});
+      }
     }
 
     return post;
@@ -149,7 +227,11 @@ export const postService = {
       select: {
         ...postSelectFields,
         user: userSelect,
-        reactions: { select: { type: true, userId: true } },
+        reactions: {
+          where: { userId: userId ?? "" },
+          take: 1,
+          select: { type: true, userId: true },
+        },
         _count: { select: { comments: true } },
         healthLog: healthLogSelect,
         poll: pollWithVotes,
@@ -202,6 +284,7 @@ export const postService = {
     });
 
     if (data.content) {
+      syncPostHashtags(postId, data.content).catch(() => {});
       notifyMentions(data.content, userId, post.id).catch(() => {});
     }
 
@@ -219,6 +302,11 @@ export const postService = {
       if (publicId) deleteImage(publicId).catch(() => {});
     }
     await prisma.post.delete({ where: { id: postId } });
+
+    broadcastRealtime(`hb-post:${postId}`, "POST_DELETED", {
+      postId,
+      userId,
+    }).catch(() => {});
   },
 
   async toggleReaction(postId: string, userId: string, type: ReactionType) {
@@ -229,13 +317,30 @@ export const postService = {
     if (existing) {
       if (existing.type === type) {
         await prisma.reaction.delete({ where: { id: existing.id } });
+        broadcastRealtime(`hb-post:${postId}`, "REACTION_REMOVED", {
+          postId,
+          userId,
+          type,
+        }).catch(() => {});
         return { type, removed: true };
       }
       await prisma.reaction.update({ where: { id: existing.id }, data: { type } });
+      broadcastRealtime(`hb-post:${postId}`, "REACTION_CHANGED", {
+        postId,
+        userId,
+        fromType: existing.type,
+        toType: type,
+      }).catch(() => {});
       return { type, changed: true };
     }
 
     await prisma.reaction.create({ data: { type, postId, userId } });
+
+    broadcastRealtime(`hb-post:${postId}`, "REACTION_ADDED", {
+      postId,
+      userId,
+      type,
+    }).catch(() => {});
 
     const post = await prisma.post.findUnique({ where: { id: postId }, select: { userId: true } });
     if (post && post.userId !== userId) {
@@ -302,33 +407,18 @@ export const postService = {
   },
 
   async getFeed(userId: string, cursor?: string, limit = 10) {
-    const posts = await prisma.$queryRaw`
-      SELECT p.* FROM "posts" p
-      WHERE p."userId" IN (
-        SELECT f."followingId" FROM "follows" f WHERE f."followerId" = ${userId}
-        UNION
-        SELECT ${userId}
-      )
-      AND p."privacy" = 'PUBLIC'
-      AND p."is_draft" = false
-      ${cursor ? Prisma.sql`AND p."createdAt" < (SELECT "createdAt" FROM "posts" WHERE "id" = ${cursor})` : Prisma.empty}
-      ORDER BY p."createdAt" DESC
-      LIMIT ${limit + 1}
-    `;
-
-    // $queryRaw returns plain objects — re-fetch with Prisma for typed relations
-    const postIds = (posts as { id: string }[]).map((p) => p.id);
-    if (postIds.length === 0) {
-      return { posts: [], nextCursor: null, hasMore: false };
-    }
-
     const fullPosts = await prisma.post.findMany({
-      where: { id: { in: postIds } },
+      where: {
+        OR: [{ userId }, { user: { followers: { some: { followerId: userId } } } }],
+        privacy: "PUBLIC",
+        isDraft: false,
+      },
       take: limit + 1,
+      ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
       select: {
         ...postSelectFields,
         user: userSelect,
-        reactions: { select: { type: true, userId: true } },
+        reactions: { where: { userId }, take: 1, select: { type: true, userId: true } },
         _count: { select: { comments: true } },
         healthLog: healthLogSelect,
         poll: pollWithVotes,
@@ -360,7 +450,11 @@ export const postService = {
       select: {
         ...postSelectFields,
         user: userSelect,
-        reactions: { select: { type: true, userId: true } },
+        reactions: {
+          where: { userId: viewerId ?? "" },
+          take: 1,
+          select: { type: true, userId: true },
+        },
         _count: { select: { comments: true } },
         healthLog: healthLogSelect,
         poll: pollWithVotes,
@@ -401,7 +495,7 @@ export const postService = {
       select: {
         ...postSelectFields,
         user: userSelect,
-        reactions: { select: { type: true, userId: true } },
+        reactions: { where: { userId }, take: 1, select: { type: true, userId: true } },
         _count: { select: { comments: true } },
         healthLog: healthLogSelect,
         poll: pollWithVotes,
@@ -423,6 +517,7 @@ export const postService = {
     const drafts = await prisma.post.findMany({
       where: { userId, isDraft: true },
       orderBy: { updatedAt: "desc" },
+      take: 50,
       select: {
         ...postSelectFields,
         user: userSelect,

@@ -17,8 +17,11 @@ import {
   Sparkles,
   Users,
   CheckCircle,
+  AlertCircle,
+  RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/getErrorMessage";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -43,6 +46,7 @@ const CalorieChart = dynamic(() => import("@/components/health/CalorieChart"), {
 const MoodChart = dynamic(() => import("@/components/health/MoodChart"), { ssr: false });
 const GoalChart = dynamic(() => import("@/components/health/GoalChart"), { ssr: false });
 import { useAppSelector } from "@/hooks";
+import { useHealthLogRealtime } from "@/hooks/useHealthLogRealtime";
 import { useSound } from "@/hooks/useSound";
 import {
   useGetHealthLogsQuery,
@@ -51,7 +55,7 @@ import {
   useShareHealthLogMutation,
   type HealthLog,
 } from "@/redux/api/healthLogApi";
-import { useGetMyChallengesQuery } from "@/redux/api/challengesApi";
+import { useGetMyChallengesQuery, useGetDayPlansQuery } from "@/redux/api/challengesApi";
 import { ChallengeGoalDisplay } from "@/components/challenges/ChallengeGoalDisplay";
 import { ChallengeStatsCard } from "@/components/challenges/ChallengeStatsCard";
 import { CheckInModal } from "@/components/challenges/CheckInModal";
@@ -184,13 +188,19 @@ function StatCard({ label, value, unit, icon, gradient, glow, suffix }: StatCard
 }
 
 function ActiveChallengesSection() {
-  const { data: myChallenges, isLoading } = useGetMyChallengesQuery();
+  const { data: myChallengesData, isLoading } = useGetMyChallengesQuery();
+  const myChallenges = myChallengesData?.data ?? [];
   const [now] = useState(() => Date.now());
   const [logChallenge, setLogChallenge] = useState<{
     id: string;
     day: number;
     total: number;
+    goalTarget?: number | null;
+    goalUnit?: string | null;
   } | null>(null);
+  const { data: logDayPlans } = useGetDayPlansQuery(logChallenge?.id || "", {
+    skip: !logChallenge?.id,
+  });
   const active = (myChallenges || []).filter((c) => !c.myProgress?.completed);
 
   if (isLoading) {
@@ -278,6 +288,8 @@ function ActiveChallengesSection() {
                         id: c.id,
                         day: (c.myProgress?.score || 0) + 1,
                         total: c.dayCount || 30,
+                        goalTarget: c.goalTarget,
+                        goalUnit: c.goalUnit,
                       });
                     }}
                     className="flex items-center gap-1 rounded-lg bg-gradient-to-r from-brand-teal to-brand-green px-2.5 py-1 text-[10px] font-bold text-white shadow-[var(--shadow-glow-teal)] transition-all hover:scale-105 active:scale-95"
@@ -300,10 +312,14 @@ function ActiveChallengesSection() {
       {logChallenge && (
         <CheckInModal
           challengeId={logChallenge.id}
-          dayNumber={logChallenge.day}
+          currentDay={logChallenge.day}
           totalDays={logChallenge.total}
           open={!!logChallenge}
           onClose={() => setLogChallenge(null)}
+          goalTarget={logChallenge.goalTarget}
+          goalUnit={logChallenge.goalUnit}
+          dayPlan={logDayPlans?.find((p) => p.dayNumber === logChallenge.day) ?? null}
+          hasDayPlans={!!logDayPlans && logDayPlans.length > 0}
         />
       )}
     </section>
@@ -316,9 +332,20 @@ export default function MyBookPage() {
   const [shareDialog, setShareDialog] = useState<{ logId: string; type: string } | null>(null);
   const [shareContent, setShareContent] = useState("");
   const user = useAppSelector((s) => s.auth.user);
+  useHealthLogRealtime();
 
-  const { data: statsData, isLoading: statsLoading } = useGetHealthStatsQuery(undefined);
-  const { data: logsData, isLoading: logsLoading } = useGetHealthLogsQuery({ limit: 50 });
+  const {
+    data: statsData,
+    isLoading: statsLoading,
+    isError: statsError,
+    refetch: refetchStats,
+  } = useGetHealthStatsQuery(undefined);
+  const {
+    data: logsData,
+    isLoading: logsLoading,
+    isError: logsError,
+    refetch: refetchLogs,
+  } = useGetHealthLogsQuery({ limit: 50 });
   const [createLog] = useCreateHealthLogMutation();
   const [shareLog, { isLoading: sharing }] = useShareHealthLogMutation();
   const { play } = useSound();
@@ -346,9 +373,9 @@ export default function MyBookPage() {
           `Just logged my ${getTemplate(activeTemplate as HealthLog["type"]).shortLabel}! #healthbook`,
         );
       }
-    } catch {
+    } catch (err) {
       play("error");
-      toast.error("Failed to save health log");
+      toast.error(getErrorMessage(err, "Failed to save health log"));
     }
   };
 
@@ -359,9 +386,9 @@ export default function MyBookPage() {
       await shareLog({ id: shareDialog.logId, content: shareContent }).unwrap();
       toast.success("Shared to feed!");
       setShareDialog(null);
-    } catch {
+    } catch (err) {
       play("error");
-      toast.error("Failed to share");
+      toast.error(getErrorMessage(err, "Failed to share"));
     }
   };
 
@@ -437,7 +464,17 @@ export default function MyBookPage() {
 
       <StreakAtRiskAlert />
 
-      {statsLoading ? (
+      {statsError ? (
+        <GlassCard className="p-6 text-center">
+          <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-2xl bg-[var(--bg-subtle)]">
+            <AlertCircle className="size-6 text-muted-foreground" />
+          </div>
+          <p className="text-sm text-muted-foreground">Couldn&apos;t load your health stats.</p>
+          <Button variant="outline" size="sm" className="mt-3" onClick={() => refetchStats()}>
+            <RefreshCw /> Retry
+          </Button>
+        </GlassCard>
+      ) : statsLoading ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {[1, 2, 3, 4].map((i) => (
             <Skeleton key={i} className="h-24 rounded-2xl" />
@@ -591,7 +628,18 @@ export default function MyBookPage() {
         </TabsList>
         {["all", ...TEMPLATE_ORDER].map((tab) => (
           <TabsContent key={tab} value={tab} className="mt-3 space-y-3">
-            {logsLoading ? (
+            {logsError ? (
+              <Empty>
+                <EmptyMedia variant="gradient">
+                  <AlertCircle />
+                </EmptyMedia>
+                <EmptyTitle>Couldn&apos;t load logs</EmptyTitle>
+                <EmptyDescription>Check your connection and try again.</EmptyDescription>
+                <Button variant="outline" size="sm" onClick={() => refetchLogs()}>
+                  <RefreshCw /> Retry
+                </Button>
+              </Empty>
+            ) : logsLoading ? (
               <div className="space-y-3">
                 {[1, 2, 3].map((i) => (
                   <Skeleton key={i} className="h-24 rounded-2xl" />
@@ -627,7 +675,10 @@ export default function MyBookPage() {
       </Tabs>
 
       <Dialog open={!!shareDialog} onOpenChange={(o) => !o && setShareDialog(null)}>
-        <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto" aria-describedby={undefined}>
+        <DialogContent
+          className="sm:max-w-lg max-h-[85vh] overflow-y-auto"
+          aria-describedby={undefined}
+        >
           <DialogHeader>
             <DialogTitle className="font-display">Share to Feed?</DialogTitle>
           </DialogHeader>
@@ -646,11 +697,7 @@ export default function MyBookPage() {
               <Button variant="ghost" onClick={() => setShareDialog(null)}>
                 Skip
               </Button>
-              <Button
-                variant="gradient"
-                onClick={handleShare}
-                disabled={sharing}
-              >
+              <Button variant="gradient" onClick={handleShare} disabled={sharing}>
                 {sharing ? <Spinner /> : <Send />}
                 {sharing ? "Sharing..." : "Share to Feed"}
               </Button>

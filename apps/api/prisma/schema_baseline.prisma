@@ -49,6 +49,8 @@ enum NotificationType {
   CONSULTATION_BOOKED
   STREAK_MILESTONE
   STREAK_AT_RISK
+  CHECK_IN_REMINDER
+  CHALLENGE_ENDING_SOON
   SYSTEM
 }
 
@@ -99,58 +101,59 @@ model User {
   bio        String?  @db.Text
   avatar     String?
   coverPhoto String?
-  gender     String?  // "male" | "female"
+  gender     String? // "male" | "female"
   role       Role     @default(USER)
   isVerified Boolean  @default(false)
   isPrivate  Boolean  @default(false)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  posts        Post[]
-  reactions    Reaction[]
-  comments     Comment[]
-  notifications Notification[] @relation("ReceivedNotifications")
+  posts           Post[]
+  reactions       Reaction[]
+  comments        Comment[]
+  notifications   Notification[] @relation("ReceivedNotifications")
   triggeredNotifs Notification[] @relation("TriggeredNotifications")
-  following    Follow[] @relation("Follower")
-  followers    Follow[] @relation("Following")
-  savedPosts   SavedPost[]
-  healthLogs   HealthLog[]
-  periodLogs   PeriodLog[]
-  weightLogs   WeightLog[]
+  following       Follow[]       @relation("Follower")
+  followers       Follow[]       @relation("Following")
+  savedPosts      SavedPost[]
+  healthLogs      HealthLog[]
+  periodLogs      PeriodLog[]
+  weightLogs      WeightLog[]
 
   // Phase 3 relations
-  conversationParticipants ConversationParticipant[]
-  sentMessages            Message[]                @relation("SentMessages")
-  createdGroups           Group[]
-  groupMemberships        GroupMember[]
-  groupJoinRequests       GroupJoinRequest[]
-  groupInvitesReceived    GroupInvite[]            @relation("GroupInvitesReceived")
-  groupInvitesSent        GroupInvite[]            @relation("GroupInvitesSent")
-  challengeParticipants   ChallengeParticipant[]
-  createdChallenges       Challenge[]
-  challengeDayEntries     ChallengeDayEntry[]
-  challengeActivities     ChallengeActivity[]
+  conversationParticipants  ConversationParticipant[]
+  sentMessages              Message[]                  @relation("SentMessages")
+  createdGroups             Group[]
+  groupMemberships          GroupMember[]
+  groupJoinRequests         GroupJoinRequest[]
+  groupInvitesReceived      GroupInvite[]              @relation("GroupInvitesReceived")
+  groupInvitesSent          GroupInvite[]              @relation("GroupInvitesSent")
+  challengeParticipants     ChallengeParticipant[]
+  createdChallenges         Challenge[]
+  challengeDayEntries       ChallengeDayEntry[]
+  challengeActivities       ChallengeActivity[]
   challengeCommentReactions ChallengeCommentReaction[]
-  challengeComments       ChallengeComment[]
-  savedChallenges         SavedChallenge[]
-  sentChallengeInvites    ChallengeInvite[]     @relation("SentChallengeInvites")
-  receivedChallengeInvites ChallengeInvite[]    @relation("ReceivedChallengeInvites")
-  stories                 Story[]
-  storyViews              StoryView[]
-  storyLikes              StoryLike[]
-  storyHighlights         StoryHighlight[]
-  reels                   Reel[]
-  reelLikes               ReelLike[]
-  reelComments            ReelComment[]
-  createdPolls            GroupPoll[]        @relation("CreatedPolls")
-  createdEvents           GroupEvent[]       @relation("CreatedEvents")
-  groupPollVotes          GroupPollVote[]
-  groupEventRsvps         GroupEventRSVP[]
-  storyPollVotes          StoryPollVote[]
-  storyReactions          StoryReaction[]
-  postPollVotes           PostPollVote[]
-  postQuizAnswers         PostQuizAnswer[]
-  pushSubscriptions       PushSubscription[]
+  challengeComments         ChallengeComment[]
+  savedChallenges           SavedChallenge[]
+  sentChallengeInvites      ChallengeInvite[]          @relation("SentChallengeInvites")
+  receivedChallengeInvites  ChallengeInvite[]          @relation("ReceivedChallengeInvites")
+  challengeRatings          ChallengeRating[]
+  stories                   Story[]
+  storyViews                StoryView[]
+  storyLikes                StoryLike[]
+  storyHighlights           StoryHighlight[]
+  reels                     Reel[]
+  reelLikes                 ReelLike[]
+  reelComments              ReelComment[]
+  createdPolls              GroupPoll[]                @relation("CreatedPolls")
+  createdEvents             GroupEvent[]               @relation("CreatedEvents")
+  groupPollVotes            GroupPollVote[]
+  groupEventRsvps           GroupEventRSVP[]
+  storyPollVotes            StoryPollVote[]
+  storyReactions            StoryReaction[]
+  postPollVotes             PostPollVote[]
+  postQuizAnswers           PostQuizAnswer[]
+  pushSubscriptions         PushSubscription[]
 
   @@map("users")
 }
@@ -184,14 +187,15 @@ model Post {
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  group     Group?     @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  reactions Reaction[]
-  comments  Comment[]
-  savedBy   SavedPost[]
-  healthLog HealthLog? @relation(fields: [healthLogId], references: [id])
-  poll      PostPoll?
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group       Group?           @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  reactions   Reaction[]
+  comments    Comment[]
+  savedBy     SavedPost[]
+  healthLog   HealthLog?       @relation(fields: [healthLogId], references: [id])
+  poll        PostPoll?
   quizAnswers PostQuizAnswer[]
+  hashtags    PostHashtag[]
 
   @@index([userId, createdAt(sort: Desc)])
   @@index([privacy, createdAt(sort: Desc)])
@@ -201,14 +205,14 @@ model Post {
 }
 
 model PostPoll {
-  id               String   @id @default(uuid())
-  postId           String   @unique
+  id               String    @id @default(uuid())
+  postId           String    @unique
   question         String
   options          String[]
-  isMultipleChoice Boolean  @default(false) @map("is_multiple_choice")
+  isMultipleChoice Boolean   @default(false) @map("is_multiple_choice")
   expiresAt        DateTime?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   post  Post           @relation(fields: [postId], references: [id], onDelete: Cascade)
   votes PostPollVote[]
@@ -227,6 +231,7 @@ model PostPollVote {
   user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([pollId, userId, optionIndex])
+  @@index([pollId])
   @@map("post_poll_votes")
 }
 
@@ -242,7 +247,31 @@ model PostQuizAnswer {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([postId, userId])
+  @@index([postId])
   @@map("post_quiz_answers")
+}
+
+model Hashtag {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  postCount Int      @default(0)
+  createdAt DateTime @default(now())
+
+  posts PostHashtag[]
+
+  @@index([name])
+  @@map("hashtags")
+}
+
+model PostHashtag {
+  postId    String
+  hashtagId String
+
+  post    Post    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  hashtag Hashtag @relation(fields: [hashtagId], references: [id], onDelete: Cascade)
+
+  @@id([postId, hashtagId])
+  @@map("post_hashtags")
 }
 
 model Reaction {
@@ -276,6 +305,7 @@ model Comment {
 
   @@index([postId])
   @@index([userId])
+  @@index([postId, parentId])
   @@map("comments")
 }
 
@@ -307,19 +337,20 @@ model HealthLog {
 
   @@index([userId, date(sort: Desc)])
   @@index([userId, type, date(sort: Desc)])
+  @@index([userId, isPublic])
   @@map("health_logs")
 }
 
 model PeriodLog {
-  id          String   @id @default(uuid())
-  userId      String   @map("user_id")
-  startDate   DateTime @map("start_date")
-  endDate     DateTime? @map("end_date")
-  cycleLength Int?     @map("cycle_length")
-  flowIntensity String? @map("flow_intensity") // light, medium, heavy
-  symptoms    String[] @default([])
-  notes       String?  @db.Text
-  createdAt   DateTime @default(now()) @map("created_at")
+  id            String    @id @default(uuid())
+  userId        String    @map("user_id")
+  startDate     DateTime  @map("start_date")
+  endDate       DateTime? @map("end_date")
+  cycleLength   Int?      @map("cycle_length")
+  flowIntensity String?   @map("flow_intensity") // light, medium, heavy
+  symptoms      String[]  @default([])
+  notes         String?   @db.Text
+  createdAt     DateTime  @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -360,7 +391,7 @@ model Notification {
   user     User  @relation("ReceivedNotifications", fields: [userId], references: [id], onDelete: Cascade)
   fromUser User? @relation("TriggeredNotifications", fields: [fromUserId], references: [id], onDelete: SetNull)
 
-  @@index([userId, read, createdAt(sort: Desc)])
+  @@index([userId, type, read, createdAt(sort: Desc)])
   @@map("notifications")
 }
 
@@ -385,15 +416,17 @@ model Conversation {
 model ConversationParticipant {
   conversationId String
   userId         String
-  role           String   @default("MEMBER") // "ADMIN" | "MEMBER"
-  joinedAt       DateTime @default(now())
-  isMuted        Boolean  @default(false)
+  role           String    @default("MEMBER") // "ADMIN" | "MEMBER"
+  joinedAt       DateTime  @default(now())
+  isMuted        Boolean   @default(false)
   lastReadAt     DateTime?
 
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([conversationId, userId])
+  @@index([userId])
+  @@index([conversationId, role])
   @@map("conversation_participants")
 }
 
@@ -415,6 +448,7 @@ model Message {
   sender       User         @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
 
   @@index([conversationId, createdAt(sort: Desc)])
+  @@index([senderId])
   @@map("messages")
 }
 
@@ -433,30 +467,33 @@ model Group {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  createdBy User          @relation(fields: [createdById], references: [id])
-  members   GroupMember[]
-  posts     Post[]
-  challenges Challenge[]
+  createdBy    User               @relation(fields: [createdById], references: [id])
+  members      GroupMember[]
+  posts        Post[]
+  challenges   Challenge[]
   joinRequests GroupJoinRequest[]
   invites      GroupInvite[]
-  polls     GroupPoll[]
-  events    GroupEvent[]
+  polls        GroupPoll[]
+  events       GroupEvent[]
 
   @@index([type])
   @@map("groups")
 }
 
 model GroupMember {
-  groupId String
-  userId  String
-  role    GroupRole @default(MEMBER)
-  joinedAt DateTime @default(now())
+  groupId  String
+  userId   String
+  role     GroupRole @default(MEMBER)
+  joinedAt DateTime  @default(now())
 
   group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([groupId, userId])
   @@index([role])
+  @@index([userId])
+  @@index([userId, role])
+  @@index([groupId, role])
   @@map("group_members")
 }
 
@@ -472,14 +509,15 @@ model GroupJoinRequest {
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([groupId, userId])
+  @@index([groupId, status])
   @@map("group_join_requests")
 }
 
 model GroupInvite {
   id        String   @id @default(uuid())
   groupId   String
-  userId    String   // recipient
-  invitedBy String   // sender
+  userId    String // recipient
+  invitedBy String // sender
   status    String   @default("PENDING") // PENDING, ACCEPTED, DECLINED
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -489,35 +527,36 @@ model GroupInvite {
   inviter User  @relation("GroupInvitesSent", fields: [invitedBy], references: [id])
 
   @@unique([groupId, userId])
+  @@index([userId, status])
   @@map("group_invites")
 }
 
 model GroupPoll {
-  id               String   @id @default(uuid())
+  id               String    @id @default(uuid())
   groupId          String
   createdById      String
   question         String
   options          String[] // ["Option A", "Option B", ...]
-  isMultipleChoice Boolean  @default(false) @map("is_multiple_choice")
+  isMultipleChoice Boolean   @default(false) @map("is_multiple_choice")
   expiresAt        DateTime?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
-  group    Group           @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  creator  User            @relation("CreatedPolls", fields: [createdById], references: [id])
-  votes    GroupPollVote[]
+  group   Group           @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  creator User            @relation("CreatedPolls", fields: [createdById], references: [id])
+  votes   GroupPollVote[]
 
   @@map("group_polls")
 }
 
 model GroupPollVote {
-  id      String @id @default(uuid())
-  pollId  String
-  userId  String
-  optionIndex Int @map("option_index")
+  id          String @id @default(uuid())
+  pollId      String
+  userId      String
+  optionIndex Int    @map("option_index")
 
   poll GroupPoll @relation(fields: [pollId], references: [id], onDelete: Cascade)
-  user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([pollId, userId, optionIndex])
   @@map("group_poll_votes")
@@ -535,8 +574,8 @@ model GroupEvent {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  group   Group           @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  creator User            @relation("CreatedEvents", fields: [createdById], references: [id])
+  group   Group            @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  creator User             @relation("CreatedEvents", fields: [createdById], references: [id])
   rsvps   GroupEventRSVP[]
 
   @@index([groupId, date])
@@ -562,9 +601,9 @@ model GroupEventRSVP {
 // ─────────────────────────────────────────
 
 model Challenge {
-  id          String             @id @default(uuid())
+  id          String               @id @default(uuid())
   title       String
-  description String             @db.Text
+  description String               @db.Text
   type        ChallengeType
   groupId     String?
   createdById String
@@ -572,26 +611,28 @@ model Challenge {
   endDate     DateTime
   entryFee    Float?
   prize       String?
-  goalTarget  Int?               // e.g. 50
-  goalUnit    String?            // e.g. "km", "minutes", "sessions"
-  category    ChallengeCategory? @default(GENERAL)
+  goalTarget  Int? // e.g. 50
+  goalUnit    String? // e.g. "km", "minutes", "sessions"
+  category    ChallengeCategory?   @default(GENERAL)
   difficulty  ChallengeDifficulty? @default(BEGINNER)
-  dayCount    Int                @default(30)
-  milestones  Json?              // [{ name: "Bronze", threshold: 25, icon: "🥉" }, ...]
+  dayCount    Int                  @default(30)
+  milestones  Json? // [{ name: "Bronze", threshold: 25, icon: "🥉" }, ...]
   templateId  String?
-  isActive    Boolean            @default(true)
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
+  isActive    Boolean              @default(true)
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
 
-  group        Group?                  @relation(fields: [groupId], references: [id])
-  createdBy    User                    @relation(fields: [createdById], references: [id])
+  group        Group?                 @relation(fields: [groupId], references: [id])
+  createdBy    User                   @relation(fields: [createdById], references: [id])
   participants ChallengeParticipant[]
   dayEntries   ChallengeDayEntry[]
   activities   ChallengeActivity[]
   comments     ChallengeComment[]
   savedBy      SavedChallenge[]
   invites      ChallengeInvite[]
-  template     ChallengeTemplate?      @relation(fields: [templateId], references: [id])
+  template     ChallengeTemplate?     @relation(fields: [templateId], references: [id])
+  ratings      ChallengeRating[]
+  dayPlans     ChallengeDayPlan[]
 
   @@index([category])
   @@index([difficulty])
@@ -602,39 +643,65 @@ model Challenge {
 model ChallengeParticipant {
   challengeId        String
   userId             String
-  score              Int      @default(0)
+  score              Int       @default(0)
   rank               Int?
-  completed          Boolean  @default(false)
+  completed          Boolean   @default(false)
   completedAt        DateTime?
-  totalValue         Float    @default(0)
-  joinedAt           DateTime @default(now())
-  achievedMilestones Json?    // ["Bronze", "Silver"]
+  totalValue         Float     @default(0)
+  matchedValue       Float?    // for goal-based challenges (total accumulated)
+  joinedAt           DateTime  @default(now())
+  currentDayNumber   Int       @default(1) @map("current_day_number")
+  achievedMilestones Json? // ["Bronze", "Silver"]
+  beforePhoto        String? // dedicated before photo URL
+  afterPhoto         String? // dedicated after photo URL
 
-  challenge Challenge          @relation(fields: [challengeId], references: [id], onDelete: Cascade)
-  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  challenge  Challenge           @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  user       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   dayEntries ChallengeDayEntry[]
 
   @@id([challengeId, userId])
+  @@index([userId])
+  @@index([challengeId, completed])
+  @@index([userId, completed])
   @@map("challenge_participants")
 }
 
 model ChallengeTemplate {
-  id          String          @id @default(uuid())
+  id          String             @id @default(uuid())
   title       String
-  description String          @db.Text
+  description String             @db.Text
   type        ChallengeType
   category    ChallengeCategory? @default(GENERAL)
   goalTarget  Int?
   goalUnit    String?
-  duration    Int             // default days
-  milestones  Json?           // default milestone definitions
-  isOfficial  Boolean         @default(false)
-  timesUsed   Int             @default(0)
-  createdAt   DateTime        @default(now())
+  duration    Int // default days
+  milestones  Json? // default milestone definitions
+  isOfficial  Boolean            @default(false)
+  timesUsed   Int                @default(0)
+  createdAt   DateTime           @default(now())
 
   challenges Challenge[]
 
   @@map("challenge_templates")
+}
+
+model ChallengeDayPlan {
+  id          String   @id @default(uuid())
+  challengeId String
+  dayNumber   Int
+  title       String?
+  description String?  @db.Text
+  tips        String?  @db.Text
+  mediaUrls   String[]
+  duration    Int? // expected minutes to complete
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  challenge Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+
+  @@unique([challengeId, dayNumber])
+  @@index([challengeId, dayNumber])
+  @@map("challenge_day_plans")
 }
 
 model ChallengeComment {
@@ -646,10 +713,10 @@ model ChallengeComment {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  challenge Challenge              @relation(fields: [challengeId], references: [id], onDelete: Cascade)
-  user      User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  parent    ChallengeComment?      @relation("ChallengeCommentReplies", fields: [parentId], references: [id])
-  replies   ChallengeComment[]     @relation("ChallengeCommentReplies")
+  challenge Challenge                  @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  user      User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent    ChallengeComment?          @relation("ChallengeCommentReplies", fields: [parentId], references: [id])
+  replies   ChallengeComment[]         @relation("ChallengeCommentReplies")
   reactions ChallengeCommentReaction[]
 
   @@index([challengeId, createdAt(sort: Desc)])
@@ -667,22 +734,23 @@ model ChallengeCommentReaction {
   user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([commentId, userId, type])
+  @@index([commentId])
   @@map("challenge_comment_reactions")
 }
 
 model ChallengeDayEntry {
-  id            String   @id @default(uuid())
-  challengeId   String
-  userId        String
-  dayNumber     Int
-  completed     Boolean  @default(false)
-  notes         String?  @db.Text
-  mediaUrls     String[]
-  sharedToFeed  Boolean  @default(false)
-  value         Float?
-  completedAt   DateTime?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id           String    @id @default(uuid())
+  challengeId  String
+  userId       String
+  dayNumber    Int
+  completed    Boolean   @default(false)
+  notes        String?   @db.Text
+  mediaUrls    String[]
+  sharedToFeed Boolean   @default(false)
+  value        Float?
+  completedAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   challenge   Challenge            @relation(fields: [challengeId], references: [id], onDelete: Cascade)
   user        User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -690,23 +758,40 @@ model ChallengeDayEntry {
 
   @@unique([challengeId, userId, dayNumber])
   @@index([challengeId, userId, dayNumber])
+  @@index([challengeId, userId, completed])
   @@map("challenge_day_entries")
 }
 
 model ChallengeActivity {
-  id          String               @id @default(uuid())
+  id          String   @id @default(uuid())
   challengeId String
   userId      String
-  type        String               // JOIN, CHECK_IN, MILESTONE, COMPLETE, COMMENT
-  message     String               @db.Text
-  metadata    Json?                // e.g. { dayNumber: 7, milestoneName: "Bronze" }
-  createdAt   DateTime             @default(now())
+  type        String // JOIN, CHECK_IN, MILESTONE, COMPLETE, COMMENT
+  message     String   @db.Text
+  metadata    Json? // e.g. { dayNumber: 7, milestoneName: "Bronze" }
+  createdAt   DateTime @default(now())
 
   challenge Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([challengeId, createdAt(sort: Desc)])
   @@map("challenge_activities")
+}
+
+model ChallengeRating {
+  challengeId String
+  userId      String
+  rating      Int // 1-5
+  review      String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  challenge Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([challengeId, userId])
+  @@index([challengeId])
+  @@map("challenge_ratings")
 }
 
 model SavedChallenge {
@@ -718,6 +803,7 @@ model SavedChallenge {
   challenge Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
 
   @@id([userId, challengeId])
+  @@index([userId])
   @@map("saved_challenges")
 }
 
@@ -747,9 +833,9 @@ model Story {
   userId          String
   type            String   @default("media") // "media" | "text" | "quiz" | "poll"
   privacy         String   @default("friends") // "public" | "friends" | "private"
-  mediaUrl        String?  // nullable — null for text/quiz/poll stories
-  mediaType       String?  // nullable — "image" or "video", null for text/quiz/poll
-  duration        Int?     // seconds for video
+  mediaUrl        String? // nullable — null for text/quiz/poll stories
+  mediaType       String? // nullable — "image" or "video", null for text/quiz/poll
+  duration        Int? // seconds for video
   textOverlay     String?
   textColor       String?  @map("text_color")
   textBgColor     String?  @map("text_bg_color") // background/highlight behind text overlay
@@ -761,14 +847,15 @@ model Story {
   expiresAt       DateTime // 24 hours after creation
   createdAt       DateTime @default(now())
 
-  user         User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  views        StoryView[]
-  likes        StoryLike[]
+  user           User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  views          StoryView[]
+  likes          StoryLike[]
   highlightItems StoryHighlightItem[]
-  pollVotes    StoryPollVote[]
-  reactions    StoryReaction[]
+  pollVotes      StoryPollVote[]
+  reactions      StoryReaction[]
 
   @@index([userId, expiresAt])
+  @@index([expiresAt])
   @@map("stories")
 }
 
@@ -783,6 +870,7 @@ model StoryReaction {
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([storyId, userId])
+  @@index([userId, storyId])
   @@map("story_reactions")
 }
 
@@ -809,6 +897,7 @@ model StoryView {
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([storyId, userId])
+  @@index([userId])
   @@map("story_views")
 }
 
@@ -821,6 +910,7 @@ model StoryLike {
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([storyId, userId])
+  @@index([userId])
   @@map("story_likes")
 }
 
@@ -832,7 +922,7 @@ model StoryHighlight {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user  User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user  User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   items StoryHighlightItem[]
 
   @@map("story_highlights")
@@ -927,10 +1017,10 @@ model PushSubscription {
 model NewsArticle {
   id          String   @id @default(uuid())
   title       String
-  source      String   // e.g., "WHO", "CDC", "Healthline"
+  source      String // e.g., "WHO", "CDC", "Healthline"
   url         String
   imageUrl    String?
-  category    String   // fitness, nutrition, mental_health, general
+  category    String // fitness, nutrition, mental_health, general
   publishedAt DateTime @default(now())
   createdAt   DateTime @default(now())
 

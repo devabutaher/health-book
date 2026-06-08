@@ -33,7 +33,7 @@ function GlassCard({ className, variant = "default", glow = "none", ...props }: 
       className={cn(
         "relative overflow-hidden rounded-2xl border border-[var(--glass-border)] backdrop-blur-md md:backdrop-blur-xl",
         variantClasses[variant],
-        "shadow-[var(--shadow-card)] transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
+        "shadow-[var(--shadow-card)] transition-[transform,box-shadow,border-color] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
         "hover:-translate-y-0.5 hover:border-[var(--border-strong)] hover:shadow-[var(--shadow-lg)]",
         glowClasses[glow],
         className,

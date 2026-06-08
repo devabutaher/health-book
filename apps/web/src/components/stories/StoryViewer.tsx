@@ -3,7 +3,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAppSelector } from "@/hooks";
 import { playAdvanceSound, playCommentSound, playLikeSound, playReactionSound } from "@/lib/sounds";
-import { cn } from "@/lib/utils";
+import { cn, getImageUrl } from "@/lib/utils";
 import { useCreateConversationMutation, useSendMessageMutation } from "@/redux/api/messagingApi";
 import {
   useDeleteStoryMutation,
@@ -123,7 +123,9 @@ export function StoryViewer({
   const lastTickRef = useRef(0);
   const longPressRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const pausedRef = useRef(paused);
-  useEffect(() => { pausedRef.current = paused; }, [paused]);
+  useEffect(() => {
+    pausedRef.current = paused;
+  }, [paused]);
   const lastTapRef = useRef(0);
 
   const group = groups[groupIdx];
@@ -281,7 +283,6 @@ export function StoryViewer({
     longPressRef.current = setTimeout(() => setPaused(true), 400);
   };
 
-
   const handlePointerUp = () => {
     clearTimeout(longPressRef.current);
     if (paused) setPaused(false);
@@ -409,9 +410,7 @@ export function StoryViewer({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div
-        className="relative aspect-[9/16] h-full max-h-[90vh] w-full max-w-sm overflow-hidden rounded-2xl bg-gradient-to-b from-[#1a1a1a] to-[#0d0d0d]"
-      >
+      <div className="relative aspect-[9/16] h-full max-h-[90vh] w-full max-w-sm overflow-hidden rounded-2xl bg-gradient-to-b from-[#1a1a1a] to-[#0d0d0d]">
         {/* Progress Bars */}
         <div className="absolute inset-x-0 top-2 z-10 flex gap-1 px-2">
           {stories.map((s, i) => (
@@ -419,7 +418,7 @@ export function StoryViewer({
               <div
                 className="h-full rounded-full bg-white transition-none"
                 style={
-                    i < storyIdx
+                  i < storyIdx
                     ? { width: "100%" }
                     : i === storyIdx
                       ? { width: `${progress * 100}%` }
@@ -462,18 +461,18 @@ export function StoryViewer({
                 </button>
               </>
             )}
-              <button
-                onClick={() => setPaused((p) => !p)}
-                className="rounded-full p-2 text-white/70 hover:bg-white/10 hover:text-white"
-              >
-                {paused ? <Play className="size-4" /> : <Pause className="size-4" />}
-              </button>
-              <button
-                onClick={onClose}
-                className="rounded-full p-2 text-white/70 hover:bg-white/10 hover:text-white"
-              >
-                <X className="size-7" />
-              </button>
+            <button
+              onClick={() => setPaused((p) => !p)}
+              className="rounded-full p-2 text-white/70 hover:bg-white/10 hover:text-white"
+            >
+              {paused ? <Play className="size-4" /> : <Pause className="size-4" />}
+            </button>
+            <button
+              onClick={onClose}
+              className="rounded-full p-2 text-white/70 hover:bg-white/10 hover:text-white"
+            >
+              <X className="size-7" />
+            </button>
           </div>
         </div>
 
@@ -496,7 +495,10 @@ export function StoryViewer({
                 className="absolute inset-0"
               >
                 <div
-                  className={cn("relative flex h-full w-full items-center justify-center")}
+                  className={cn(
+                    "relative flex h-full w-full items-center justify-center",
+                    isMedia && "bg-black/90",
+                  )}
                   style={
                     !isMedia && story.backgroundColor
                       ? { backgroundColor: story.backgroundColor }
@@ -514,12 +516,17 @@ export function StoryViewer({
                     />
                   ) : isMedia ? (
                     <Image
-                      src={story.mediaUrl!}
+                      src={getImageUrl(story.mediaUrl, "q_auto:best,f_auto") ?? story.mediaUrl!}
                       alt={story.textOverlay || "Story"}
                       className="h-full w-full object-contain"
                       width={400}
                       height={712}
                       priority
+                      placeholder="blur"
+                      blurDataURL={
+                        getImageUrl(story.mediaUrl, "w_20,e_blur:2000,q_auto:low,f_auto") ??
+                        undefined
+                      }
                     />
                   ) : null}
                 </div>
@@ -561,12 +568,18 @@ export function StoryViewer({
                     <div
                       className="absolute inset-y-0 left-0 z-20"
                       style={{ width: "20%" }}
-                      onClick={(e) => { e.stopPropagation(); goBack(); }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        goBack();
+                      }}
                     />
                     <div
                       className="absolute inset-y-0 right-0 z-20"
                       style={{ width: "20%" }}
-                      onClick={(e) => { e.stopPropagation(); goNext(); }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        goNext();
+                      }}
                     />
                     <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 px-5">
                       {/* Question card */}
@@ -628,7 +641,11 @@ export function StoryViewer({
                                   )}
                                   initial={{ width: 0 }}
                                   animate={{ width: `${percentage}%` }}
-                                  transition={{ duration: 0.35, ease: "easeOut", delay: idx * 0.05 }}
+                                  transition={{
+                                    duration: 0.35,
+                                    ease: "easeOut",
+                                    delay: idx * 0.05,
+                                  }}
                                 />
                                 <div className="relative flex items-center justify-between gap-3">
                                   <span className="text-sm font-medium text-white">{opt}</span>
@@ -731,50 +748,50 @@ export function StoryViewer({
 
         {/* Comment Input */}
         {showComment && (
-            <motion.div
-              initial={{ y: 100, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 100, opacity: 0 }}
-              transition={SPRING_CONFIG}
-              className="absolute inset-x-0 bottom-0 z-20 border-t border-white/10 bg-black/80 backdrop-blur-xl"
+          <motion.div
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            transition={SPRING_CONFIG}
+            className="absolute inset-x-0 bottom-0 z-20 border-t border-white/10 bg-black/80 backdrop-blur-xl"
+          >
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleComment();
+              }}
+              className="flex items-center gap-2 p-3"
             >
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  handleComment();
-                }}
-                className="flex items-center gap-2 p-3"
+              <input
+                ref={commentInputRef}
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                placeholder="Send a comment..."
+                maxLength={500}
+                className="flex-1 rounded-full bg-white/15 px-4 py-2.5 text-sm text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-brand-teal"
+              />
+              <motion.button
+                type="submit"
+                disabled={!commentText.trim()}
+                whileTap={{ scale: 1.2 }}
+                className="flex size-9 items-center justify-center rounded-full bg-gradient-to-r from-brand-teal to-brand-green text-white disabled:opacity-50"
               >
-                <input
-                  ref={commentInputRef}
-                  value={commentText}
-                  onChange={(e) => setCommentText(e.target.value)}
-                  placeholder="Send a comment..."
-                  maxLength={500}
-                  className="flex-1 rounded-full bg-white/15 px-4 py-2.5 text-sm text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-brand-teal"
-                />
-                <motion.button
-                  type="submit"
-                  disabled={!commentText.trim()}
-                  whileTap={{ scale: 1.2 }}
-                  className="flex size-9 items-center justify-center rounded-full bg-gradient-to-r from-brand-teal to-brand-green text-white disabled:opacity-50"
-                >
-                  <Send className="size-4" />
-                </motion.button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowComment(false);
-                    setCommentText("");
-                    setPaused(false);
-                  }}
-                  className="flex size-9 items-center justify-center rounded-full bg-white/10 text-white/70 hover:bg-white/20"
-                >
-<X className="size-7" />
-                </button>
-              </form>
-            </motion.div>
-          )}
+                <Send className="size-4" />
+              </motion.button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowComment(false);
+                  setCommentText("");
+                  setPaused(false);
+                }}
+                className="flex size-9 items-center justify-center rounded-full bg-white/10 text-white/70 hover:bg-white/20"
+              >
+                <X className="size-7" />
+              </button>
+            </form>
+          </motion.div>
+        )}
 
         {/* Reaction animation overlay */}
         {reactionAnimating && (

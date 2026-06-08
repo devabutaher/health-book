@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { useAppSelector } from "@/hooks";
@@ -60,7 +61,7 @@ const sections: {
   },
 ];
 
-export default function LeftSidebar({
+function LeftSidebar({
   onCreatePost,
   onOpenDrafts,
 }: {
@@ -178,3 +179,5 @@ export default function LeftSidebar({
     </aside>
   );
 }
+
+export default memo(LeftSidebar);

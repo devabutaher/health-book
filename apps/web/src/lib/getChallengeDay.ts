@@ -1,8 +1,9 @@
 export function getChallengeDayElapsed(startDate: string | Date): number {
   const start = new Date(startDate);
-  start.setHours(0, 0, 0, 0);
   const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const elapsed = Math.floor((today.getTime() - start.getTime()) / 86400000);
+  // Use UTC to avoid DST transition issues
+  const startUtc = Date.UTC(start.getFullYear(), start.getMonth(), start.getDate());
+  const todayUtc = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+  const elapsed = Math.floor((todayUtc - startUtc) / 86400000);
   return Math.max(1, elapsed + 1);
 }

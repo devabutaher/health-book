@@ -1,15 +1,15 @@
 import { Router } from "express";
 import { messageController } from "../controllers/message.controller";
-import { authenticate, cacheControl } from "../middleware";
+import { authenticate } from "../middleware";
 
 const router = Router() as ReturnType<typeof Router>;
 
 router.use(authenticate);
 
-router.get("/unread-count", cacheControl(10, 30), messageController.unreadCount);
-router.get("/conversations", cacheControl(60, 300), messageController.listConversations);
+router.get("/unread-count", messageController.unreadCount);
+router.get("/conversations", messageController.listConversations);
 router.post("/conversations", messageController.createConversation);
-router.get("/conversations/:id", cacheControl(60, 300), messageController.getConversation);
+router.get("/conversations/:id", messageController.getConversation);
 router.post("/conversations/:id/messages", messageController.sendMessage);
 router.post("/conversations/:id/mute", messageController.toggleMute);
 router.post("/conversations/:id/read", messageController.markRead);

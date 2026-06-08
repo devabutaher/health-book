@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { memo, useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { Bell, CheckCheck, ArrowRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 
-export default function NotificationBell() {
+const NotificationBell = memo(function NotificationBell() {
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const isAuthLoading = useAppSelector((s) => s.auth.isLoading);
@@ -152,4 +152,6 @@ export default function NotificationBell() {
       </AnimatePresence>
     </div>
   );
-}
+});
+
+export default NotificationBell;

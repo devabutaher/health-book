@@ -54,19 +54,20 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
-        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+        <Script
+          id="theme-init"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{ __html: themeInitScript }}
+        />
       </head>
       <body className="min-h-full flex flex-col">
-        <Script
-          src="https://widget.cloudinary.com/v2.0/global/all.js"
-          strategy="lazyOnload"
-        />
+        <Script src="https://widget.cloudinary.com/v2.0/global/all.js" strategy="lazyOnload" />
         <ReduxProvider>
           <ThemeProvider>
             <AuthProvider>
               <MotionProvider>
-              <PWAProvider>{children}</PWAProvider>
-            </MotionProvider>
+                <PWAProvider>{children}</PWAProvider>
+              </MotionProvider>
             </AuthProvider>
           </ThemeProvider>
         </ReduxProvider>

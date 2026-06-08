@@ -8,7 +8,9 @@ import { soundManager } from "@/lib/soundManager";
 export const commentApi = createApi({
   reducerPath: "commentApi",
   baseQuery: createBaseQuery(`${process.env["NEXT_PUBLIC_API_URL"]}/api/comments`),
-  tagTypes: ["Post", "Comments", "Feed"],
+  tagTypes: ["Post", "Comments"],
+  refetchOnFocus: false,
+  refetchOnReconnect: true,
   endpoints: (builder) => ({
     getComments: builder.query({
       query: ({ postId, cursor }: { postId: string; cursor?: string }) =>
@@ -87,7 +89,7 @@ export const commentApi = createApi({
         method: "PUT",
         body: { content },
       }),
-      invalidatesTags: (_result, _error, { commentId }) => [{ type: "Comments", id: commentId }],
+      invalidatesTags: ["Comments"],
       onQueryStarted: async ({ commentId, content }, { dispatch, queryFulfilled, getState }) => {
         const state = getState() as RootState;
         const queries = (state as any).commentApi?.queries ?? {};
@@ -120,7 +122,6 @@ export const commentApi = createApi({
         url: `/${commentId}`,
         method: "DELETE",
       }),
-      invalidatesTags: ["Comments"],
       onQueryStarted: async (commentId, { dispatch, queryFulfilled, getState }) => {
         const state = getState() as RootState;
         const queries = (state as any).commentApi?.queries ?? {};
@@ -152,7 +153,6 @@ export const commentApi = createApi({
         url: `/${commentId}/pin`,
         method: "POST",
       }),
-      invalidatesTags: ["Comments"],
       onQueryStarted: async (commentId, { dispatch, queryFulfilled, getState }) => {
         const state = getState() as RootState;
         const queries = (state as any).commentApi?.queries ?? {};
@@ -177,6 +177,7 @@ export const commentApi = createApi({
           await queryFulfilled;
         } catch {
           patch?.undo();
+          soundManager.playError();
         }
       },
     }),

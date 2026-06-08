@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useRef } from "react";
 import { useSelector } from "react-redux";
 import type { RootState } from "@/redux/store";
 
@@ -27,35 +27,46 @@ const SOUNDS: Record<SoundKey, { src: string; volume: number }> = {
   success: { src: "/sounds/success.mp3", volume: 0.3 },
 };
 
+// Module-level singleton Audio pool — shared across all component instances
+// Prevents creating 9 Audio() per component (44+ instances × 9 = 396+ Audio objects)
+let initialised = false;
+const audioPool = new Map<string, HTMLAudioElement>();
+
+function ensurePool() {
+  if (initialised) return;
+  initialised = true;
+  Object.entries(SOUNDS).forEach(([key, config]) => {
+    const audio = new Audio(config.src);
+    audio.volume = config.volume;
+    audio.preload = "auto";
+    audioPool.set(key, audio);
+  });
+}
+
 export function useSound() {
   const soundEnabled = useSelector(
     (s: RootState) =>
       (s as { settings?: { soundEnabled?: boolean } }).settings?.soundEnabled ?? true,
   );
-  const audioCache = useRef<Map<string, HTMLAudioElement>>(new Map());
 
-  useEffect(() => {
-    Object.entries(SOUNDS).forEach(([key, config]) => {
-      if (!audioCache.current.has(key)) {
-        const audio = new Audio(config.src);
-        audio.volume = config.volume;
-        audio.preload = "auto";
-        audioCache.current.set(key, audio);
-      }
-    });
-  }, []);
+  // Ensure pool is initialised once (module-level)
+  const poolReady = useRef(false);
+  if (!poolReady.current) {
+    poolReady.current = true;
+    ensurePool();
+  }
 
   const play = useCallback(
     (key: SoundKey) => {
       if (!soundEnabled) return;
       if (typeof window === "undefined") return;
       try {
-        let audio = audioCache.current.get(key);
+        let audio = audioPool.get(key);
         if (!audio) {
           audio = new Audio(SOUNDS[key].src);
           audio.volume = SOUNDS[key].volume;
           audio.preload = "auto";
-          audioCache.current.set(key, audio);
+          audioPool.set(key, audio);
         }
         audio.currentTime = 0;
         audio.play().catch(() => {});

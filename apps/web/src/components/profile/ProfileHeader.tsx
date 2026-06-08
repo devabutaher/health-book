@@ -1,13 +1,14 @@
 "use client";
 
+import { memo, useCallback } from "react";
 import Image from "next/image";
 import { CalendarPlus, Flame, Heart, MessageCircle, Pencil } from "lucide-react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useAppSelector } from "@/hooks";
-import { useFollowMutation, useUnfollowMutation } from "@/redux/api/userApi";
+import { getImageUrl } from "@/lib/utils";
+import { useFollow } from "@/hooks/useFollow";
 import { useCreateConversationMutation } from "@/redux/api/messagingApi";
-import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { GlassCard } from "@/components/ui/glass-card";
@@ -29,7 +30,7 @@ interface ProfileData {
   createdAt: string;
 }
 
-export function ProfileHeader({
+const ProfileHeader = memo(function ProfileHeader({
   profile,
   onEdit,
   onFollowersClick,
@@ -43,48 +44,50 @@ export function ProfileHeader({
   const router = useRouter();
   const currentUser = useAppSelector((s) => s.auth.user);
   const isOwner = currentUser?.id === profile.id;
-  const [follow, { isLoading: following }] = useFollowMutation();
-  const [unfollow, { isLoading: unfollowing }] = useUnfollowMutation();
   const [createConversation] = useCreateConversationMutation();
-  const [isFollow, setIsFollow] = useState(profile.isFollowing);
   const { play } = useSound();
 
-  const handleMessage = async () => {
+  const {
+    isFollowing: isFollow,
+    toggleFollow,
+    isPending,
+  } = useFollow(profile.id, profile.isFollowing, {
+    silent: true,
+    errorLabel: "update follow status",
+  });
+
+  const handleMessage = useCallback(async () => {
     try {
       const result = await createConversation({ participantIds: [profile.id] }).unwrap();
       router.push(`/messages/${result.id}`);
     } catch {
       toast.error("Failed to start conversation");
     }
-  };
+  }, [createConversation, profile.id, router]);
 
-  const handleFollow = async () => {
-    if (isFollow) {
-      try {
-        await unfollow(profile.id).unwrap();
-        setIsFollow(false);
-      } catch {
-        play("error");
-        toast.error("Failed to update follow status");
-      }
-    } else {
-      play("follow");
-      try {
-        await follow(profile.id).unwrap();
-        setIsFollow(true);
-        toast.success(`Following ${profile.name}`);
-      } catch {
-        play("error");
-        toast.error("Failed to update follow status");
-      }
-    }
-  };
+  const handleFollow = useCallback(async () => {
+    if (isOwner) return;
+    const newFollowState = !isFollow;
+    if (newFollowState) play("follow");
+    await toggleFollow();
+  }, [isOwner, isFollow, toggleFollow, play]);
 
   return (
     <GlassCard variant="elevated">
       <div className="relative h-48 sm:h-56">
         {profile.coverPhoto ? (
-          <Image src={profile.coverPhoto} alt="Cover" fill className="object-cover" priority sizes="(max-width: 768px) 100vw, 800px" />
+          <Image
+            src={getImageUrl(profile.coverPhoto, "q_auto:good,f_auto") ?? profile.coverPhoto}
+            alt="Cover"
+            fill
+            className="object-cover"
+            priority
+            placeholder="blur"
+            blurDataURL={
+              getImageUrl(profile.coverPhoto, "w_20,e_blur:2000,q_auto:low,f_auto") ?? undefined
+            }
+            sizes="(max-width: 768px) 100vw, 800px"
+          />
         ) : (
           <div
             className="absolute inset-0 bg-gradient-to-br from-brand-teal via-brand-green to-brand-lime"
@@ -114,10 +117,15 @@ export function ProfileHeader({
                 {profile.avatar ? (
                   <div className="relative size-full">
                     <Image
-                      src={profile.avatar}
+                      src={getImageUrl(profile.avatar, "q_auto:good,f_auto") ?? profile.avatar}
                       alt={profile.name}
                       fill
                       className="object-cover"
+                      placeholder="blur"
+                      blurDataURL={
+                        getImageUrl(profile.avatar, "w_20,e_blur:2000,q_auto:low,f_auto") ??
+                        undefined
+                      }
                       sizes="128px"
                     />
                   </div>
@@ -140,7 +148,7 @@ export function ProfileHeader({
                   variant={isFollow ? "outline" : "gradient"}
                   size="sm"
                   onClick={handleFollow}
-                  disabled={following || unfollowing}
+                  disabled={isPending}
                 >
                   {isFollow ? "Following" : "Follow"}
                 </Button>
@@ -221,4 +229,6 @@ export function ProfileHeader({
       </div>
     </GlassCard>
   );
-}
+});
+
+export { ProfileHeader };

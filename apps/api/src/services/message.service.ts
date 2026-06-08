@@ -1,13 +1,17 @@
 import { prisma } from "../lib/prisma";
 import { Prisma } from "../../generated/prisma";
-import { supabase } from "../lib/supabase";
 import { AppError } from "../utils/AppError";
+import { broadcastRealtime } from "../utils/realtime";
 import { notificationService } from "./notification.service";
 
 export const messageService = {
-  async listConversations(userId: string) {
+  async listConversations(userId: string, cursor?: string, limit = 50) {
     const participations = await prisma.conversationParticipant.findMany({
       where: { userId },
+      take: limit + 1,
+      ...(cursor
+        ? { skip: 1, cursor: { conversationId_userId: { conversationId: cursor, userId } } }
+        : {}),
       include: {
         conversation: {
           include: {
@@ -23,14 +27,16 @@ export const messageService = {
                 sender: { select: { id: true, name: true, username: true, avatar: true } },
               },
             },
-            _count: { select: { messages: true } },
           },
         },
       },
-      orderBy: { conversation: { updatedAt: "desc" } },
+      orderBy: [{ conversation: { updatedAt: "desc" } }, { conversationId: "desc" }],
     });
 
-    return participations.map((p) => {
+    const hasMore = participations.length > limit;
+    const items = hasMore ? participations.slice(0, limit) : participations;
+
+    const data = items.map((p) => {
       const conv = p.conversation;
       const unreadCount = conv.messages.filter(
         (m) =>
@@ -51,35 +57,33 @@ export const messageService = {
         updatedAt: conv.updatedAt,
       };
     });
+
+    return { data, nextCursor: hasMore ? (data[data.length - 1]?.id ?? null) : null, hasMore };
   },
 
   async getTotalUnreadCount(userId: string) {
-    const participations = await prisma.conversationParticipant.findMany({
+    const result = await prisma.conversationParticipant.findMany({
       where: { userId },
-      include: {
+      select: {
+        lastReadAt: true,
         conversation: {
-          include: {
+          select: {
             messages: {
-              take: 1,
+              where: { senderId: { not: userId }, isDeleted: false },
               orderBy: { createdAt: "desc" },
-              select: { id: true, senderId: true, createdAt: true },
+              take: 1,
+              select: { createdAt: true },
             },
           },
         },
       },
+      take: 100,
     });
 
-    let total = 0;
-    for (const p of participations) {
-      const conv = p.conversation;
-      const unread = conv.messages.filter(
-        (m) =>
-          m.senderId !== userId &&
-          (!p.lastReadAt || new Date(m.createdAt) > new Date(p.lastReadAt)),
-      ).length;
-      total += unread;
-    }
-    return total;
+    return result.filter((p) => {
+      const lastMsg = p.conversation.messages[0];
+      return lastMsg && (!p.lastReadAt || new Date(lastMsg.createdAt) > new Date(p.lastReadAt));
+    }).length;
   },
 
   async createConversation(
@@ -182,97 +186,121 @@ export const messageService = {
       where: { conversationId_userId: { conversationId, userId: senderId } },
     });
 
-    const message = await prisma.message.create({
-      data: {
-        conversationId,
-        senderId,
-        content: data.content,
-        mediaUrl: data.mediaUrl,
-        sharedPostId: data.sharedPostId,
-        messageType: data.messageType ?? "text",
-        storyId: data.storyId,
-        storyReplyData: (data.storyReplyData ?? undefined) as Prisma.InputJsonValue,
-      },
-      include: {
-        sender: { select: { id: true, name: true, username: true, avatar: true } },
-      },
+    const message = await prisma.$transaction(async (tx) => {
+      const msg = await tx.message.create({
+        data: {
+          conversationId,
+          senderId,
+          content: data.content,
+          mediaUrl: data.mediaUrl,
+          sharedPostId: data.sharedPostId,
+          messageType: data.messageType ?? "text",
+          storyId: data.storyId,
+          storyReplyData: (data.storyReplyData ?? undefined) as Prisma.InputJsonValue,
+        },
+        include: {
+          sender: { select: { id: true, name: true, username: true, avatar: true } },
+        },
+      });
+
+      await tx.conversation.update({
+        where: { id: conversationId },
+        data: { updatedAt: new Date() },
+      });
+
+      return msg;
     });
 
-    await prisma.conversation.update({
-      where: { id: conversationId },
-      data: { updatedAt: new Date() },
+    broadcastRealtime(`room:${conversationId}:messages`, "INSERT", {
+      ...message,
+      senderName: message.sender?.name ?? "Unknown",
+    }).catch((err) => {
+      console.error(`[message] realtime broadcast failed for ${conversationId}`, err);
     });
 
+    let participants: { userId: string }[] = [];
     try {
-      const channel = supabase.channel(`room:${conversationId}:messages`);
-      const p = new Promise<void>((resolve, reject) => {
-        const t = setTimeout(() => reject(new Error("timeout")), 3000);
-        channel.subscribe((status) => {
-          if (status === "SUBSCRIBED") {
-            clearTimeout(t);
-            resolve();
-          }
-          if (status === "CHANNEL_ERROR") {
-            clearTimeout(t);
-            reject(new Error("channel_error"));
-          }
-        });
-      });
-      await p;
-      await channel.send({
-        type: "broadcast",
-        event: "INSERT",
-        payload: { ...message, senderName: message.sender?.name ?? "Unknown" },
-      });
-      channel.unsubscribe();
-    } catch {}
-
-    try {
-      const participants = await prisma.conversationParticipant.findMany({
+      participants = await prisma.conversationParticipant.findMany({
         where: { conversationId, userId: { not: senderId } },
         select: { userId: true },
       });
-      for (const p of participants) {
-        try {
-          await notificationService.create({
-            type: "MESSAGE",
-            userId: p.userId,
-            fromUserId: senderId,
-            message: data.content?.slice(0, 100),
-          });
-        } catch {}
-      }
-    } catch {}
+    } catch (err) {
+      console.error(`[message] participant fetch failed for ${conversationId}`, err);
+    }
+
+    await Promise.allSettled(
+      participants.map((p) =>
+        broadcastRealtime(`hb-conversations:${p.userId}`, "CONVERSATION_UPDATED", {
+          conversationId,
+        }).catch((err) => {
+          console.error(`[message] conversation list broadcast failed for ${conversationId}`, err);
+        }),
+      ),
+    );
+
+    // Batch create notifications via createMany — single DB write instead of N sequential
+    try {
+      await prisma.notification.createMany({
+        data: participants.map((p) => ({
+          type: "MESSAGE",
+          userId: p.userId,
+          fromUserId: senderId,
+          message: data.content?.slice(0, 100),
+        })),
+      });
+    } catch (err) {
+      console.error(`[message] batch notification create failed`, err);
+    }
+
+    // Broadcast realtime in parallel
+    await Promise.allSettled(
+      participants.map((p) =>
+        broadcastRealtime(`hb-notification:${p.userId}`, "INSERT", {
+          type: "MESSAGE",
+          userId: p.userId,
+          fromUserId: senderId,
+          message: data.content?.slice(0, 100),
+        }).catch((err) =>
+          console.error(`[message] notification broadcast failed for ${p.userId}`, err),
+        ),
+      ),
+    );
 
     return message;
   },
 
   async deleteMessage(messageId: string, userId: string, deleteForAll = false) {
-    const message = await prisma.message.findUniqueOrThrow({ where: { id: messageId } })
+    const message = await prisma.message.findUniqueOrThrow({ where: { id: messageId } });
 
     if (message.senderId !== userId) {
-      throw new AppError(403, "Not your message")
+      throw new AppError(403, "Not your message");
     }
 
     if (deleteForAll) {
       await prisma.message.update({
         where: { id: messageId },
         data: { isDeleted: true },
-      })
+      });
     } else {
-      const deletedFor = [...message.deletedFor, userId]
+      const deletedFor = [...message.deletedFor, userId];
       if (deletedFor.length >= 2) {
         await prisma.message.update({
           where: { id: messageId },
           data: { isDeleted: true },
-        })
+        });
       } else {
         await prisma.message.update({
           where: { id: messageId },
           data: { deletedFor },
-        })
+        });
       }
     }
+
+    broadcastRealtime(`hb-message:${message.conversationId}`, "MESSAGE_DELETED", {
+      messageId,
+      conversationId: message.conversationId,
+      userId,
+    }).catch(() => {});
   },
 
   async toggleMute(conversationId: string, userId: string) {
@@ -305,7 +333,8 @@ export const messageService = {
 
     if (conv.isGroup) {
       if (deleteForEveryone) {
-        if (participant.role !== "ADMIN") throw new AppError(403, "Only admins can delete the group");
+        if (participant.role !== "ADMIN")
+          throw new AppError(403, "Only admins can delete the group");
         await prisma.conversation.delete({ where: { id: conversationId } });
         return;
       }

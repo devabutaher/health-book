@@ -6,10 +6,26 @@ import {
   checkInSchema,
   commentReactionSchema,
   duelSchema,
+  ratingSchema,
+  shareChallengeSchema,
+  inviteToChallengeSchema,
+  respondToInviteSchema,
+  upsertDayPlansSchema,
+  uploadPhotoSchema,
 } from "../utils/validators";
 import { challengeService } from "../services/challenge.service";
 import { challengeTemplateService } from "../services/challengeTemplate.service";
+import { uploadImage, uploadVideo } from "../services/cloudinary";
 import type { ChallengeType, ChallengeCategory, ChallengeDifficulty } from "../../generated/prisma";
+
+interface MulterFile {
+  fieldname: string;
+  originalname: string;
+  encoding: string;
+  mimetype: string;
+  path: string;
+  size: number;
+}
 
 type P = Record<string, string>;
 
@@ -161,8 +177,10 @@ export const challengeController = {
 
   async getMyChallenges(req: Request<P>, res: Response, next: NextFunction) {
     try {
-      const challenges = await challengeService.getMyChallenges(req.user!.id);
-      res.json({ success: true, data: challenges });
+      const cursor = req.query.cursor as string | undefined;
+      const limit = Number(req.query.limit) || 100;
+      const result = await challengeService.getMyChallenges(req.user!.id, cursor, limit);
+      res.json({ success: true, data: result });
     } catch (err) {
       next(err);
     }
@@ -170,8 +188,10 @@ export const challengeController = {
 
   async getSavedChallenges(req: Request<P>, res: Response, next: NextFunction) {
     try {
-      const challenges = await challengeService.getSaved(req.user!.id);
-      res.json({ success: true, data: challenges });
+      const cursor = req.query.cursor as string | undefined;
+      const limit = Number(req.query.limit) || 50;
+      const result = await challengeService.getSaved(req.user!.id, cursor, limit);
+      res.json({ success: true, data: result });
     } catch (err) {
       next(err);
     }
@@ -188,7 +208,7 @@ export const challengeController = {
 
   async share(req: Request<P>, res: Response, next: NextFunction) {
     try {
-      const content = req.body.content as string | undefined;
+      const { content } = shareChallengeSchema.parse(req.body);
       const post = await challengeService.share(req.params.id, req.user!.id, content);
       res.json({ success: true, data: post });
     } catch (err) {
@@ -261,9 +281,9 @@ export const challengeController = {
 
   async invite(req: Request<P>, res: Response, next: NextFunction) {
     try {
-      const { userId: toUserId } = req.body as { userId: string };
-      await challengeService.invite(req.params.id, req.user!.id, toUserId);
-      res.json({ success: true });
+      const { userId: toUserId } = inviteToChallengeSchema.parse(req.body);
+      const invite = await challengeService.invite(req.params.id, req.user!.id, toUserId);
+      res.json({ success: true, data: invite });
     } catch (err) {
       next(err);
     }
@@ -271,7 +291,7 @@ export const challengeController = {
 
   async respondToInvite(req: Request<P>, res: Response, next: NextFunction) {
     try {
-      const { accept } = req.body as { accept: boolean };
+      const { accept } = respondToInviteSchema.parse(req.body);
       await challengeService.respondToInvite(req.params.inviteId, req.user!.id, accept);
       res.json({ success: true });
     } catch (err) {
@@ -317,6 +337,54 @@ export const challengeController = {
     }
   },
 
+  async upsertDayPlans(req: Request<P>, res: Response, next: NextFunction) {
+    try {
+      const { plans } = upsertDayPlansSchema.parse(req.body);
+      const result = await challengeService.upsertDayPlans(req.params.id, req.user!.id, plans);
+      res.json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async getDayPlans(req: Request<P>, res: Response, next: NextFunction) {
+    try {
+      const result = await challengeService.getDayPlans(req.params.id);
+      res.json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async getDayPlan(req: Request<P>, res: Response, next: NextFunction) {
+    try {
+      const day = Number(req.params.day);
+      const result = await challengeService.getDayPlan(req.params.id, day);
+      res.json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async rate(req: Request<P>, res: Response, next: NextFunction) {
+    try {
+      const { rating, review } = ratingSchema.parse(req.body);
+      const result = await challengeService.rate(req.params.id, req.user!.id, rating, review);
+      res.json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async getRatings(req: Request<P>, res: Response, next: NextFunction) {
+    try {
+      const result = await challengeService.getRatings(req.params.id, req.user?.id);
+      res.json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  },
+
   async listTemplates(req: Request<P>, res: Response, next: NextFunction) {
     try {
       const category = req.query.category as ChallengeCategory | undefined;
@@ -331,6 +399,47 @@ export const challengeController = {
   async seedTemplates(_req: Request<P>, res: Response, next: NextFunction) {
     try {
       const result = await challengeTemplateService.seedIfEmpty();
+      res.json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async uploadMedia(req: Request<P> & { file?: MulterFile }, res: Response, next: NextFunction) {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ success: false, message: "No file provided" });
+      }
+      if (req.file.mimetype.startsWith("video/")) {
+        const result = await uploadVideo(req.file.path, "challenges");
+        res.json({ success: true, data: { url: result.url, thumbnailUrl: result.thumbnailUrl } });
+      } else {
+        const url = await uploadImage(req.file.path, "challenges");
+        res.json({ success: true, data: { url } });
+      }
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async uploadBeforePhoto(req: Request<P>, res: Response, next: NextFunction) {
+    try {
+      const { photoUrl } = uploadPhotoSchema.parse(req.body);
+      const result = await challengeService.uploadBeforePhoto(
+        req.params.id,
+        req.user!.id,
+        photoUrl,
+      );
+      res.json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async uploadAfterPhoto(req: Request<P>, res: Response, next: NextFunction) {
+    try {
+      const { photoUrl } = uploadPhotoSchema.parse(req.body);
+      const result = await challengeService.uploadAfterPhoto(req.params.id, req.user!.id, photoUrl);
       res.json({ success: true, data: result });
     } catch (err) {
       next(err);
