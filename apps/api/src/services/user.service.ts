@@ -75,7 +75,7 @@ export const userService = {
     userId: string,
     data: { name?: string; bio?: string; isPrivate?: boolean; gender?: string },
   ) {
-    return prisma.user.update({
+    const user = await prisma.user.update({
       where: { id: userId },
       data,
       select: {
@@ -93,6 +93,12 @@ export const userService = {
         createdAt: true,
       },
     });
+
+    broadcastRealtime(`hb-user:${userId}`, "PROFILE_UPDATED", {
+      userId,
+    }).catch(() => {});
+
+    return user;
   },
 
   async getAvatar(userId: string) {
@@ -112,19 +118,31 @@ export const userService = {
   },
 
   async updateAvatar(userId: string, avatar: string) {
-    return prisma.user.update({
+    const user = await prisma.user.update({
       where: { id: userId },
       data: { avatar },
       select: { id: true, avatar: true },
     });
+
+    broadcastRealtime(`hb-user:${userId}`, "AVATAR_UPDATED", {
+      userId,
+    }).catch(() => {});
+
+    return user;
   },
 
   async updateCover(userId: string, coverPhoto: string) {
-    return prisma.user.update({
+    const user = await prisma.user.update({
       where: { id: userId },
       data: { coverPhoto },
       select: { id: true, coverPhoto: true },
     });
+
+    broadcastRealtime(`hb-user:${userId}`, "COVER_UPDATED", {
+      userId,
+    }).catch(() => {});
+
+    return user;
   },
 
   async follow(followerId: string, followingId: string) {

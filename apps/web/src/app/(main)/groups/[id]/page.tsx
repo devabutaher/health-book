@@ -38,6 +38,7 @@ import { useBrowseChallengesQuery } from "@/redux/api/challengesApi";
 import { useGroupRealtime } from "@/hooks/useGroupRealtime";
 import { ChallengeCard } from "@/components/challenges/ChallengeCard";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -257,9 +258,9 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
   if (isLoading) {
     return (
       <div className="mx-auto max-w-4xl space-y-4">
-        <div className="h-48 animate-pulse rounded-2xl bg-[var(--bg-subtle)]" />
-        <div className="h-10 animate-pulse rounded-xl bg-[var(--bg-subtle)]" />
-        <div className="h-64 animate-pulse rounded-2xl bg-[var(--bg-subtle)]" />
+        <Skeleton className="h-48 rounded-2xl" />
+        <Skeleton className="h-10 rounded-xl" />
+        <Skeleton className="h-64 rounded-2xl" />
       </div>
     );
   }
@@ -526,10 +527,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                 {feedLoading && !feedData ? (
                   <div className="space-y-4">
                     {Array.from({ length: 3 }).map((_, i) => (
-                      <div
-                        key={i}
-                        className="h-48 animate-pulse rounded-2xl bg-[var(--bg-subtle)]"
-                      />
+                      <Skeleton key={i} className="h-48 rounded-2xl" />
                     ))}
                   </div>
                 ) : !feedData?.posts?.length ? (
@@ -616,10 +614,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                 {challengesLoading ? (
                   <div className="mt-4 grid gap-4 sm:grid-cols-2">
                     {Array.from({ length: 2 }).map((_, i) => (
-                      <div
-                        key={i}
-                        className="h-44 animate-pulse rounded-2xl bg-[var(--bg-subtle)]"
-                      />
+                      <Skeleton key={i} className="h-44 rounded-2xl" />
                     ))}
                   </div>
                 ) : !groupChallenges?.challenges?.length ? (

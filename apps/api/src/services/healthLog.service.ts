@@ -161,7 +161,7 @@ export const healthLogService = {
     if (!original) throw new AppError(404, "Health log not found");
     if (!original.isPublic) throw new AppError(403, "Cannot copy a private health log");
 
-    return prisma.healthLog.create({
+    const log = await prisma.healthLog.create({
       data: {
         userId,
         type: original.type,
@@ -171,13 +171,19 @@ export const healthLogService = {
         isPublic: false,
       },
     });
+
+    broadcastRealtime(`hb-health:${userId}`, "HEALTH_LOG_CREATED", {
+      logId: log.id,
+    }).catch(() => {});
+
+    return log;
   },
 
   async share(userId: string, logId: string, content: string) {
     const log = await prisma.healthLog.findFirst({ where: { id: logId, userId } });
     if (!log) throw new AppError(404, "Health log not found");
 
-    return prisma.post.create({
+    const post = await prisma.post.create({
       data: {
         content,
         userId,
@@ -187,6 +193,13 @@ export const healthLogService = {
         privacy: "PUBLIC",
       },
     });
+
+    broadcastRealtime(`hb-health:${userId}`, "HEALTH_LOG_SHARED", {
+      logId,
+      postId: post.id,
+    }).catch(() => {});
+
+    return post;
   },
 
   async getStats(userId: string) {

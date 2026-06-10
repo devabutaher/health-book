@@ -57,6 +57,7 @@ export function ChatWindow({
     [play, sendMessage, conversationId],
   );
 
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const handleLoadMore = useCallback(async () => {
     if (!data?.nextCursor || loadingMore) return;
     loadingOlderRef.current = true;

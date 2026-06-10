@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { MessageCircle, Send, Trash2, ChevronDown } from "lucide-react";
 import {
   useGetChallengeCommentsQuery,
@@ -16,7 +16,7 @@ import { getErrorMessage } from "@/lib/getErrorMessage";
 import { useSound } from "@/hooks/useSound";
 import { GlassCard } from "@/components/ui/glass-card";
 import { cn } from "@/lib/utils";
-import type { ChallengeCommentReaction } from "@/types/challenge";
+import type { ChallengeComment, ChallengeCommentReaction } from "@/types/challenge";
 
 const reactionEmojis: Record<string, string> = {
   INSPIRED: "🌟",
@@ -32,12 +32,10 @@ const reactionEmojis: Record<string, string> = {
 function CommentReactions({
   reactions,
   commentId,
-  challengeId,
   currentUserId,
 }: {
   reactions?: ChallengeCommentReaction[];
   commentId: string;
-  challengeId: string;
   currentUserId?: string;
 }) {
   const [reactToComment] = useReactToChallengeCommentMutation();
@@ -91,12 +89,28 @@ export function ChallengeComments({ challengeId }: { challengeId: string }) {
   const [deleteComment] = useDeleteChallengeCommentMutation();
   const { play } = useSound();
 
-  const comments = data?.comments || [];
+  const [allComments, setAllComments] = useState<ChallengeComment[]>([]);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+
+  useEffect(() => {
+    if (data) {
+      if (!cursor) {
+        setAllComments(data.comments);
+      } else {
+        setAllComments((prev) => [...prev, ...data.comments]);
+      }
+      setNextCursor(data.nextCursor);
+      setHasMore(data.hasMore);
+    }
+  }, [data, cursor]);
+
+  const comments = allComments;
 
   const loadMore = useCallback(() => {
-    if (!data?.hasMore || isFetching) return;
-    setCursor(data.nextCursor || undefined);
-  }, [data, isFetching]);
+    if (!hasMore || isFetching) return;
+    setCursor(nextCursor || undefined);
+  }, [hasMore, isFetching, nextCursor]);
 
   const handleSubmit = async () => {
     if (!content.trim()) return;
@@ -202,7 +216,6 @@ export function ChallengeComments({ challengeId }: { challengeId: string }) {
                   <CommentReactions
                     reactions={c.reactions}
                     commentId={c.id}
-                    challengeId={challengeId}
                     currentUserId={currentUserId}
                   />
                   <button
@@ -242,7 +255,6 @@ export function ChallengeComments({ challengeId }: { challengeId: string }) {
                         <CommentReactions
                           reactions={r.reactions}
                           commentId={r.id}
-                          challengeId={challengeId}
                           currentUserId={currentUserId}
                         />
                       </div>
@@ -258,7 +270,7 @@ export function ChallengeComments({ challengeId }: { challengeId: string }) {
             </div>
           ))}
 
-          {data?.hasMore && (
+          {hasMore && (
             <Button
               variant="secondary"
               size="sm"

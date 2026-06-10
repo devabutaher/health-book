@@ -43,7 +43,7 @@ export default function CalorieChart() {
           ))}
         </ToggleGroup>
       </div>
-      <ChartContainer config={config} className="h-[180px] w-full">
+      <ChartContainer config={config} className="aspect-auto h-[180px] w-full">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={chartData} margin={{ top: 8, right: 4, left: 0, bottom: 0 }}>
             <defs>

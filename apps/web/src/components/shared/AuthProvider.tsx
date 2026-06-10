@@ -86,7 +86,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Capture refetch in a ref to stabilize the effect dependency
   const refetchRef = useRef(refetch);
-  refetchRef.current = refetch;
+
+  useEffect(() => {
+    refetchRef.current = refetch;
+  }, [refetch]);
 
   useEffect(() => {
     // Guard: don't stack retry timers

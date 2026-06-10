@@ -117,7 +117,7 @@ export const messageService = {
       if (existing) return existing;
     }
 
-    return prisma.conversation.create({
+    const conversation = await prisma.conversation.create({
       data: {
         isGroup: isGroup ?? false,
         groupName,
@@ -138,6 +138,16 @@ export const messageService = {
         },
       },
     });
+
+    await Promise.allSettled(
+      allIds.map((id) =>
+        broadcastRealtime(`hb-conversations:${id}`, "CONVERSATION_CREATED", {
+          conversationId: conversation.id,
+        }).catch(() => {}),
+      ),
+    );
+
+    return conversation;
   },
 
   async getConversation(conversationId: string, userId: string, cursor?: string, limit = 50) {
@@ -336,6 +346,18 @@ export const messageService = {
         if (participant.role !== "ADMIN")
           throw new AppError(403, "Only admins can delete the group");
         await prisma.conversation.delete({ where: { id: conversationId } });
+
+        const allParticipants = await prisma.conversationParticipant.findMany({
+          where: { conversationId },
+          select: { userId: true },
+        });
+        await Promise.allSettled(
+          allParticipants.map((p) =>
+            broadcastRealtime(`hb-conversations:${p.userId}`, "CONVERSATION_DELETED", {
+              conversationId,
+            }).catch(() => {}),
+          ),
+        );
         return;
       }
 
@@ -350,6 +372,11 @@ export const messageService = {
     await prisma.conversationParticipant.delete({
       where: { conversationId_userId: { conversationId, userId } },
     });
+
+    broadcastRealtime(`room:${conversationId}:messages`, "PARTICIPANT_REMOVED", {
+      conversationId,
+      userId,
+    }).catch(() => {});
 
     const remaining = await prisma.conversationParticipant.count({ where: { conversationId } });
     if (remaining === 0) {
@@ -366,6 +393,11 @@ export const messageService = {
       where: { conversationId, isDeleted: false },
       data: { isDeleted: true },
     });
+
+    broadcastRealtime(`room:${conversationId}:messages`, "MESSAGES_CLEARED", {
+      conversationId,
+      userId,
+    }).catch(() => {});
   },
 
   async addParticipant(conversationId: string, newUserId: string, currentUserId: string) {
@@ -384,10 +416,17 @@ export const messageService = {
     });
     if (existing) throw new AppError(409, "User is already a participant");
 
-    return prisma.conversationParticipant.create({
+    const participant = await prisma.conversationParticipant.create({
       data: { conversationId, userId: newUserId },
       include: { user: { select: { id: true, name: true, username: true, avatar: true } } },
     });
+
+    broadcastRealtime(`room:${conversationId}:messages`, "PARTICIPANT_ADDED", {
+      conversationId,
+      userId: newUserId,
+    }).catch(() => {});
+
+    return participant;
   },
 
   async removeParticipant(conversationId: string, userIdToRemove: string, currentUserId: string) {
@@ -414,6 +453,11 @@ export const messageService = {
       where: { conversationId_userId: { conversationId, userId: userIdToRemove } },
     });
 
+    broadcastRealtime(`room:${conversationId}:messages`, "PARTICIPANT_REMOVED", {
+      conversationId,
+      userId: userIdToRemove,
+    }).catch(() => {});
+
     const remaining = await prisma.conversationParticipant.count({ where: { conversationId } });
     if (remaining === 0) {
       await prisma.conversation.delete({ where: { id: conversationId } });
@@ -430,10 +474,17 @@ export const messageService = {
       where: { conversationId_userId: { conversationId, userId: targetUserId } },
     });
 
-    return prisma.conversationParticipant.update({
+    const result = await prisma.conversationParticipant.update({
       where: { conversationId_userId: { conversationId, userId: targetUserId } },
       data: { role: "ADMIN" },
     });
+
+    broadcastRealtime(`room:${conversationId}:messages`, "ADMIN_PROMOTED", {
+      conversationId,
+      userId: targetUserId,
+    }).catch(() => {});
+
+    return result;
   },
 
   async updateGroupInfo(
@@ -451,7 +502,7 @@ export const messageService = {
     });
     if (!conv.isGroup) throw new AppError(400, "Not a group conversation");
 
-    return prisma.conversation.update({
+    const updated = await prisma.conversation.update({
       where: { id: conversationId },
       data,
       include: {
@@ -462,5 +513,13 @@ export const messageService = {
         },
       },
     });
+
+    broadcastRealtime(`room:${conversationId}:messages`, "GROUP_INFO_UPDATED", {
+      conversationId,
+      groupName: data.groupName,
+      groupAvatar: data.groupAvatar,
+    }).catch(() => {});
+
+    return updated;
   },
 };

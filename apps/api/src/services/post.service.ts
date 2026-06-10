@@ -288,6 +288,10 @@ export const postService = {
       notifyMentions(data.content, userId, post.id).catch(() => {});
     }
 
+    broadcastRealtime(`hb-post:${postId}`, "POST_UPDATED", {
+      postId,
+    }).catch(() => {});
+
     return enrichPost(post, userId);
   },
 
@@ -366,13 +370,21 @@ export const postService = {
       where: { userId_postId: { userId, postId } },
     });
 
+    let saved: boolean;
     if (existing) {
       await prisma.savedPost.delete({ where: { userId_postId: { userId, postId } } });
-      return { saved: false };
+      saved = false;
+    } else {
+      await prisma.savedPost.create({ data: { userId, postId } });
+      saved = true;
     }
 
-    await prisma.savedPost.create({ data: { userId, postId } });
-    return { saved: true };
+    broadcastRealtime(`hb-post:${postId}`, saved ? "POST_SAVED" : "POST_UNSAVED", {
+      postId,
+      userId,
+    }).catch(() => {});
+
+    return { saved };
   },
 
   async getSaved(userId: string, cursor?: string, limit = 20) {
@@ -407,9 +419,16 @@ export const postService = {
   },
 
   async getFeed(userId: string, cursor?: string, limit = 10) {
+    const follows = await prisma.follow.findMany({
+      where: { followerId: userId },
+      select: { followingId: true },
+    });
+    const followedIds = follows.map((f) => f.followingId);
+    const userIds = [userId, ...followedIds];
+
     const fullPosts = await prisma.post.findMany({
       where: {
-        OR: [{ userId }, { user: { followers: { some: { followerId: userId } } } }],
+        userId: { in: userIds },
         privacy: "PUBLIC",
         isDraft: false,
       },
@@ -542,6 +561,11 @@ export const postService = {
         poll: pollWithVotes,
       },
     });
+
+    broadcastRealtime(`hb-post:${postId}`, "POST_CREATED", {
+      postId,
+    }).catch(() => {});
+
     return enrichPost(updated, userId);
   },
 

@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ChevronDown, ChevronUp, Clock, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
-interface DayPlan {
+export interface DayPlan {
   dayNumber: number;
   title: string;
   description: string;
@@ -20,11 +20,15 @@ export function DayPlanEditor({
   initialPlans,
   onSave,
   saving,
+  onChange,
+  hideSave,
 }: {
   dayCount: number;
   initialPlans?: DayPlan[];
-  onSave: (plans: DayPlan[]) => Promise<void>;
+  onSave?: (plans: DayPlan[]) => Promise<void>;
   saving?: boolean;
+  onChange?: (plans: DayPlan[]) => void;
+  hideSave?: boolean;
 }) {
   const [plans, setPlans] = useState<DayPlan[]>(
     initialPlans?.length
@@ -41,6 +45,35 @@ export function DayPlanEditor({
   const [expandedDays, setExpandedDays] = useState<Set<number>>(new Set([1]));
   const [bulkMode, setBulkMode] = useState(false);
   const [bulkTemplate, setBulkTemplate] = useState("");
+
+  useEffect(() => {
+    if (onChange) onChange(plans);
+  }, [plans]);
+
+  useEffect(() => {
+    if (initialPlans?.length) {
+      setPlans(initialPlans);
+    }
+  }, [initialPlans]);
+
+  useEffect(() => {
+    if (initialPlans?.length) return;
+    setPlans((prev) => {
+      if (prev.length === dayCount) return prev;
+      if (prev.length < dayCount) {
+        const extra = Array.from({ length: dayCount - prev.length }, (_, i) => ({
+          dayNumber: prev.length + i + 1,
+          title: "",
+          description: "",
+          tips: "",
+          mediaUrls: [] as string[],
+          duration: 0,
+        }));
+        return [...prev, ...extra];
+      }
+      return prev.slice(0, dayCount);
+    });
+  }, [dayCount]);
 
   const toggleDay = (day: number) => {
     setExpandedDays((prev) => {
@@ -108,6 +141,7 @@ export function DayPlanEditor({
       toast.error("Add at least one day plan");
       return;
     }
+    if (!onSave) return;
     await onSave(filled);
   };
 
@@ -241,7 +275,7 @@ export function DayPlanEditor({
         ))}
       </div>
 
-      {filledCount > 0 && (
+      {!hideSave && filledCount > 0 && onSave && (
         <Button
           type="button"
           variant="gradient"

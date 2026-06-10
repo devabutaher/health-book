@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect } from "react";
 import { useSelector } from "react-redux";
 import type { RootState } from "@/redux/store";
 
@@ -49,12 +49,10 @@ export function useSound() {
       (s as { settings?: { soundEnabled?: boolean } }).settings?.soundEnabled ?? true,
   );
 
-  // Ensure pool is initialised once (module-level)
-  const poolReady = useRef(false);
-  if (!poolReady.current) {
-    poolReady.current = true;
+  // Ensure pool is initialised once — useEffect guarantees render-phase safety.
+  useEffect(() => {
     ensurePool();
-  }
+  }, []);
 
   const play = useCallback(
     (key: SoundKey) => {

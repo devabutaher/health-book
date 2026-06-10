@@ -36,8 +36,10 @@ export interface ChallengeProgress {
     id: string;
     dayNumber: number;
     completed: boolean;
+    notes?: string | null;
     mediaUrls: string[];
     value?: number | null;
+    sharedToFeed: boolean;
   }[];
 }
 

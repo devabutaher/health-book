@@ -16,17 +16,18 @@ export function ChallengeRating({
   userRating?: number | null;
   averageRating: number;
   ratingCount: number;
-  onRate: (rating: number) => Promise<void>;
+  onRate: (rating: number, review?: string) => Promise<void>;
   disabled?: boolean;
 }) {
   const [hovered, setHovered] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [review, setReview] = useState("");
 
   const handleRate = async (r: number) => {
     if (disabled || saving) return;
     setSaving(true);
     try {
-      await onRate(r);
+      await onRate(r, review.trim() || undefined);
       toast.success("Rating submitted!");
     } catch (err) {
       toast.error(getErrorMessage(err, "Failed to submit rating"));
@@ -37,7 +38,7 @@ export function ChallengeRating({
 
   return (
     <div className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-elevated)] p-4 shadow-[var(--shadow-card)]">
-      <div className="flex items-center justify-between">
+      <div className="mb-3 flex items-center justify-between">
         <div>
           <h4 className="text-xs font-bold text-[var(--text-primary)]">Rate this Challenge</h4>
           {ratingCount > 0 && (
@@ -72,6 +73,14 @@ export function ChallengeRating({
           })}
         </div>
       </div>
+      <textarea
+        value={review}
+        onChange={(e) => setReview(e.target.value)}
+        placeholder="Write a review (optional)..."
+        rows={2}
+        maxLength={1000}
+        className="w-full resize-none rounded-lg border border-[var(--border-default)] bg-[var(--bg-subtle)] px-3 py-2 text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-brand-teal/50 focus:outline-none focus:ring-2 focus:ring-brand-teal/10"
+      />
     </div>
   );
 }

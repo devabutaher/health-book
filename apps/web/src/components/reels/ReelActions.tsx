@@ -44,12 +44,12 @@ export function ReelActions({
   const [editValue, setEditValue] = useState(currentCaption || "");
 
   const liked = optimisticLiked ?? initialLiked;
-  const likesCount = optimisticLikesCount ?? initialLikesCount;
+  const likesCount = optimisticLikesCount ?? (initialLikesCount ?? 0);
 
   const handleLike = () => {
     const next = !liked;
     setOptimisticLiked(next);
-    setOptimisticLikesCount((c) => (c ?? initialLikesCount) + (next ? 1 : -1));
+    setOptimisticLikesCount((c) => (c ?? initialLikesCount ?? 0) + (next ? 1 : -1));
     onLikeToggle?.();
   };
 
@@ -138,7 +138,7 @@ export function ReelActions({
         >
           <MessageCircle className="size-7 text-white drop-shadow-lg" />
           <span className="text-[10px] font-semibold text-white">
-            {commentsCount.toLocaleString()}
+            {(commentsCount ?? 0).toLocaleString()}
           </span>
         </button>
 

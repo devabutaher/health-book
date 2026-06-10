@@ -60,7 +60,7 @@ export function ChallengeCalendar({
                 if (!isFuture || isToday) onDayClick?.(day);
               }}
               className={cn(
-                "relative flex aspect-square items-center justify-center rounded-lg text-[10px] font-semibold transition-all",
+                "relative flex aspect-square items-center justify-center rounded-lg text-xs font-bold transition-all",
                 isCompleted && "bg-brand-teal text-white",
                 !isCompleted && !isFuture && "bg-[var(--bg-subtle)] text-[var(--text-muted)]",
                 isFuture &&
@@ -74,9 +74,9 @@ export function ChallengeCalendar({
               title={tooltip}
             >
               {isCompleted ? (
-                <Check className="size-3.5" />
+                <Check className="size-4" />
               ) : isToday && !isCompleted ? (
-                <Circle className="size-2 fill-brand-blue" />
+                <Circle className="size-2.5 fill-brand-blue" />
               ) : (
                 <span>{day}</span>
               )}

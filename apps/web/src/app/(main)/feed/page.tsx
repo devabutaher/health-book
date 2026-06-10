@@ -4,7 +4,6 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { Component, type ReactNode } from "react";
 import { FileText, Plus, Users, LogIn, LogOut } from "lucide-react";
-import { motion } from "framer-motion";
 import { Virtuoso } from "react-virtuoso";
 import { PostCard } from "@/components/post/PostCard";
 import { PostSkeletonList } from "@/components/shared/PostSkeleton";
@@ -65,11 +64,14 @@ export default function FeedPage() {
   );
   const [loadingTimedOut, setLoadingTimedOut] = useState(false);
   const isFetchingRef = useRef(isFetching);
-  isFetchingRef.current = isFetching;
-  const hasMoreRef = useRef(data?.data?.hasMore);
-  const cursorRef = useRef(data?.data?.nextCursor);
-  hasMoreRef.current = data?.data?.hasMore ?? false;
-  cursorRef.current = data?.data?.nextCursor ?? null;
+  const hasMoreRef = useRef<boolean | undefined>(data?.data?.hasMore);
+  const cursorRef = useRef<string | null | undefined>(data?.data?.nextCursor);
+
+  useEffect(() => {
+    isFetchingRef.current = isFetching;
+    hasMoreRef.current = data?.data?.hasMore ?? false;
+    cursorRef.current = data?.data?.nextCursor ?? null;
+  }, [isFetching, data?.data?.hasMore, data?.data?.nextCursor]);
 
   const isAuthError = error && "status" in error && error.status === 401;
 
@@ -82,9 +84,16 @@ export default function FeedPage() {
     };
   }, [isLoading]);
 
+  // Track which cursor values have already been applied to prevent infinite
+  // re-render loops when cached query data cycles cursor back and forth.
+  const appliedCursors = useRef(new Set<string | undefined>());
   const appendRef = useRef(false);
   useEffect(() => {
     if (!data?.data) return;
+    // Skip if we've already applied data for this cursor value.
+    // On reload, the cursor can cycle between pages via cache hits.
+    if (appliedCursors.current.has(cursor)) return;
+    appliedCursors.current.add(cursor);
     applyPage(
       { posts: data.data.posts, nextCursor: data.data.nextCursor, hasMore: data.data.hasMore },
       appendRef.current,
@@ -93,18 +102,26 @@ export default function FeedPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data]);
 
+  // Clear applied cursors on reset so pull-to-refresh still works
+  const originalReset = reset;
+  const wrappedReset = useCallback(() => {
+    appliedCursors.current.clear();
+    appendRef.current = false;
+    originalReset();
+  }, [originalReset]);
+
   const handlePostCreated = useCallback(() => {
-    reset();
-  }, [reset]);
+    wrappedReset();
+  }, [wrappedReset]);
 
   useEffect(() => {
     const handler = () => {
-      reset();
+      wrappedReset();
       refetch();
     };
     window.addEventListener("app:pulltorefresh", handler);
     return () => window.removeEventListener("app:pulltorefresh", handler);
-  }, [reset, refetch]);
+  }, [wrappedReset, refetch]);
 
   const endReached = useCallback(() => {
     if (hasMoreRef.current && cursorRef.current && !isFetchingRef.current) {

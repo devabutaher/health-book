@@ -66,7 +66,17 @@ export function HealthNewsFeed() {
               variants={staggerItem}
               className="group rounded-2xl border border-[var(--glass-border)] bg-[var(--glass-bg)] p-4 backdrop-blur-xl transition-all hover:border-[var(--border-strong)] hover:shadow-[var(--shadow-lg)]"
             >
-              <div className="flex h-full flex-col">
+              {article.imageUrl && (
+                <div className="relative -mx-4 -mt-4 mb-3 h-36 overflow-hidden rounded-t-2xl">
+                  <img
+                    src={article.imageUrl}
+                    alt={article.title}
+                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    loading="lazy"
+                  />
+                </div>
+              )}
+              <div className="flex flex-1 flex-col">
                 <div className="mb-2">
                   <span className="inline-block rounded-full bg-brand-teal/10 px-2.5 py-0.5 text-[10px] font-semibold text-brand-teal">
                     {article.source}

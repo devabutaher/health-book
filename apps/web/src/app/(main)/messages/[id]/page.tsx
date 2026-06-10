@@ -3,7 +3,7 @@
 import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Users, PenLine, AlertCircle, RefreshCw } from "lucide-react";
+import { X, Users, PenLine, AlertCircle, RefreshCw, MessageCircle } from "lucide-react";
 import { ActiveNow } from "@/components/shared/ActiveNow";
 import { ConversationHeader } from "@/components/messaging/ConversationHeader";
 import { ChatWindow } from "@/components/messaging/ChatWindow";
@@ -45,6 +45,25 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
           <p className="text-sm text-muted-foreground">Couldn&apos;t load conversations.</p>
           <Button variant="outline" size="sm" className="mt-4" onClick={() => refetchConvs()}>
             <RefreshCw /> Try again
+          </Button>
+        </GlassCard>
+      </div>
+    );
+  }
+
+  if (allConvos && !conv) {
+    return (
+      <div className="mx-auto flex h-[calc(100vh-10rem)] max-w-5xl items-center justify-center">
+        <GlassCard className="p-10 text-center">
+          <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-[var(--bg-subtle)]">
+            <MessageCircle className="size-7 text-muted-foreground" />
+          </div>
+          <p className="text-sm font-semibold text-[var(--text-primary)]">Conversation not found</p>
+          <p className="mb-4 mt-1 text-xs text-muted-foreground">
+            This conversation may have been deleted or you don&apos;t have access.
+          </p>
+          <Button variant="outline" size="sm" onClick={() => router.push("/messages")}>
+            <MessageCircle /> Go to messages
           </Button>
         </GlassCard>
       </div>

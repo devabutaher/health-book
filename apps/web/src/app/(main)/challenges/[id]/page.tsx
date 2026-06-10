@@ -26,11 +26,13 @@ import { DailyStreakTracker } from "@/components/challenges/DailyStreakTracker";
 import { ChallengeBadge } from "@/components/challenges/ChallengeBadge";
 import { ChallengeDayPlan } from "@/components/challenges/ChallengeDayPlan";
 import { ChallengeRating } from "@/components/challenges/ChallengeRating";
+import { ChallengeReviewsList } from "@/components/challenges/ChallengeReviewsList";
 import { ChallengeProgressChart } from "@/components/challenges/ChallengeProgressChart";
 import { ChallengeHeatMap } from "@/components/challenges/ChallengeHeatMap";
 import { ChallengeShareCard } from "@/components/challenges/ChallengeShareCard";
 import { DuelHeader } from "@/components/challenges/DuelHeader";
 import { EditChallengeModal } from "@/components/challenges/EditChallengeModal";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import {
   Trophy,
@@ -55,6 +57,7 @@ import { useRouter } from "next/navigation";
 import { useAppSelector } from "@/hooks";
 import { useChallengeRealtime } from "@/hooks/useChallengeRealtime";
 import { useSound } from "@/hooks/useSound";
+import { getCalendarDay } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { getErrorMessage } from "@/lib/getErrorMessage";
 
@@ -88,6 +91,8 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
   const isPastEndDate = challenge ? new Date(challenge.endDate) < new Date() : false;
   const currentDay = challenge?.myProgress?.currentDayNumber ?? 1;
   const totalDays = challenge?.dayCount || 30;
+  const todayCal = challenge ? getCalendarDay(challenge.startDate) : 1;
+  const canCheckIn = currentDay <= todayCal && currentDay <= totalDays;
   const todayCheckedIn =
     currentDay > totalDays ||
     calendar?.days.find((d) => d.dayNumber === currentDay)?.completed === true;
@@ -102,7 +107,7 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
   if (isLoading) {
     return (
       <div className="mx-auto max-w-4xl space-y-4">
-        <div className="h-48 animate-pulse rounded-2xl bg-[var(--bg-subtle)]" />
+        <Skeleton className="h-48 rounded-2xl" />
       </div>
     );
   }
@@ -417,7 +422,7 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
                 if (!entry?.completed) showCheckIn(day);
               }}
             />
-            {!isPastEndDate && challenge.isJoined && currentDay <= totalDays && (
+            {!isPastEndDate && challenge.isJoined && canCheckIn && (
               <Button
                 variant="gradient"
                 size="sm"
@@ -455,9 +460,6 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
           </div>
         )}
 
-        {/* Activity Feed */}
-        <ChallengeActivityFeed challengeId={id} />
-
         {/* Before & After */}
         {challenge.isJoined && beforeAfter && (
           <BeforeAfterSection
@@ -475,12 +477,14 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
             userRating={userRating}
             averageRating={challenge.averageRating}
             ratingCount={challenge.ratingCount}
-            onRate={async (rating) => {
-              await rateChallenge({ challengeId: id, rating }).unwrap();
+            onRate={async (rating, review) => {
+              await rateChallenge({ challengeId: id, rating, review }).unwrap();
               setUserRating(rating);
             }}
           />
         )}
+
+        <ChallengeReviewsList challengeId={id} />
 
         <ChallengeLeaderboard
           entries={leaderboard || []}
@@ -489,6 +493,9 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
           goalTarget={challenge.goalTarget}
           goalUnit={challenge.goalUnit}
         />
+
+        {/* Activity Feed */}
+        <ChallengeActivityFeed challengeId={id} />
       </div>
 
       {checkInDay && challenge && (

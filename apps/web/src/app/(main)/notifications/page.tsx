@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useCallback, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AlertCircle, BellOff, Check } from "lucide-react";
 import { Virtuoso } from "react-virtuoso";
 import {
@@ -22,16 +22,22 @@ export default function NotificationsPage() {
 
   const { data, isLoading, isFetching, isError, refetch } = useGetNotificationsQuery({ cursor });
 
+  // Prevent infinite re-render loop when cached query data cycles cursor back
+  const appliedCursors = useRef(new Set<string | undefined>());
   useEffect(() => {
     const notifications =
       (data as { notifications?: Notification[] } | undefined)?.notifications ?? [];
     if (!notifications.length) return;
+    if (appliedCursors.current.has(cursor)) return;
+    appliedCursors.current.add(cursor);
     const nextCursor = (data as { nextCursor?: string } | undefined)?.nextCursor;
     applyPage({ posts: notifications as unknown[], nextCursor }, Boolean(cursor));
   }, [data, cursor, applyPage]);
 
   const isFetchingRef = useRef(isFetching);
-  isFetchingRef.current = isFetching;
+  useEffect(() => {
+    isFetchingRef.current = isFetching;
+  }, [isFetching]);
   const hasMore = (data as { hasMore?: boolean } | undefined)?.hasMore ?? false;
   const nextCursor = (data as { nextCursor?: string } | undefined)?.nextCursor;
 

@@ -25,6 +25,7 @@ import {
   useGetDayPlansQuery,
 } from "@/redux/api/challengesApi";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { motion } from "framer-motion";
@@ -127,14 +128,35 @@ export default function ChallengesPage() {
     } catch {}
   };
 
+  const [logExistingEntry, setLogExistingEntry] = useState<{
+    dayNumber: number;
+    notes?: string | null;
+    mediaUrls: string[];
+    value?: number | null;
+    sharedToFeed: boolean;
+  } | null>(null);
+
   const handleLogProgress = (challengeId: string) => {
     const challenge = activeData?.challenges.find((c) => c.id === challengeId);
     if (challenge) {
       setLogChallengeId(challengeId);
-      setLogDayNumber(challenge.myProgress ? challenge.myProgress.score + 1 : 1);
+      const dayNum = challenge.myProgress ? challenge.myProgress.currentDayNumber : 1;
+      setLogDayNumber(dayNum);
       setLogTotalDays(challenge.dayCount || 30);
       setLogGoalTarget(challenge.goalTarget);
       setLogGoalUnit(challenge.goalUnit);
+      const entry = challenge.myProgress?.dayEntries?.find((d) => d.dayNumber === dayNum);
+      if (entry?.completed) {
+        setLogExistingEntry({
+          dayNumber: entry.dayNumber,
+          notes: entry.notes,
+          mediaUrls: entry.mediaUrls ?? [],
+          value: entry.value,
+          sharedToFeed: entry.sharedToFeed ?? false,
+        });
+      } else {
+        setLogExistingEntry(null);
+      }
     }
   };
 
@@ -256,7 +278,7 @@ export default function ChallengesPage() {
             ) : activeLoading ? (
               <div className="grid gap-4 sm:grid-cols-2">
                 {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="h-44 animate-pulse rounded-2xl bg-[var(--bg-subtle)]" />
+                  <Skeleton key={i} className="h-44 rounded-2xl" />
                 ))}
               </div>
             ) : !activeData?.challenges?.length ? (
@@ -305,7 +327,7 @@ export default function ChallengesPage() {
             {myLoading ? (
               <div className="grid gap-4 sm:grid-cols-2">
                 {Array.from({ length: 2 }).map((_, i) => (
-                  <div key={i} className="h-44 animate-pulse rounded-2xl bg-[var(--bg-subtle)]" />
+                  <Skeleton key={i} className="h-44 rounded-2xl" />
                 ))}
               </div>
             ) : myError ? (
@@ -351,7 +373,7 @@ export default function ChallengesPage() {
             {savedLoading ? (
               <div className="grid gap-4 sm:grid-cols-2">
                 {Array.from({ length: 2 }).map((_, i) => (
-                  <div key={i} className="h-44 animate-pulse rounded-2xl bg-[var(--bg-subtle)]" />
+                  <Skeleton key={i} className="h-44 rounded-2xl" />
                 ))}
               </div>
             ) : savedError ? (
@@ -407,11 +429,12 @@ export default function ChallengesPage() {
         currentDay={logDayNumber}
         totalDays={logTotalDays}
         open={!!logChallengeId}
-        onClose={() => setLogChallengeId(null)}
+        onClose={() => { setLogChallengeId(null); setLogExistingEntry(null); }}
         goalTarget={logGoalTarget}
         goalUnit={logGoalUnit}
         dayPlan={logDayPlans?.find((p) => p.dayNumber === logDayNumber) ?? null}
         hasDayPlans={!!logDayPlans && logDayPlans.length > 0}
+        existingEntry={logExistingEntry}
       />
     </>
   );

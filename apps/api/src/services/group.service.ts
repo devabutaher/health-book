@@ -156,7 +156,7 @@ export const groupService = {
     type?: GroupType;
     createdById: string;
   }) {
-    return prisma.group.create({
+    const group = await prisma.group.create({
       data: {
         name: data.name,
         description: data.description,
@@ -169,6 +169,12 @@ export const groupService = {
         },
       },
     });
+
+    broadcastRealtime(`hb-group:${group.id}`, "GROUP_CREATED", {
+      groupId: group.id,
+    }).catch(() => {});
+
+    return group;
   },
 
   async update(
@@ -202,10 +208,16 @@ export const groupService = {
       if (publicId) deleteImage(publicId).catch(() => {});
     }
 
-    return prisma.group.update({
+    const updated = await prisma.group.update({
       where: { id: groupId },
       data,
     });
+
+    broadcastRealtime(`hb-group:${groupId}`, "GROUP_UPDATED", {
+      groupId,
+    }).catch(() => {});
+
+    return updated;
   },
 
   async delete(groupId: string, userId: string) {
@@ -229,6 +241,10 @@ export const groupService = {
     }
 
     await prisma.group.delete({ where: { id: groupId } });
+
+    broadcastRealtime(`hb-group:${groupId}`, "GROUP_DELETED", {
+      groupId,
+    }).catch(() => {});
   },
 
   async join(groupId: string, userId: string) {
@@ -339,13 +355,21 @@ export const groupService = {
       }
     }
 
-    return prisma.groupMember.update({
+    const result = await prisma.groupMember.update({
       where: { groupId_userId: { groupId, userId: targetUserId } },
       data: { role },
       include: {
         user: { select: { id: true, name: true, username: true, avatar: true, isVerified: true } },
       },
     });
+
+    broadcastRealtime(`hb-group:${groupId}`, "MEMBER_ROLE_CHANGED", {
+      groupId,
+      userId: targetUserId,
+      role,
+    }).catch(() => {});
+
+    return result;
   },
 
   async removeMember(groupId: string, requesterId: string, targetUserId: string) {
@@ -408,9 +432,16 @@ export const groupService = {
       return existingRequest;
     }
 
-    return prisma.groupJoinRequest.create({
+    const joinRequest = await prisma.groupJoinRequest.create({
       data: { groupId, userId },
     });
+
+    broadcastRealtime(`hb-group:${groupId}`, "JOIN_REQUESTED", {
+      groupId,
+      userId,
+    }).catch(() => {});
+
+    return joinRequest;
   },
 
   async getJoinRequests(groupId: string, requesterId: string) {
@@ -454,6 +485,11 @@ export const groupService = {
       }),
     ]);
 
+    broadcastRealtime(`hb-group:${groupId}`, "MEMBER_JOINED", {
+      groupId,
+      userId: targetUserId,
+    }).catch(() => {});
+
     return { message: "Request approved" };
   },
 
@@ -469,6 +505,11 @@ export const groupService = {
       where: { groupId_userId: { groupId, userId: targetUserId } },
       data: { status: "REJECTED" },
     });
+
+    broadcastRealtime(`hb-group:${groupId}`, "JOIN_REJECTED", {
+      groupId,
+      userId: targetUserId,
+    }).catch(() => {});
 
     return { message: "Request rejected" };
   },
@@ -495,12 +536,19 @@ export const groupService = {
       throw new AppError(409, "User already has a pending invite");
     }
 
-    return prisma.groupInvite.create({
+    const invite = await prisma.groupInvite.create({
       data: { groupId, userId: targetUserId, invitedBy: requesterId },
       include: {
         user: { select: { id: true, name: true, username: true, avatar: true, isVerified: true } },
       },
     });
+
+    broadcastRealtime(`hb-group:${groupId}`, "USER_INVITED", {
+      groupId,
+      userId: targetUserId,
+    }).catch(() => {});
+
+    return invite;
   },
 
   async getMyInvites(userId: string) {
@@ -536,6 +584,11 @@ export const groupService = {
       }),
     ]);
 
+    broadcastRealtime(`hb-group:${invite.groupId}`, "MEMBER_JOINED", {
+      groupId: invite.groupId,
+      userId,
+    }).catch(() => {});
+
     return { message: "Invite accepted" };
   },
 
@@ -550,6 +603,11 @@ export const groupService = {
       where: { id: inviteId },
       data: { status: "DECLINED" },
     });
+
+    broadcastRealtime(`hb-group:${invite.groupId}`, "INVITE_DECLINED", {
+      groupId: invite.groupId,
+      userId,
+    }).catch(() => {});
 
     return { message: "Invite declined" };
   },

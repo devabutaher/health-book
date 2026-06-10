@@ -16,6 +16,7 @@ import {
 } from "@/redux/api/groupsApi";
 import type { Group } from "@/types/group";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -110,20 +111,7 @@ export default function GroupsPage() {
   const renderLoading = () => (
     <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {Array.from({ length: 6 }).map((_, i) => (
-        <div key={i} className="animate-pulse rounded-2xl bg-[var(--bg-subtle)]">
-          <div className="aspect-video rounded-t-2xl bg-[var(--bg-elevated)]" />
-          <div className="space-y-3 p-4">
-            <div className="flex items-center gap-3">
-              <div className="size-10 rounded-full bg-[var(--bg-elevated)]" />
-              <div className="h-4 flex-1 rounded-md bg-[var(--bg-elevated)]" />
-            </div>
-            <div className="h-3 w-3/4 rounded-md bg-[var(--bg-elevated)]" />
-            <div className="flex gap-3">
-              <div className="h-5 w-16 rounded-md bg-[var(--bg-elevated)]" />
-              <div className="h-5 w-20 rounded-md bg-[var(--bg-elevated)]" />
-            </div>
-          </div>
-        </div>
+        <Skeleton key={i} className="rounded-2xl" />
       ))}
     </div>
   );

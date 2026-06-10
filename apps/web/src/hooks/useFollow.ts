@@ -46,7 +46,9 @@ export function useFollow(
   const { play } = useSound();
 
   // Keep ref in sync so it can be read inside callbacks without stale closures
-  isPendingRef.current = isPending;
+  useEffect(() => {
+    isPendingRef.current = isPending;
+  }, [isPending]);
 
   // Sync with external prop when not mid-mutation (e.g. RTK cache patches)
   useEffect(() => {

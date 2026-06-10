@@ -72,6 +72,19 @@ export function CreatePostModal({
 
   const privacy = initialPost?.privacy || "PUBLIC";
 
+  const resetAll = useCallback(() => {
+    contentRef.current?.reset();
+    mediaRef.current?.reset();
+    tagsRef.current?.reset();
+    quizRef.current?.reset();
+    pollRef.current?.reset();
+    setRecipeData(null);
+    setRecipeContent("");
+    setTemplateMode(null);
+    setScheduledAt("");
+    setShowSchedule(false);
+  }, []);
+
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
@@ -185,26 +198,14 @@ export function CreatePostModal({
       recipeContent,
       scheduledAt,
       isEdit,
-      initialPost?.id,
+      initialPost,
       groupId,
       play,
       onCreated,
       onClose,
+      resetAll,
     ],
   );
-
-  const resetAll = useCallback(() => {
-    contentRef.current?.reset();
-    mediaRef.current?.reset();
-    tagsRef.current?.reset();
-    quizRef.current?.reset();
-    pollRef.current?.reset();
-    setRecipeData(null);
-    setRecipeContent("");
-    setTemplateMode(null);
-    setScheduledAt("");
-    setShowSchedule(false);
-  }, []);
 
   const handleTemplateSelect = useCallback((mode: TemplateMode) => {
     setTemplateMode(mode);

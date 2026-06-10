@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { X, LayoutTemplate, Swords, Users as UsersIcon, Target, Trophy } from "lucide-react";
+import { X, LayoutTemplate, Swords, Users as UsersIcon, Target, Trophy, Calendar, ChevronDown, ChevronRight } from "lucide-react";
 import {
   useCreateChallengeMutation,
   useGetChallengeTemplatesQuery,
@@ -15,6 +15,7 @@ import { useRouter } from "next/navigation";
 import type { ChallengeCategory, ChallengeDifficulty } from "@/types/challenge";
 import { cn } from "@/lib/utils";
 import { useSound } from "@/hooks/useSound";
+import { DayPlanEditor, type DayPlan } from "./DayPlanEditor";
 
 const difficulties: { value: ChallengeDifficulty; label: string; class: string }[] = [
   { value: "BEGINNER", label: "Beginner", class: "text-green-500" },
@@ -52,6 +53,8 @@ export function CreateChallengeModal({
   const [entryFee, setEntryFee] = useState("");
   const [goalTarget, setGoalTarget] = useState("");
   const [goalUnit, setGoalUnit] = useState("");
+  const [dayPlans, setDayPlans] = useState<DayPlan[]>([]);
+  const [showDayPlans, setShowDayPlans] = useState(false);
   const [createChallenge, { isLoading }] = useCreateChallengeMutation();
 
   const computedDayCount = useMemo(() => {
@@ -88,6 +91,7 @@ export function CreateChallengeModal({
         goalTarget: goalTarget ? Number(goalTarget) : undefined,
         goalUnit: goalUnit.trim() || undefined,
         milestones: defaultMilestones,
+        dayPlans: dayPlans.filter((p) => p.title.trim()) || undefined,
       }).unwrap();
       play("success");
       toast.success("Challenge created!");
@@ -152,6 +156,8 @@ export function CreateChallengeModal({
     setEntryFee("");
     setGoalTarget("");
     setGoalUnit("");
+    setDayPlans([]);
+    setShowDayPlans(false);
   };
 
   const handleClose = () => {
@@ -395,16 +401,8 @@ export function CreateChallengeModal({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="mb-1.5 block text-xs font-semibold text-[var(--text-secondary)]">
-                      Day Count <span className="text-brand-teal">(auto)</span>
-                    </label>
-                    <div className="flex h-[42px] items-center rounded-xl border border-[var(--border-default)] bg-[var(--bg-overlay)] px-4 text-sm text-[var(--text-primary)]">
-                      {startDate && endDate ? `${computedDayCount} days` : "Set dates above"}
-                    </div>
-                  </div>
-                  <div>
+                <div className="flex items-end gap-3">
+                  <div className="flex-1">
                     <label className="mb-1.5 block text-xs font-semibold text-[var(--text-secondary)]">
                       Goal Target
                     </label>
@@ -417,14 +415,15 @@ export function CreateChallengeModal({
                       className="w-full rounded-xl border border-[var(--border-default)] bg-[var(--bg-subtle)] px-4 py-2.5 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-brand-teal/50 focus:outline-none focus:ring-2 focus:ring-brand-teal/10"
                     />
                   </div>
-                  <div>
+                  <span className="pb-2.5 text-sm text-[var(--text-muted)]">×</span>
+                  <div className="flex-[2]">
                     <label className="mb-1.5 block text-xs font-semibold text-[var(--text-secondary)]">
-                      Goal Unit
+                      Unit
                     </label>
                     <input
                       value={goalUnit}
                       onChange={(e) => setGoalUnit(e.target.value)}
-                      placeholder="e.g. km, minutes, sessions"
+                      placeholder="km, min, sessions"
                       className="w-full rounded-xl border border-[var(--border-default)] bg-[var(--bg-subtle)] px-4 py-2.5 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-brand-teal/50 focus:outline-none focus:ring-2 focus:ring-brand-teal/10"
                     />
                   </div>
@@ -434,6 +433,11 @@ export function CreateChallengeModal({
                   <div>
                     <label className="mb-1.5 block text-xs font-semibold text-[var(--text-secondary)]">
                       Start Date
+                      {startDate && endDate && (
+                        <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-brand-teal/10 px-2 py-0.5 text-[10px] font-bold text-brand-teal">
+                          {computedDayCount} days
+                        </span>
+                      )}
                     </label>
                     <input
                       type="date"
@@ -453,6 +457,40 @@ export function CreateChallengeModal({
                       onChange={(e) => setEndDate(e.target.value)}
                       required
                       className="w-full rounded-xl border border-[var(--border-default)] bg-[var(--bg-subtle)] px-4 py-2.5 text-sm text-[var(--text-primary)] focus:border-brand-teal/50 focus:outline-none focus:ring-2 focus:ring-brand-teal/10"
+                    />
+                  </div>
+                </div>
+
+                <div className="overflow-hidden rounded-xl border border-[var(--border-default)]">
+                  <button
+                    type="button"
+                    onClick={() => setShowDayPlans(!showDayPlans)}
+                    className="flex w-full items-center justify-between bg-[var(--bg-subtle)] px-4 py-3 text-left transition-colors hover:bg-[var(--bg-overlay)]"
+                  >
+                    <div className="flex items-center gap-2">
+                      {showDayPlans ? (
+                        <ChevronDown className="size-4 text-brand-teal" />
+                      ) : (
+                        <ChevronRight className="size-4 text-brand-teal" />
+                      )}
+                      <span className="text-xs font-semibold text-[var(--text-primary)]">
+                        Daily Tasks
+                      </span>
+                      <span className="text-[10px] text-[var(--text-muted)]">
+                        {dayPlans.filter((p) => p.title.trim()).length > 0
+                          ? `${dayPlans.filter((p) => p.title.trim()).length} day${dayPlans.filter((p) => p.title.trim()).length !== 1 ? "s" : ""} planned`
+                          : "optional"}
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-semibold text-brand-teal">
+                      {showDayPlans ? "Hide" : "Edit"}
+                    </span>
+                  </button>
+                  <div className={`${showDayPlans ? "block" : "hidden"} border-t border-[var(--border-default)] p-4`}>
+                    <DayPlanEditor
+                      dayCount={computedDayCount}
+                      onChange={(plans) => setDayPlans(plans)}
+                      hideSave
                     />
                   </div>
                 </div>

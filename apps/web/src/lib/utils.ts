@@ -25,6 +25,10 @@ export function formatRelativeTime(date: Date | string | null | undefined): stri
   return d.toLocaleDateString();
 }
 
+export function getCalendarDay(startDate: string): number {
+  return Math.max(1, Math.floor((Date.now() - new Date(startDate).getTime()) / 86400000) + 1);
+}
+
 export function getImageUrl(url: string | null | undefined, transforms?: string): string | null {
   if (!url) return null;
   if (transforms && url.includes("res.cloudinary.com")) {

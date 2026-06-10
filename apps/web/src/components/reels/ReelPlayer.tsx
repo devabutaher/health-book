@@ -1,6 +1,6 @@
 "use client";
 
-import { Heart, Loader2, Play, Volume2, VolumeX } from "lucide-react";
+import { AlertCircle, Heart, Loader2, Play, Volume2, VolumeX } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -19,6 +19,7 @@ export function ReelPlayer({
   const [muted, setMuted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showHeart, setShowHeart] = useState(false);
+  const [error, setError] = useState(false);
   const [heartPosition, setHeartPosition] = useState({ x: 0, y: 0 });
   const videoRef = useRef<HTMLVideoElement>(null);
   const lastTap = useRef(0);
@@ -95,7 +96,7 @@ export function ReelPlayer({
       <video
         ref={videoRef}
         src={videoUrl}
-        className="h-full w-full object-cover"
+        className="h-full w-full object-contain bg-black"
         autoPlay
         loop
         playsInline
@@ -104,12 +105,23 @@ export function ReelPlayer({
         onWaiting={() => setLoading(true)}
         onCanPlay={() => setLoading(false)}
         poster={thumbnailUrl || undefined}
+        onError={() => setError(true)}
       />
 
       {/* Loading spinner */}
-      {loading && (
+      {loading && !error && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/40">
           <Loader2 className="size-8 animate-spin text-white/70" />
+        </div>
+      )}
+
+      {/* Error state */}
+      {error && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/60">
+          <div className="text-center text-white/60">
+            <AlertCircle className="mx-auto mb-1 size-6" />
+            <p className="text-xs">Failed to load video</p>
+          </div>
         </div>
       )}
 

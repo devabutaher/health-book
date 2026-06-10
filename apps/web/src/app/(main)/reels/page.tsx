@@ -19,11 +19,10 @@ const ReelsFeed = dynamic(
 
 export default function ReelsPage() {
   const [uploadOpen, setUploadOpen] = useState(false);
-  const [refreshFlag, setRefreshFlag] = useState(0);
 
   return (
     <div className="relative h-[calc(100dvh-11rem)] lg:h-[calc(100dvh-8rem)]">
-      <ReelsFeed key={refreshFlag} onUploadClick={() => setUploadOpen(true)} />
+      <ReelsFeed onUploadClick={() => setUploadOpen(true)} />
 
       {/* Floating upload button */}
       <button
@@ -37,7 +36,7 @@ export default function ReelsPage() {
       <ReelUploadModal
         open={uploadOpen}
         onClose={() => setUploadOpen(false)}
-        onUploadComplete={() => setRefreshFlag((f) => f + 1)}
+        onUploadComplete={() => setUploadOpen(false)}
       />
     </div>
   );

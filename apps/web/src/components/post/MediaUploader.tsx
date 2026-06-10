@@ -2,7 +2,6 @@
 
 import { useState, useRef, forwardRef, useImperativeHandle, memo, useCallback } from "react";
 import { ImagePlus, X } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 export interface MediaFile {
   file: File;
@@ -83,8 +82,8 @@ export const MediaUploader = memo(
                 <p className="text-xs font-medium text-muted-foreground">{slot.label}</p>
                 {existing ? (
                   <div className="relative aspect-square overflow-hidden rounded-2xl border border-[var(--glass-border)]">
-                    {/* eslint-disable-next-line @next/next/no-img-element — local blob URL preview */}
-                    <img src={existing.preview} alt="" className="size-full object-cover" />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={existing.preview} alt="" className="size-full object-cover" />
                     <button
                       type="button"
                       onClick={() => removeFile(slot.index)}
@@ -128,7 +127,7 @@ export const MediaUploader = memo(
                 key={i}
                 className="relative aspect-square overflow-hidden rounded-2xl border border-[var(--glass-border)]"
               >
-                {/* eslint-disable-next-line @next/next/no-img-element — local blob URL preview */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={item.preview} alt="" className="size-full object-cover" />
                 <button
                   type="button"

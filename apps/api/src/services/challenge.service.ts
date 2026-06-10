@@ -24,8 +24,10 @@ interface ChallengeWithRelations extends Challenge {
     id: string;
     dayNumber: number;
     completed: boolean;
+    notes?: string | null;
     mediaUrls: string[];
     value?: number | null;
+    sharedToFeed: boolean;
   }[];
 }
 
@@ -57,7 +59,7 @@ async function computeStreak(challengeId: string, userId: string): Promise<numbe
 
 async function batchComputeProgress(
   pairs: { challengeId: string; userId: string }[],
-): Promise<Map<string, { score: number; streak: number }>> {
+): Promise<Map<string, { score: number; streak: number; totalValue: number }>> {
   if (pairs.length === 0) return new Map();
 
   const allEntries = await prisma.challengeDayEntry.findMany({
@@ -68,21 +70,25 @@ async function batchComputeProgress(
         completed: true,
       })),
     },
-    select: { challengeId: true, userId: true, dayNumber: true },
+    select: { challengeId: true, userId: true, dayNumber: true, value: true },
     orderBy: { dayNumber: "desc" },
   });
 
-  const grouped = new Map<string, number[]>();
+  const grouped = new Map<string, { dayNumbers: number[]; totalValue: number }>();
   for (const e of allEntries) {
     const key = `${e.challengeId}:${e.userId}`;
-    if (!grouped.has(key)) grouped.set(key, []);
-    grouped.get(key)!.push(e.dayNumber);
+    if (!grouped.has(key)) grouped.set(key, { dayNumbers: [], totalValue: 0 });
+    const g = grouped.get(key)!;
+    g.dayNumbers.push(e.dayNumber);
+    g.totalValue += e.value ?? 0;
   }
 
-  const result = new Map<string, { score: number; streak: number }>();
+  const result = new Map<string, { score: number; streak: number; totalValue: number }>();
   for (const pair of pairs) {
     const key = `${pair.challengeId}:${pair.userId}`;
-    const dayNumbers = grouped.get(key) || [];
+    const g = grouped.get(key);
+    const dayNumbers = g?.dayNumbers || [];
+    const totalValue = g?.totalValue ?? 0;
     const score = dayNumbers.length;
 
     let streak = 0;
@@ -97,7 +103,7 @@ async function batchComputeProgress(
       }
     }
 
-    result.set(key, { score, streak });
+    result.set(key, { score, streak, totalValue });
   }
 
   return result;
@@ -270,8 +276,10 @@ function formatChallenge(
             id: de.id,
             dayNumber: de.dayNumber,
             completed: de.completed,
+            notes: de.notes,
             mediaUrls: de.mediaUrls,
             value: de.value,
+            sharedToFeed: de.sharedToFeed,
           })),
         }
       : null,
@@ -362,6 +370,7 @@ export const challengeService = {
         f.myProgress.score = progress.score;
         f.myProgress.pct = Math.min((progress.score / f.myProgress.goal) * 100, 100);
         f.myProgress.streak = progress.streak;
+        f.myProgress.totalValue = progress.totalValue;
       }
       f.friendCount = friendCounts.get(f.id) ?? 0;
       f.totalCompleted = completedCounts.get(f.id) ?? 0;
@@ -430,6 +439,7 @@ export const challengeService = {
         f.myProgress.score = progress.score;
         f.myProgress.pct = Math.min((progress.score / f.myProgress.goal) * 100, 100);
         f.myProgress.streak = progress.streak;
+        f.myProgress.totalValue = progress.totalValue;
       }
       f.friendCount = friendCounts.get(f.id) ?? 0;
       f.totalCompleted = completedCounts.get(f.id) ?? 0;
@@ -458,7 +468,7 @@ export const challengeService = {
           ? {
               where: { userId },
               orderBy: { dayNumber: "asc" },
-              select: { id: true, dayNumber: true, completed: true, mediaUrls: true, value: true },
+              select: { id: true, dayNumber: true, completed: true, notes: true, mediaUrls: true, value: true, sharedToFeed: true },
             }
           : false,
       },
@@ -576,6 +586,7 @@ export const challengeService = {
         f.myProgress.score = progress.score;
         f.myProgress.pct = Math.min((progress.score / f.myProgress.goal) * 100, 100);
         f.myProgress.streak = progress.streak;
+        f.myProgress.totalValue = progress.totalValue;
       }
       f.friendCount = friendCounts.get(f.id) ?? 0;
       f.totalCompleted = completedCounts.get(f.id) ?? 0;
@@ -609,6 +620,13 @@ export const challengeService = {
     dayCount?: number;
     milestones?: Record<string, unknown>[];
     templateId?: string;
+    dayPlans?: {
+      dayNumber: number;
+      title?: string;
+      description?: string;
+      tips?: string;
+      duration?: number;
+    }[];
     createdById: string;
   }) {
     const start = new Date(data.startDate);
@@ -638,17 +656,31 @@ export const challengeService = {
         },
       });
 
-      // Auto-create default day plans for every challenge
-      const plans = Array.from({ length: dayCount }, (_, i) => ({
-        challengeId: c.id,
-        dayNumber: i + 1,
-        title: `Day ${i + 1}`,
-        description: null,
-        tips: null,
-        mediaUrls: [] as string[],
-        duration: null,
-      }));
-      await tx.challengeDayPlan.createMany({ data: plans });
+      if (data.dayPlans?.length) {
+        await tx.challengeDayPlan.createMany({
+          data: data.dayPlans.map((dp) => ({
+            challengeId: c.id,
+            dayNumber: dp.dayNumber,
+            title: dp.title ?? `Day ${dp.dayNumber}`,
+            description: dp.description ?? null,
+            tips: dp.tips ?? null,
+            mediaUrls: [],
+            duration: dp.duration ?? null,
+          })),
+        });
+      } else {
+        // Auto-create default day plans for every challenge
+        const plans = Array.from({ length: dayCount }, (_, i) => ({
+          challengeId: c.id,
+          dayNumber: i + 1,
+          title: `Day ${i + 1}`,
+          description: null,
+          tips: null,
+          mediaUrls: [] as string[],
+          duration: null,
+        }));
+        await tx.challengeDayPlan.createMany({ data: plans });
+      }
 
       if (data.templateId) {
         await tx.challengeTemplate.update({
@@ -659,6 +691,10 @@ export const challengeService = {
 
       return c;
     });
+
+    broadcastRealtime(`hb-challenge:${challenge.id}`, "CHALLENGE_CREATED", {
+      challengeId: challenge.id,
+    }).catch(() => {});
 
     return challenge;
   },
@@ -699,7 +735,7 @@ export const challengeService = {
       }
     }
 
-    return prisma.challenge.update({
+    const updated = await prisma.challenge.update({
       where: { id: challengeId },
       data: {
         ...(data.title !== undefined ? { title: data.title } : {}),
@@ -720,6 +756,12 @@ export const challengeService = {
           : {}),
       },
     });
+
+    broadcastRealtime(`hb-challenge:${challengeId}`, "CHALLENGE_UPDATED", {
+      challengeId,
+    }).catch(() => {});
+
+    return updated;
   },
 
   async join(challengeId: string, userId: string) {
@@ -958,8 +1000,24 @@ export const challengeService = {
         challengeId_userId_dayNumber: { challengeId, userId, dayNumber: targetDay },
       },
     });
-    if (existingEntry?.completed) {
-      throw new AppError(409, "Already checked in for this day");
+    if (existingEntry?.completed && !isBackfill) {
+      const updated = await prisma.challengeDayEntry.update({
+        where: {
+          challengeId_userId_dayNumber: { challengeId, userId, dayNumber: targetDay },
+        },
+        data: {
+          notes: data.notes,
+          mediaUrls: data.mediaUrls || [],
+          sharedToFeed: data.sharedToFeed ?? false,
+          value: data.value,
+        },
+      });
+      await broadcastRealtime(`hb-challenge:${challengeId}`, "CHECK_IN", {
+        userId,
+        dayNumber: targetDay,
+        score: participant.score,
+      });
+      return updated;
     }
 
     // Consolidate queries: fetch completed entries once instead of 3 separate calls
@@ -971,7 +1029,7 @@ export const challengeService = {
     const totalValue = allCompletedEntries.reduce((sum, e) => sum + (e.value ?? 0), 0);
 
     const currentAchieved = (participant.achievedMilestones as string[]) || [];
-    const newMilestones = await checkMilestones(challengeId, userId, currentAchieved, score);
+    const newMilestones = await checkMilestones(challengeId, userId, currentAchieved, score + 1);
     const allAchieved = [...currentAchieved, ...newMilestones];
 
     const nextDay = isBackfill ? 0 : targetDay + 1;
@@ -1160,9 +1218,8 @@ export const challengeService = {
     const firstPhoto = entries.find((e) => e.mediaUrls.length > 0);
     const lastPhoto = entries.length > 0 ? entries[entries.length - 1] : null;
 
-    // Dedicated fields take priority, fallback to first/last day entry photos
-    const before = participant?.beforePhoto || firstPhoto?.mediaUrls[0] || null;
-    const after = participant?.afterPhoto || lastPhoto?.mediaUrls[0] || null;
+    const before = participant?.beforePhoto || null;
+    const after = participant?.afterPhoto || null;
 
     const totalDays = await prisma.challengeDayEntry.count({
       where: { challengeId, userId, completed: true },
@@ -1197,11 +1254,18 @@ export const challengeService = {
     });
     if (!participant) throw new AppError(404, "Not a participant");
 
-    return prisma.challengeParticipant.update({
+    const result = await prisma.challengeParticipant.update({
       where: { challengeId_userId: { challengeId, userId } },
       data: { beforePhoto: photoUrl },
       select: { beforePhoto: true },
     });
+
+    broadcastRealtime(`hb-challenge:${challengeId}`, "BEFORE_PHOTO_UPLOADED", {
+      challengeId,
+      userId,
+    }).catch(() => {});
+
+    return result;
   },
 
   async uploadAfterPhoto(challengeId: string, userId: string, photoUrl: string) {
@@ -1211,11 +1275,18 @@ export const challengeService = {
     });
     if (!participant) throw new AppError(404, "Not a participant");
 
-    return prisma.challengeParticipant.update({
+    const result = await prisma.challengeParticipant.update({
       where: { challengeId_userId: { challengeId, userId } },
       data: { afterPhoto: photoUrl },
       select: { afterPhoto: true },
     });
+
+    broadcastRealtime(`hb-challenge:${challengeId}`, "AFTER_PHOTO_UPLOADED", {
+      challengeId,
+      userId,
+    }).catch(() => {});
+
+    return result;
   },
 
   async getActivityFeed(challengeId: string, cursor?: string, limit = 20) {
@@ -1349,18 +1420,25 @@ export const challengeService = {
       where: { challengeId_userId: { challengeId, userId } },
     });
 
+    let result;
     if (existing) {
-      const updated = await prisma.challengeRating.update({
+      result = await prisma.challengeRating.update({
         where: { challengeId_userId: { challengeId, userId } },
         data: { rating, review },
       });
-      return updated;
+    } else {
+      result = await prisma.challengeRating.create({
+        data: { challengeId, userId, rating, review },
+      });
     }
 
-    const created = await prisma.challengeRating.create({
-      data: { challengeId, userId, rating, review },
-    });
-    return created;
+    broadcastRealtime(`hb-challenge:${challengeId}`, "CHALLENGE_RATED", {
+      challengeId,
+      userId,
+      rating,
+    }).catch(() => {});
+
+    return result;
   },
 
   async getRatings(challengeId: string, _userId?: string) {
@@ -1445,7 +1523,11 @@ export const challengeService = {
           pct: Math.min((score / goal) * 100, 100),
           rank: p.rank,
           completed: p.completed,
+          totalValue: p.totalValue,
+          goalTarget: c.goalTarget,
+          goalUnit: c.goalUnit,
           streak,
+          currentDayNumber: p.currentDayNumber,
           achievedMilestones: (p.achievedMilestones as string[]) || [],
           dayEntries: [],
         },
@@ -1465,15 +1547,23 @@ export const challengeService = {
       where: { userId_challengeId: { userId, challengeId } },
     });
 
+    let saved: boolean;
     if (existing) {
       await prisma.savedChallenge.delete({
         where: { userId_challengeId: { userId, challengeId } },
       });
-      return { saved: false };
+      saved = false;
+    } else {
+      await prisma.savedChallenge.create({ data: { userId, challengeId } });
+      saved = true;
     }
 
-    await prisma.savedChallenge.create({ data: { userId, challengeId } });
-    return { saved: true };
+    broadcastRealtime(`hb-challenge:${challengeId}`, saved ? "CHALLENGE_SAVED" : "CHALLENGE_UNSAVED", {
+      challengeId,
+      userId,
+    }).catch(() => {});
+
+    return { saved };
   },
 
   async share(challengeId: string, userId: string, content?: string) {
@@ -1617,7 +1707,18 @@ export const challengeService = {
     });
     if (!existing) return { reacted: false };
 
+    const comment = await prisma.challengeComment.findUnique({
+      where: { id: commentId },
+      select: { challengeId: true },
+    });
+
     await prisma.challengeCommentReaction.delete({ where: { id: existing.id } });
+
+    broadcastRealtime(`hb-challenge:${comment?.challengeId}`, "CHALLENGE_REACTION_REMOVED", {
+      commentId,
+      userId,
+    }).catch(() => {});
+
     return { reacted: false };
   },
 
@@ -1652,6 +1753,13 @@ export const challengeService = {
       message: `invited you to "${challenge.title}"`,
     });
 
+    broadcastRealtime(`hb-challenge:${challengeId}`, "CHALLENGE_INVITE", {
+      inviteId: invite.id,
+      challengeId,
+      fromUserId,
+      toUserId,
+    }).catch(() => {});
+
     return invite;
   },
 
@@ -1665,11 +1773,21 @@ export const challengeService = {
         prisma.challengeInvite.update({ where: { id: inviteId }, data: { status: "ACCEPTED" } }),
         prisma.challengeParticipant.create({ data: { challengeId: invite.challengeId, userId } }),
       ]);
+
+      broadcastRealtime(`hb-challenge:${invite.challengeId}`, "PARTICIPANT_JOINED", {
+        challengeId: invite.challengeId,
+        userId,
+      }).catch(() => {});
     } else {
       await prisma.challengeInvite.update({
         where: { id: inviteId },
         data: { status: "DECLINED" },
       });
+
+      broadcastRealtime(`hb-challenge:${invite.challengeId}`, "INVITE_DECLINED", {
+        inviteId,
+        challengeId: invite.challengeId,
+      }).catch(() => {});
     }
   },
 
@@ -1809,6 +1927,10 @@ export const challengeService = {
       fromUserId: data.createdById,
       message: `challenged you to a duel: "${challenge.title}"`,
     });
+
+    broadcastRealtime(`hb-challenge:${challenge.id}`, "CHALLENGE_CREATED", {
+      challengeId: challenge.id,
+    }).catch(() => {});
 
     return challenge;
   },

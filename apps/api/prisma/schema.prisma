@@ -201,6 +201,7 @@ model Post {
   @@index([privacy, createdAt(sort: Desc)])
   @@index([groupId, createdAt(sort: Desc)])
   @@index([isDraft, scheduledAt])
+  @@index([privacy, isDraft, createdAt(sort: Desc)])
   @@map("posts")
 }
 

@@ -151,6 +151,10 @@ export const messagingApi = createApi({
         body,
       }),
       transformResponse: (response: { success: boolean; data: Message }) => response.data,
+      invalidatesTags: (_result, _error, { conversationId }) => [
+        { type: "Conversations" },
+        { type: "Conversation", id: conversationId },
+      ],
       onQueryStarted: async (
         { conversationId, content, mediaUrl, sharedPostId, messageType, storyId, storyReplyData },
         { dispatch, getState, queryFulfilled },
@@ -251,6 +255,7 @@ export const messagingApi = createApi({
         url: "/conversations/" + conversationId + "/mute",
         method: "POST",
       }),
+      invalidatesTags: ["Conversations"],
       onQueryStarted: async (conversationId, { dispatch, queryFulfilled }) => {
         const patch = dispatch(
           messagingApi.util.updateQueryData("getConversations", undefined, (draft) => {
@@ -273,6 +278,11 @@ export const messagingApi = createApi({
         url: "/conversations/" + conversationId + "/read",
         method: "POST",
       }),
+      invalidatesTags: (_result, _error, conversationId) => [
+        "Conversations",
+        { type: "Conversation", id: conversationId },
+        "MessageUnread",
+      ],
       onQueryStarted: async (conversationId, { dispatch, queryFulfilled }) => {
         const patchConv = dispatch(
           messagingApi.util.updateQueryData("getConversations", undefined, (draft) => {

@@ -141,6 +141,12 @@ export const storyService = {
         throw err;
       }
     }
+
+    broadcastRealtime(`hb-stories`, "STORY_VIEWED", {
+      storyId,
+      userId,
+    }).catch(() => {});
+
     return { viewed: true };
   },
 
@@ -151,19 +157,28 @@ export const storyService = {
       where: { storyId_userId: { storyId, userId } },
     });
 
+    let result: { reacted: boolean; emoji: string | null };
     if (existing && existing.emoji === emoji) {
       // Same emoji — toggle off (use deleteMany to avoid race condition)
       await prisma.storyReaction.deleteMany({ where: { storyId, userId } });
-      return { reacted: false, emoji: null };
+      result = { reacted: false, emoji: null };
+    } else {
+      // Create or update atomically — handles race condition
+      await prisma.storyReaction.upsert({
+        where: { storyId_userId: { storyId, userId } },
+        create: { storyId, userId, emoji },
+        update: { emoji },
+      });
+      result = { reacted: true, emoji };
     }
 
-    // Create or update atomically — handles race condition
-    await prisma.storyReaction.upsert({
-      where: { storyId_userId: { storyId, userId } },
-      create: { storyId, userId, emoji },
-      update: { emoji },
-    });
-    return { reacted: true, emoji };
+    broadcastRealtime(`hb-stories`, "STORY_REACTION", {
+      storyId,
+      userId,
+      emoji: result.emoji,
+    }).catch(() => {});
+
+    return result;
   },
 
   async getInteractions(storyId: string, userId: string) {
@@ -262,6 +277,12 @@ export const storyService = {
       create: { storyId, userId, optionIndex },
       update: { optionIndex },
     });
+
+    broadcastRealtime(`hb-stories`, "STORY_POLL_VOTE", {
+      storyId,
+      userId,
+      optionIndex,
+    }).catch(() => {});
 
     return this.getPollResults(storyId, userId);
   },

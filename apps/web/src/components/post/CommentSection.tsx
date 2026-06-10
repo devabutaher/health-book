@@ -3,17 +3,14 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ChevronDown, ChevronUp, Pin, Trash2, AlertTriangle } from "lucide-react";
-import { toast } from "sonner";
 import {
   useGetCommentsQuery,
-  useCreateCommentMutation,
   useUpdateCommentMutation,
   useDeleteCommentMutation,
   useTogglePinMutation,
 } from "@/redux/api/commentApi";
 import { useAppSelector } from "@/hooks";
 import type { Comment } from "@/types/comment";
-import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/shared/UserAvatar";
 import {
   AlertDialog,
@@ -26,9 +23,7 @@ import {
   AlertDialogMedia,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { formatRelativeTime } from "@/lib/utils";
-import { useSound } from "@/hooks/useSound";
-import { ErrorBoundary } from "@/components/ui/error-boundary";
+import { formatRelativeTime } from "@/lib/utils";  import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { CommentForm } from "./CommentForm";
 
 export function CommentSection({ postId, postUserId }: { postId: string; postUserId?: string }) {
@@ -40,12 +35,9 @@ export function CommentSection({ postId, postUserId }: { postId: string; postUse
   const user = useAppSelector((s) => s.auth.user);
 
   const { data, isLoading } = useGetCommentsQuery({ postId }, { skip: !expanded });
-  const [createComment] = useCreateCommentMutation();
   const [updateComment, { isLoading: updating }] = useUpdateCommentMutation();
   const [deleteComment] = useDeleteCommentMutation();
   const [togglePin] = useTogglePinMutation();
-
-  const { play } = useSound();
 
   const comments = data?.data?.comments || [];
 

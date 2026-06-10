@@ -221,7 +221,7 @@ export function BeforeAfterSection({
         </div>
       </div>
 
-      <Button variant="gradient" size="sm" onClick={handleShare} className="mt-4 w-full gap-1.5">
+      <Button variant="gradient" size="sm" onClick={handleShare} disabled={!isCompleted || (!data.before && !data.after)} className="mt-4 w-full gap-1.5">
         <Share2 className="size-3.5" /> Share Before & After to Feed
       </Button>
     </GlassCard>

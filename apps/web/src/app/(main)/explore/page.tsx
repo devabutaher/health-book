@@ -1,19 +1,19 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
-import { AlertCircle, Compass, Newspaper } from "lucide-react";
-import { Virtuoso } from "react-virtuoso";
-import { PostCard } from "@/components/post/PostCard";
-import { PostSkeletonList } from "@/components/shared/PostSkeleton";
-import { useGetExploreQuery } from "@/redux/api/postApi";
-import { useAppSelector } from "@/hooks";
-import { useFeedPagination } from "@/hooks/useFeedPagination";
-import { Empty, EmptyDescription, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { ExploreCategoryTabs } from "@/components/discovery/ExploreCategoryTabs";
 import { HealthNewsFeed } from "@/components/discovery/HealthNewsFeed";
+import { PostCard } from "@/components/post/PostCard";
+import { PostSkeletonList } from "@/components/shared/PostSkeleton";
 import { Button } from "@/components/ui/button";
+import { Empty, EmptyDescription, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
+import { useAppSelector } from "@/hooks";
+import { useFeedPagination } from "@/hooks/useFeedPagination";
 import { cn } from "@/lib/utils";
+import { useGetExploreQuery } from "@/redux/api/postApi";
 import type { Post } from "@/types/post";
+import { AlertCircle, Compass, Newspaper } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Virtuoso } from "react-virtuoso";
 
 export default function ExplorePage() {
   const [category, setCategory] = useState("all");
@@ -25,8 +25,19 @@ export default function ExplorePage() {
     { skip: isAuthLoading },
   );
 
+  const appliedCursors = useRef(new Set<string | undefined>());
+  const prevCategory = useRef(category);
+
+  useEffect(() => {
+    if (prevCategory.current === category) return;
+    prevCategory.current = category;
+    appliedCursors.current.clear();
+  }, [category]);
+
   useEffect(() => {
     if (!data?.data) return;
+    if (appliedCursors.current.has(cursor)) return;
+    appliedCursors.current.add(cursor);
     applyPage(
       { posts: data.data.posts, nextCursor: data.data.nextCursor, hasMore: data.data.hasMore },
       Boolean(cursor),
@@ -34,11 +45,14 @@ export default function ExplorePage() {
   }, [data, cursor, applyPage]);
 
   const isFetchingRef = useRef(isFetching);
-  isFetchingRef.current = isFetching;
-  const hasMoreRef = useRef(data?.data?.hasMore);
-  const cursorRef = useRef(data?.data?.nextCursor);
-  hasMoreRef.current = data?.data?.hasMore ?? false;
-  cursorRef.current = data?.data?.nextCursor ?? null;
+  const hasMoreRef = useRef<boolean>(false);
+  const cursorRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    isFetchingRef.current = isFetching;
+    hasMoreRef.current = data?.data?.hasMore ?? false;
+    cursorRef.current = data?.data?.nextCursor ?? null;
+  }, [isFetching, data?.data?.hasMore, data?.data?.nextCursor]);
 
   const endReached = useCallback(() => {
     if (hasMoreRef.current && cursorRef.current && !isFetchingRef.current) {

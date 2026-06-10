@@ -16,7 +16,7 @@ import {
   UserPlus,
 } from "lucide-react";
 import type { Challenge } from "@/types/challenge";
-import { cn } from "@/lib/utils";
+import { cn, getCalendarDay } from "@/lib/utils";
 import { ChallengeGoalDisplay } from "./ChallengeGoalDisplay";
 import { ChallengeMilestones } from "./ChallengeMilestones";
 
@@ -65,7 +65,9 @@ export const ChallengeCard = memo(function ChallengeCard({
   const TypeIcon = typeConfig[challenge.type].icon;
   const progress = challenge.myProgress;
   const isPastEndDate = new Date(challenge.endDate) < new Date();
-  const canLog = challenge.isJoined && progress && !progress.completed && !isPastEndDate;
+  const todayCal = getCalendarDay(challenge.startDate);
+  const dayNum = progress?.currentDayNumber ?? 1;
+  const canLog = challenge.isJoined && progress && !progress.completed && !isPastEndDate && dayNum <= todayCal;
   const daysLeft = Math.max(0, Math.ceil((new Date(challenge.endDate).getTime() - now) / 86400000));
 
   return (

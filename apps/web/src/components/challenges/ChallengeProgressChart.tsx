@@ -97,7 +97,7 @@ export function ChallengeProgressChart({
       </div>
 
       <div className="h-40">
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height={160}>
           {view === "daily" ? (
             <BarChart data={chartData} barCategoryGap={2}>
               <CartesianGrid

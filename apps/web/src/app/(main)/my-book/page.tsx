@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { getErrorMessage } from "@/lib/getErrorMessage";
+import { getCalendarDay } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -197,6 +198,13 @@ function ActiveChallengesSection() {
     total: number;
     goalTarget?: number | null;
     goalUnit?: string | null;
+    existingEntry?: {
+      dayNumber: number;
+      notes?: string | null;
+      mediaUrls: string[];
+      value?: number | null;
+      sharedToFeed: boolean;
+    } | null;
   } | null>(null);
   const { data: logDayPlans } = useGetDayPlansQuery(logChallenge?.id || "", {
     skip: !logChallenge?.id,
@@ -233,7 +241,9 @@ function ActiveChallengesSection() {
         {active.slice(0, 4).map((c) => {
           const daysLeft = Math.max(0, Math.ceil((new Date(c.endDate).getTime() - now) / 86400000));
           const isPastEndDate = new Date(c.endDate) < new Date(now);
-          const canLog = !!c.myProgress && !c.myProgress.completed && !isPastEndDate;
+          const todayCal = getCalendarDay(c.startDate);
+          const dayNum = c.myProgress?.currentDayNumber ?? 1;
+          const canLog = !!c.myProgress && !c.myProgress.completed && !isPastEndDate && dayNum <= todayCal;
           return (
             <div
               key={c.id}
@@ -284,12 +294,21 @@ function ActiveChallengesSection() {
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
+                      const dayNum = c.myProgress?.currentDayNumber ?? 1;
+                      const entry = c.myProgress?.dayEntries?.find((d) => d.dayNumber === dayNum);
                       setLogChallenge({
                         id: c.id,
-                        day: (c.myProgress?.score || 0) + 1,
+                        day: dayNum,
                         total: c.dayCount || 30,
                         goalTarget: c.goalTarget,
                         goalUnit: c.goalUnit,
+                        existingEntry: entry?.completed ? {
+                          dayNumber: entry.dayNumber,
+                          notes: entry.notes,
+                          mediaUrls: entry.mediaUrls ?? [],
+                          value: entry.value,
+                          sharedToFeed: entry.sharedToFeed ?? false,
+                        } : null,
                       });
                     }}
                     className="flex items-center gap-1 rounded-lg bg-gradient-to-r from-brand-teal to-brand-green px-2.5 py-1 text-[10px] font-bold text-white shadow-[var(--shadow-glow-teal)] transition-all hover:scale-105 active:scale-95"
@@ -320,6 +339,7 @@ function ActiveChallengesSection() {
           goalUnit={logChallenge.goalUnit}
           dayPlan={logDayPlans?.find((p) => p.dayNumber === logChallenge.day) ?? null}
           hasDayPlans={!!logDayPlans && logDayPlans.length > 0}
+          existingEntry={logChallenge.existingEntry}
         />
       )}
     </section>

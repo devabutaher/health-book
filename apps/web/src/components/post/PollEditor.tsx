@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, forwardRef, useImperativeHandle, memo, useCallback } from "react";
+import { useState, forwardRef, useImperativeHandle, memo } from "react";
 import { BarChart3, Plus, Trash2 } from "lucide-react";
 
 export interface PollData {

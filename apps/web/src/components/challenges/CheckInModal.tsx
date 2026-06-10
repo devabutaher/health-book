@@ -11,7 +11,6 @@ import { toast } from "sonner";
 import { getErrorMessage } from "@/lib/getErrorMessage";
 import { useSound } from "@/hooks/useSound";
 import type { ChallengeDayPlan } from "@/types/challenge";
-import { getImageUrl } from "@/lib/utils";
 import { useEffect } from "react";
 export function CheckInModal({
   challengeId,
@@ -24,6 +23,7 @@ export function CheckInModal({
   goalUnit,
   hasDayPlans,
   dayNumber,
+  existingEntry,
 }: {
   challengeId: string;
   currentDay: number;
@@ -35,6 +35,13 @@ export function CheckInModal({
   goalUnit?: string | null;
   hasDayPlans?: boolean;
   dayNumber?: number;
+  existingEntry?: {
+    dayNumber: number;
+    notes?: string | null;
+    mediaUrls: string[];
+    value?: number | null;
+    sharedToFeed: boolean;
+  } | null;
 }) {
   const [notes, setNotes] = useState("");
   const [mediaPreviews, setMediaPreviews] = useState<
@@ -60,6 +67,8 @@ export function CheckInModal({
   const targetDay = dayNumber ?? currentDay;
   const isBackfill = dayNumber != null && dayNumber < currentDay;
   const isDone = currentDay > totalDays;
+
+  const isEditing = existingEntry != null;
 
   const showValueInput = goalTarget != null && goalUnit != null;
 
@@ -104,6 +113,23 @@ export function CheckInModal({
     setMediaPreviews((prev) => prev.filter((m) => m.id !== id));
   };
 
+  // Pre-fill fields when editing an existing entry
+  useEffect(() => {
+    if (open && existingEntry) {
+      setNotes(existingEntry.notes ?? "");
+      setSharedToFeed(existingEntry.sharedToFeed);
+      setValue(existingEntry.value ?? "");
+      setMediaPreviews(
+        existingEntry.mediaUrls.map((url) => ({
+          id: `existing-${url}`,
+          localUrl: url,
+          remoteUrl: url,
+          uploading: false,
+        })),
+      );
+    }
+  }, [open, existingEntry]);
+
   // Cleanup object URLs on unmount
   useEffect(() => {
     return () => {
@@ -120,14 +146,14 @@ export function CheckInModal({
     try {
       await checkIn({
         challengeId,
-        dayNumber: isBackfill ? targetDay : undefined,
+        dayNumber: isBackfill ? targetDay : isEditing ? targetDay : undefined,
         notes: notes.trim() || undefined,
         mediaUrls: remoteUrls.length > 0 ? remoteUrls : undefined,
         sharedToFeed,
         value: value !== "" ? Number(value) : undefined,
       }).unwrap();
       play("success");
-      toast.success(isBackfill ? `Day ${targetDay} logged!` : `Day ${targetDay} checked in!`);
+      toast.success(isEditing ? `Day ${targetDay} updated!` : `Day ${targetDay} checked in!`);
       setNotes("");
       setMediaPreviews([]);
       setSharedToFeed(false);
@@ -176,9 +202,11 @@ export function CheckInModal({
           >
             <div className="mb-4 flex items-center justify-between">
               <h2 className="font-display text-lg font-bold text-[var(--text-primary)]">
-                {isBackfill
-                  ? `Backfill Day ${targetDay} / ${totalDays}`
-                  : `Day ${targetDay} / ${totalDays}`}
+                {isEditing
+                  ? `Edit Day ${targetDay} / ${totalDays}`
+                  : isBackfill
+                    ? `Backfill Day ${targetDay} / ${totalDays}`
+                    : `Day ${targetDay} / ${totalDays}`}
               </h2>
               <button
                 onClick={onClose}
@@ -201,11 +229,17 @@ export function CheckInModal({
               </div>
             )}
 
+            {isEditing && (
+              <div className="mb-4 flex items-center gap-2 rounded-xl bg-brand-teal/10 p-3 text-sm font-semibold text-brand-teal">
+                <Check className="size-4" /> Editing check-in for day {targetDay}
+              </div>
+            )}
+
             {/* Today's Task from day plan */}
             {dayPlan && (
               <div className="mb-4 rounded-xl border border-brand-teal/20 bg-gradient-to-br from-brand-teal/[0.05] to-brand-green/[0.03] p-3">
                 <p className="text-[10px] font-semibold text-brand-teal uppercase tracking-wider">
-                  {isBackfill ? "Missed Day Task" : "Today's Task"}
+                  {isBackfill ? "Missed Day Task" : isEditing ? "Day Task" : "Today's Task"}
                 </p>
                 <p className="mt-1 text-sm font-bold text-[var(--text-primary)]">
                   {dayPlan.title || `Day ${dayPlan.dayNumber}`}
@@ -337,7 +371,7 @@ export function CheckInModal({
               </Button>
               {!isDone && (
                 <>
-                  {hasDayPlans && !isBackfill && (
+                  {hasDayPlans && !isBackfill && !isEditing && (
                     <Button
                       type="button"
                       variant="secondary"
@@ -355,7 +389,7 @@ export function CheckInModal({
                     onClick={handleCheckIn}
                     className="flex-1"
                   >
-                    {isSubmitting ? "Saving..." : isBackfill ? "Log Missed Day" : "Check In"}
+                    {isSubmitting ? "Saving..." : isEditing ? "Update" : isBackfill ? "Log Missed Day" : "Check In"}
                   </Button>
                 </>
               )}

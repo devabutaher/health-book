@@ -91,9 +91,7 @@ export const store = configureStore({
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
       immutableCheck: false,
-      serializableCheck: {
-        ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
-      },
+      serializableCheck: false,
     }).concat(
       persistSettingsMiddleware,
       authApi.middleware,
@@ -120,11 +118,11 @@ export const store = configureStore({
 
 export const persistor = persistStore(store);
 
-setupListeners(store.dispatch, (dispatch, { onFocus, onOnline, onOffline }) => {
+setupListeners(store.dispatch, (_d, { onOnline, onOffline }) => {
   if (typeof window === "undefined") return () => {};
   // Only handle online/offline, skip refetchOnFocus
-  const handleOnline = () => dispatch(onOnline());
-  const handleOffline = () => dispatch(onOffline());
+  const handleOnline = () => _d(onOnline());
+  const handleOffline = () => _d(onOffline());
   window.addEventListener("online", handleOnline);
   window.addEventListener("offline", handleOffline);
   return () => {

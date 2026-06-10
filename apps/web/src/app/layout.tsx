@@ -28,7 +28,10 @@ export const metadata: Metadata = {
   title: "HealthBook",
   description: "Your health journey, shared",
   manifest: "/manifest.json",
-  icons: { icon: "/icons/icon.svg" },
+  icons: {
+    icon: "/icons/icon.svg",
+    apple: [{ url: "/icons/icon-192x192.png", sizes: "192x192", type: "image/png" }],
+  },
   appleWebApp: { capable: true, title: "HealthBook", statusBarStyle: "default" },
 };
 

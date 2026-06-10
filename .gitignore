@@ -60,3 +60,4 @@ apps/api/uploads/
 *.temp
 
 .vercel
+.opencode

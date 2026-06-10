@@ -139,11 +139,22 @@ export const notificationService = {
   async markRead(userId: string, notificationId: string) {
     const notif = await prisma.notification.findFirst({ where: { id: notificationId, userId } });
     if (!notif) throw new AppError(404, "Notification not found");
-    return prisma.notification.update({ where: { id: notificationId }, data: { read: true } });
+    const updated = await prisma.notification.update({
+      where: { id: notificationId },
+      data: { read: true },
+    });
+
+    broadcastRealtime(`hb-notification:${userId}`, "NOTIFICATION_READ", {
+      notificationId,
+    }).catch(() => {});
+
+    return updated;
   },
 
   async markAllRead(userId: string) {
     await prisma.notification.updateMany({ where: { userId, read: false }, data: { read: true } });
+
+    broadcastRealtime(`hb-notification:${userId}`, "ALL_NOTIFICATIONS_READ", {}).catch(() => {});
   },
 
   async getUnreadCount(userId: string) {
@@ -154,5 +165,9 @@ export const notificationService = {
     const notif = await prisma.notification.findFirst({ where: { id: notificationId, userId } });
     if (!notif) throw new AppError(404, "Notification not found");
     await prisma.notification.delete({ where: { id: notificationId } });
+
+    broadcastRealtime(`hb-notification:${userId}`, "NOTIFICATION_DELETED", {
+      notificationId,
+    }).catch(() => {});
   },
 };

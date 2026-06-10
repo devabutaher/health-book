@@ -18,10 +18,6 @@ import type {
 } from "@/types/challenge";
 import { soundManager } from "@/lib/soundManager";
 
-function removeChallengeFromList(list: Challenge[], challengeId: string): Challenge[] {
-  return list.filter((c) => c.id !== challengeId);
-}
-
 export const challengesApi = createApi({
   reducerPath: "challengesApi",
   baseQuery: createBaseQuery(`${process.env["NEXT_PUBLIC_API_URL"]}/api/challenges`),
@@ -162,6 +158,13 @@ export const challengesApi = createApi({
         dayCount?: number;
         milestones?: { name: string; threshold: number; icon: string }[];
         templateId?: string;
+        dayPlans?: {
+          dayNumber: number;
+          title?: string;
+          description?: string;
+          tips?: string;
+          duration?: number;
+        }[];
       }
     >({
       query: (body) => ({ url: "/", method: "POST", body }),
@@ -260,16 +263,37 @@ export const challengesApi = createApi({
       invalidatesTags: (_result, _error, id) => [{ type: "Challenge", id }, "Challenges"],
       onQueryStarted: async (challengeId, { dispatch, getState, queryFulfilled }) => {
         const patches: (() => void)[] = [];
-        const currentUser = (getState() as RootState).auth.user;
-        if (currentUser) {
-          const myPatch = dispatch(
-            challengesApi.util.updateQueryData("getMyChallenges", undefined, (draft) => {
-              if (!draft?.data) return;
-              draft.data = draft.data.filter((c) => c.id !== challengeId);
+
+        // Patch getMyChallenges
+        const myPatch = dispatch(
+          challengesApi.util.updateQueryData("getMyChallenges", undefined, (draft) => {
+            if (!draft?.data) return;
+            draft.data = draft.data.filter((c) => c.id !== challengeId);
+          }),
+        );
+        patches.push(() => myPatch.undo());
+
+        // Patch browseChallenges (all cached pages/filters)
+        const browseArgs = challengesApi.util.selectCachedArgsForQuery(getState(), "browseChallenges");
+        for (const arg of browseArgs) {
+          const p = dispatch(
+            challengesApi.util.updateQueryData("browseChallenges", arg, (draft) => {
+              if (!draft?.challenges) return;
+              draft.challenges = draft.challenges.filter((c) => c.id !== challengeId);
             }),
           );
-          patches.push(() => myPatch.undo());
+          patches.push(() => p.undo());
         }
+
+        // Patch getSavedChallenges
+        const savedPatch = dispatch(
+          challengesApi.util.updateQueryData("getSavedChallenges", undefined, (draft) => {
+            if (!draft?.data) return;
+            draft.data = draft.data.filter((c) => c.id !== challengeId);
+          }),
+        );
+        patches.push(() => savedPatch.undo());
+
         try {
           await queryFulfilled;
         } catch {
@@ -487,17 +511,29 @@ export const challengesApi = createApi({
     toggleSaveChallenge: builder.mutation<{ saved: boolean }, string>({
       query: (id) => ({ url: `/${id}/save`, method: "POST" }),
       invalidatesTags: (_result, _error, id) => [{ type: "Challenge", id }, "Challenges"],
-      onQueryStarted: async (challengeId, { dispatch, queryFulfilled }) => {
-        const patch = dispatch(
+      onQueryStarted: async (challengeId, { dispatch, getState, queryFulfilled }) => {
+        const undoFns: (() => void)[] = [];
+        const detailPatch = dispatch(
           challengesApi.util.updateQueryData("getChallenge", challengeId, (draft) => {
             draft.isSaved = !draft.isSaved;
           }),
         );
+        undoFns.push(() => detailPatch.undo());
+        const browseArgs = challengesApi.util.selectCachedArgsForQuery(getState(), "browseChallenges");
+        for (const arg of browseArgs) {
+          const p = dispatch(
+            challengesApi.util.updateQueryData("browseChallenges", arg, (draft) => {
+              const c = draft.challenges.find((x) => x.id === challengeId);
+              if (c) c.isSaved = !c.isSaved;
+            }),
+          );
+          undoFns.push(() => p.undo());
+        }
         try {
           await queryFulfilled;
         } catch {
           soundManager.playError();
-          patch.undo();
+          undoFns.forEach((fn) => fn());
         }
       },
     }),
@@ -523,27 +559,6 @@ export const challengesApi = createApi({
         success: boolean;
         data: { comments: ChallengeComment[]; nextCursor: string | null; hasMore: boolean };
       }) => response.data,
-      serializeQueryArgs: ({ queryArgs }) => {
-        const { cursor, ...rest } = queryArgs as { challengeId: string; cursor?: string };
-        void cursor;
-        return JSON.stringify(rest);
-      },
-      merge: (currentCache, newItems) => {
-        if (!newItems) return;
-        if (!currentCache) return newItems;
-        const existingIds = new Set(currentCache.comments.map((c) => c.id));
-        return {
-          comments: [
-            ...currentCache.comments,
-            ...newItems.comments.filter((c) => !existingIds.has(c.id)),
-          ],
-          nextCursor: newItems.nextCursor,
-          hasMore: newItems.hasMore,
-        };
-      },
-      forceRefetch: ({ currentArg, previousArg }) => {
-        return currentArg?.cursor !== previousArg?.cursor;
-      },
     }),
 
     addChallengeComment: builder.mutation<
@@ -577,14 +592,15 @@ export const challengesApi = createApi({
           createdAt: new Date().toISOString(),
         };
         const patch = dispatch(
-          challengesApi.util.updateQueryData("getChallengeComments", { challengeId }, (draft) => {
-            if (!draft?.comments) {
-              draft.comments = [];
-              draft.nextCursor = null;
-              draft.hasMore = false;
-            }
-            draft.comments.unshift(optimistic);
-          }),
+          challengesApi.util.updateQueryData(
+            "getChallengeComments",
+            { challengeId },
+            (draft) => {
+              if (draft?.comments) {
+                draft.comments.unshift(optimistic);
+              }
+            },
+          ),
         );
         try {
           const { data: real } = await queryFulfilled;
@@ -639,9 +655,8 @@ export const challengesApi = createApi({
         if (!currentUser) return;
 
         // Look up challenge info from cache for optimistic invite data
-        const state = getState() as any;
         const cachedChallenge =
-          challengesApi.endpoints.getChallenge.select(challengeId)(state)?.data;
+          challengesApi.endpoints.getChallenge.select(challengeId)(getState() as RootState)?.data;
 
         const optimistic: ChallengeInvite = {
           id: `temp-${Date.now()}`,
@@ -663,10 +678,9 @@ export const challengesApi = createApi({
           createdAt: new Date().toISOString(),
         };
 
-        const patch = dispatch(
-          challengesApi.util.updateQueryData("getMyInvites", undefined, (draft: any) => {
+        const patch = dispatch(            challengesApi.util.updateQueryData("getMyInvites", undefined, (draft: ChallengeInvite[]) => {
             if (!draft) return;
-            const exists = (draft as ChallengeInvite[]).findIndex(
+            const exists = draft.findIndex(
               (i) =>
                 i.id === optimistic.id ||
                 (i.challengeId === challengeId &&
@@ -823,6 +837,27 @@ export const challengesApi = createApi({
         { type: "Challenge", id: challengeId },
       ],
     }),
+
+    getRatings: builder.query<
+      {
+        ratings: Array<{
+          id: string;
+          rating: number;
+          review?: string | null;
+          createdAt: string;
+          user: { id: string; name: string | null; username: string; avatar: string | null };
+        }>;
+        averageRating: number;
+        ratingCount: number;
+      },
+      string
+    >({
+      query: (challengeId) => `/${challengeId}/ratings`,
+      transformResponse: (response: { success: boolean; data: { ratings: Array<Record<string, unknown>>; averageRating: number; ratingCount: number } }) => response.data as any,
+      providesTags: (_result, _error, challengeId) => [
+        { type: "Challenge", id: challengeId },
+      ],
+    }),
   }),
 });
 
@@ -858,6 +893,7 @@ export const {
   useUpsertDayPlansMutation,
   useUploadChallengeMediaMutation,
   useRateChallengeMutation,
+  useGetRatingsQuery,
   useUploadBeforePhotoMutation,
   useUploadAfterPhotoMutation,
 } = challengesApi;

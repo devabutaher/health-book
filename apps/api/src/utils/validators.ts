@@ -215,6 +215,17 @@ export const createChallengeSchema = z.object({
   dayCount: z.number().int().positive().optional(),
   milestones: challengeMilestoneSchema,
   templateId: z.string().uuid().optional(),
+  dayPlans: z
+    .array(
+      z.object({
+        dayNumber: z.number().int().positive(),
+        title: z.string().max(500).optional(),
+        description: z.string().max(5000).optional(),
+        tips: z.string().max(5000).optional(),
+        duration: z.number().int().positive().optional(),
+      }),
+    )
+    .optional(),
 });
 
 export const updateChallengeSchema = z.object({

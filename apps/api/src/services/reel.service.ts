@@ -145,12 +145,18 @@ export const reelService = {
     if (comment.userId !== userId) throw new AppError(403, "Not your comment");
 
     await prisma.reelComment.delete({ where: { id: commentId } });
+
+    broadcastRealtime(`hb-reel:${comment.reelId}`, "REEL_COMMENT_DELETED", {
+      reelId: comment.reelId,
+      commentId,
+    }).catch(() => {});
   },
 
   async update(reelId: string, userId: string, data: { caption?: string }) {
     const reel = await prisma.reel.findUniqueOrThrow({ where: { id: reelId } });
     if (reel.userId !== userId) throw new AppError(403, "Not your reel");
-    return prisma.reel.update({
+
+    const updated = await prisma.reel.update({
       where: { id: reelId },
       data,
       include: {
@@ -166,6 +172,12 @@ export const reelService = {
         },
       },
     });
+
+    broadcastRealtime(`hb-reel:${reelId}`, "REEL_UPDATED", {
+      reelId,
+    }).catch(() => {});
+
+    return updated;
   },
 
   async delete(reelId: string, userId: string) {
@@ -180,5 +192,9 @@ export const reelService = {
       if (publicId) deleteImage(publicId).catch(() => {});
     }
     await prisma.reel.delete({ where: { id: reelId } });
+
+    broadcastRealtime(`hb-reel:${reelId}`, "REEL_DELETED", {
+      reelId,
+    }).catch(() => {});
   },
 };
