@@ -95,13 +95,15 @@ export function ChallengeComments({ challengeId }: { challengeId: string }) {
 
   useEffect(() => {
     if (data) {
-      if (!cursor) {
-        setAllComments(data.comments);
-      } else {
-        setAllComments((prev) => [...prev, ...data.comments]);
-      }
-      setNextCursor(data.nextCursor);
-      setHasMore(data.hasMore);
+      queueMicrotask(() => {
+        if (!cursor) {
+          setAllComments(data.comments);
+        } else {
+          setAllComments((prev) => [...prev, ...data.comments]);
+        }
+        setNextCursor(data.nextCursor);
+        setHasMore(data.hasMore);
+      });
     }
   }, [data, cursor]);
 

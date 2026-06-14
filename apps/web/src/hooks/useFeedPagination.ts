@@ -23,6 +23,9 @@ function reducer(state: State, action: Action): State {
     case "set-cursor":
       return { ...state, cursor: action.cursor };
     case "merge-page": {
+      // Only update cursor when a valid nextCursor is returned,
+      // otherwise keep the existing cursor to avoid refetching page 1
+      const nextCursor = action.cursor ?? state.cursor;
       if (action.append) {
         // Merge: update existing posts when they reappear (e.g. RTK cache patches)
         const map = new Map((state.allPosts as { id?: string }[]).map((p) => [p.id, p]));
@@ -30,12 +33,12 @@ function reducer(state: State, action: Action): State {
           if (post.id) map.set(post.id, post);
         }
         return {
-          cursor: action.cursor,
+          cursor: nextCursor,
           allPosts: Array.from(map.values()),
         };
       }
       return {
-        cursor: action.cursor,
+        cursor: nextCursor,
         allPosts: action.posts,
       };
     }

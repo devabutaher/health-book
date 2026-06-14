@@ -28,7 +28,7 @@ export const storyService = {
     };
   }) {
     const expiresAt = new Date();
-    expiresAt.setHours(expiresAt.getHours() + 24);
+    expiresAt.setDate(expiresAt.getDate() + 7);
 
     const story = await prisma.story.create({
       data: {

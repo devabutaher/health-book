@@ -23,6 +23,7 @@ export function useChallengeRealtime(challengeId: string | null) {
           challengesApi.util.invalidateTags([
             { type: "Challenge", id: challengeId },
             { type: "Leaderboard", id: challengeId },
+            "Challenges",
           ]),
         );
       })
@@ -42,8 +43,24 @@ export function useChallengeRealtime(challengeId: string | null) {
           ]),
         );
       })
+      .on("broadcast", { event: "CHALLENGE_UPDATED" }, () => {
+        dispatch(
+          challengesApi.util.invalidateTags([
+            { type: "Challenge", id: challengeId },
+            "Challenges",
+          ]),
+        );
+      })
       .on("broadcast", { event: "CHALLENGE_DELETED" }, () => {
         dispatch(challengesApi.util.invalidateTags(["Challenges"]));
+      })
+      .on("broadcast", { event: "CHALLENGE_RATED" }, () => {
+        dispatch(
+          challengesApi.util.invalidateTags([
+            { type: "Challenge", id: challengeId },
+            { type: "Leaderboard", id: challengeId },
+          ]),
+        );
       })
       .on("broadcast", { event: "NEW_COMMENT" }, () => {
         dispatch(challengesApi.util.invalidateTags([{ type: "Comments", id: challengeId }]));

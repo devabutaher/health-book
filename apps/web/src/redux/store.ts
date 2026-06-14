@@ -3,12 +3,6 @@ import { setupListeners } from "@reduxjs/toolkit/query";
 import {
   persistReducer,
   persistStore,
-  FLUSH,
-  REHYDRATE,
-  PAUSE,
-  PERSIST,
-  PURGE,
-  REGISTER,
 } from "redux-persist";
 import storage from "./storage";
 import { authApi } from "./api/authApi";

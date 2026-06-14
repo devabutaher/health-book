@@ -1,10 +1,10 @@
 "use client";
 
-import { memo, useCallback, useState } from "react";
+import { memo, useCallback, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import dynamic from "next/dynamic";
-import { Bookmark, BookmarkCheck, Share2 } from "lucide-react";
+import { Bookmark, BookmarkCheck, MessageCircle, Share2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn, getImageUrl, formatRelativeTime } from "@/lib/utils";
 import { ReactionBar } from "./ReactionBar";
@@ -46,6 +46,8 @@ export const PostCard = memo(function PostCard({ post }: { post: Post }) {
   const isOwner = user?.id === post.userId;
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [editPostId, setEditPostId] = useState<string | null>(null);
+  const [commentTrigger, setCommentTrigger] = useState(0);
+  const commentRef = useRef<HTMLDivElement>(null);
   const handleEdit = useCallback(() => setEditPostId(post.id), [post.id]);
   const [copyLog, { isLoading: copying }] = useCopyHealthLogMutation();
   const [toggleSave] = useToggleSaveMutation();
@@ -197,10 +199,10 @@ export const PostCard = memo(function PostCard({ post }: { post: Post }) {
                   <button
                     key={i}
                     onClick={() => setLightboxIndex(i)}
-                    className="group relative aspect-square overflow-hidden bg-[var(--bg-subtle)]"
+                    className="group relative aspect-[4/3] overflow-hidden bg-[var(--bg-subtle)]"
                   >
                     <Image
-                      src={getImageUrl(url, "q_auto:best,f_auto") ?? url}
+                      src={getImageUrl(url, "w_600,c_limit,q_auto:best,f_auto") ?? url}
                       alt=""
                       placeholder="blur"
                       blurDataURL={
@@ -255,6 +257,18 @@ export const PostCard = memo(function PostCard({ post }: { post: Post }) {
             <Button
               variant="ghost"
               size="icon-sm"
+              onClick={() => {
+                setCommentTrigger((n) => n + 1);
+                commentRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+              }}
+              aria-label="Comment"
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <MessageCircle />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-sm"
               onClick={handleShare}
               aria-label="Share"
               className="text-muted-foreground hover:text-foreground"
@@ -276,8 +290,8 @@ export const PostCard = memo(function PostCard({ post }: { post: Post }) {
           </div>
         </div>
 
-        <div className="mt-2 border-t border-[var(--border-subtle)] pt-2">
-          <CommentSection postId={post.id} postUserId={post.userId} />
+        <div ref={commentRef} className="mt-2 border-t border-[var(--border-subtle)] pt-2">
+          <CommentSection postId={post.id} postUserId={post.userId} expandTrigger={commentTrigger} />
         </div>
       </GlassCard>
 
@@ -292,7 +306,7 @@ export const PostCard = memo(function PostCard({ post }: { post: Post }) {
         <CreatePostModal
           open={true}
           onClose={() => setEditPostId(null)}
-          initialPost={{ id: post.id, content: post.content || "", privacy: post.privacy }}
+          initialPost={post}
         />
       )}
     </motion.div>

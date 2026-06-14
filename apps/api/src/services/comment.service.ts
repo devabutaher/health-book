@@ -120,9 +120,14 @@ export const commentService = {
   async togglePin(commentId: string) {
     const comment = await prisma.comment.findUnique({ where: { id: commentId } });
     if (!comment) return null;
-    return prisma.comment.update({
+    const updated = await prisma.comment.update({
       where: { id: commentId },
       data: { isPinned: !comment.isPinned },
     });
+    broadcastRealtime(`hb-post:${comment.postId}`, "COMMENT_PINNED", {
+      commentId,
+      postId: comment.postId,
+    }).catch(() => {});
+    return updated;
   },
 };

@@ -19,6 +19,9 @@ export function usePostRealtime(postId: string | null) {
     channel = supabase.channel(topic, { config: { private: false } });
 
     channel
+      .on("broadcast", { event: "POST_UPDATED" }, () => {
+        dispatch(postApi.util.invalidateTags([{ type: "Post", id: postId }, "Posts"]));
+      })
       .on("broadcast", { event: "REACTION_ADDED" }, () => {
         dispatch(postApi.util.invalidateTags([{ type: "Post", id: postId }]));
       })
@@ -29,7 +32,7 @@ export function usePostRealtime(postId: string | null) {
         dispatch(postApi.util.invalidateTags([{ type: "Post", id: postId }]));
       })
       .on("broadcast", { event: "POST_DELETED" }, () => {
-        dispatch(postApi.util.invalidateTags([{ type: "Post", id: postId }, "Feed"]));
+        dispatch(postApi.util.invalidateTags([{ type: "Post", id: postId }, "Posts"]));
       })
       .on("broadcast", { event: "NEW_COMMENT" }, () => {
         dispatch(commentApi.util.invalidateTags([{ type: "Comments", id: postId }]));
@@ -37,6 +40,10 @@ export function usePostRealtime(postId: string | null) {
       })
       .on("broadcast", { event: "COMMENT_UPDATED" }, () => {
         dispatch(commentApi.util.invalidateTags([{ type: "Comments", id: postId }]));
+      })
+      .on("broadcast", { event: "COMMENT_PINNED" }, () => {
+        dispatch(commentApi.util.invalidateTags([{ type: "Comments", id: postId }]));
+        dispatch(postApi.util.invalidateTags([{ type: "Post", id: postId }]));
       })
       .on("broadcast", { event: "COMMENT_DELETED" }, () => {
         dispatch(commentApi.util.invalidateTags([{ type: "Comments", id: postId }]));

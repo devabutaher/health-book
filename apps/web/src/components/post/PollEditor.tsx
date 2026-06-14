@@ -14,11 +14,15 @@ export interface PollEditorHandle {
   reset(): void;
 }
 
+interface PollEditorProps {
+  initialData?: PollData;
+}
+
 export const PollEditor = memo(
-  forwardRef<PollEditorHandle, object>(function PollEditor(_props, ref) {
-    const [question, setQuestion] = useState("");
-    const [options, setOptions] = useState<string[]>([""]);
-    const [isMultipleChoice, setIsMultipleChoice] = useState(false);
+  forwardRef<PollEditorHandle, PollEditorProps>(function PollEditor({ initialData }, ref) {
+    const [question, setQuestion] = useState(initialData?.question ?? "");
+    const [options, setOptions] = useState<string[]>(initialData?.options ?? [""]);
+    const [isMultipleChoice, setIsMultipleChoice] = useState(initialData?.isMultipleChoice ?? false);
 
     useImperativeHandle(
       ref,

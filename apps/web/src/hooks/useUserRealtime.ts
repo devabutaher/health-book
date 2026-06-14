@@ -25,6 +25,15 @@ export function useUserRealtime() {
       .on("broadcast", { event: "UNFOLLOWED" }, () => {
         dispatch(userApi.util.invalidateTags(["Profile", "Followers", "Following"]));
       })
+      .on("broadcast", { event: "PROFILE_UPDATED" }, () => {
+        dispatch(userApi.util.invalidateTags(["Profile"]));
+      })
+      .on("broadcast", { event: "AVATAR_UPDATED" }, () => {
+        dispatch(userApi.util.invalidateTags(["Profile"]));
+      })
+      .on("broadcast", { event: "COVER_UPDATED" }, () => {
+        dispatch(userApi.util.invalidateTags(["Profile"]));
+      })
       .subscribe();
 
     return () => {

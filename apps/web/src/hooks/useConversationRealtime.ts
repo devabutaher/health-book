@@ -22,6 +22,12 @@ export function useConversationRealtime() {
       .on("broadcast", { event: "CONVERSATION_UPDATED" }, () => {
         dispatch(messagingApi.util.invalidateTags(["Conversations", "MessageUnread"]));
       })
+      .on("broadcast", { event: "CONVERSATION_CREATED" }, () => {
+        dispatch(messagingApi.util.invalidateTags(["Conversations"]));
+      })
+      .on("broadcast", { event: "CONVERSATION_DELETED" }, () => {
+        dispatch(messagingApi.util.invalidateTags(["Conversations"]));
+      })
       .subscribe();
 
     return () => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { ChevronDown, ChevronUp, Pin, Trash2, AlertTriangle } from "lucide-react";
 import {
@@ -26,8 +26,14 @@ import {
 import { formatRelativeTime } from "@/lib/utils";  import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { CommentForm } from "./CommentForm";
 
-export function CommentSection({ postId, postUserId }: { postId: string; postUserId?: string }) {
+export function CommentSection({ postId, postUserId, expandTrigger }: { postId: string; postUserId?: string; expandTrigger?: number }) {
   const [expanded, setExpanded] = useState(false);
+
+  useEffect(() => {
+    if (expandTrigger) {
+      queueMicrotask(() => setExpanded(true));
+    }
+  }, [expandTrigger]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingContent, setEditingContent] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);

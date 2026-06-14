@@ -93,26 +93,32 @@ export const commentApi = createApi({
       onQueryStarted: async ({ commentId, content }, { dispatch, queryFulfilled, getState }) => {
         const state = getState() as RootState;
         const queries = (state as any).commentApi?.queries ?? {};
-        let patch: { undo: () => void } | undefined;
+        const patches: { undo: () => void }[] = [];
         for (const key of Object.keys(queries)) {
-          const entry = queries[key];
-          if (entry?.data?.data?.comments?.some((c: any) => c.id === commentId)) {
+          const q = queries[key];
+          if (q?.endpointName === "getComments" && q?.status === "fulfilled") {
             try {
-              patch = dispatch(
-                commentApi.util.updateQueryData("getComments", entry.arg, (draft: any) => {
+              const p = dispatch(
+                commentApi.util.updateQueryData("getComments", q.originalArgs, (draft: any) => {
                   if (!draft?.data?.comments) return;
-                  const idx = draft.data.comments.findIndex((c: any) => c.id === commentId);
-                  if (idx >= 0) draft.data.comments[idx].content = content;
+                  const updateInList = (list: any[]) => {
+                    const idx = list.findIndex((c: any) => c.id === commentId);
+                    if (idx >= 0) list[idx].content = content;
+                  };
+                  updateInList(draft.data.comments);
+                  for (const c of draft.data.comments) {
+                    if (c.replies) updateInList(c.replies);
+                  }
                 }),
               );
+              patches.push(p);
             } catch {}
-            break;
           }
         }
         try {
           await queryFulfilled;
         } catch {
-          patch?.undo();
+          patches.forEach((p) => p.undo());
           soundManager.playError();
         }
       },
@@ -122,28 +128,34 @@ export const commentApi = createApi({
         url: `/${commentId}`,
         method: "DELETE",
       }),
+      invalidatesTags: ["Comments"],
       onQueryStarted: async (commentId, { dispatch, queryFulfilled, getState }) => {
         const state = getState() as RootState;
         const queries = (state as any).commentApi?.queries ?? {};
-        let patch: { undo: () => void } | undefined;
+        const patches: { undo: () => void }[] = [];
         for (const key of Object.keys(queries)) {
-          const entry = queries[key];
-          if (entry?.data?.data?.comments?.some((c: any) => c.id === commentId)) {
+          const q = queries[key];
+          if (q?.endpointName === "getComments" && q?.status === "fulfilled") {
             try {
-              patch = dispatch(
-                commentApi.util.updateQueryData("getComments", entry.arg, (draft: any) => {
+              const p = dispatch(
+                commentApi.util.updateQueryData("getComments", q.originalArgs, (draft: any) => {
                   if (!draft?.data?.comments) return;
                   draft.data.comments = draft.data.comments.filter((c: any) => c.id !== commentId);
+                  for (const c of draft.data.comments) {
+                    if (c.replies) {
+                      c.replies = c.replies.filter((r: any) => r.id !== commentId);
+                    }
+                  }
                 }),
               );
+              patches.push(p);
             } catch {}
-            break;
           }
         }
         try {
           await queryFulfilled;
         } catch {
-          patch?.undo();
+          patches.forEach((p) => p.undo());
           soundManager.playError();
         }
       },
@@ -153,30 +165,36 @@ export const commentApi = createApi({
         url: `/${commentId}/pin`,
         method: "POST",
       }),
+      invalidatesTags: ["Comments"],
       onQueryStarted: async (commentId, { dispatch, queryFulfilled, getState }) => {
         const state = getState() as RootState;
         const queries = (state as any).commentApi?.queries ?? {};
-        let patch: { undo: () => void } | undefined;
+        const patches: { undo: () => void }[] = [];
         for (const key of Object.keys(queries)) {
-          const entry = queries[key];
-          if (entry?.data?.data?.comments?.some((c: any) => c.id === commentId)) {
+          const q = queries[key];
+          if (q?.endpointName === "getComments" && q?.status === "fulfilled") {
             try {
-              patch = dispatch(
-                commentApi.util.updateQueryData("getComments", entry.arg, (draft: any) => {
+              const p = dispatch(
+                commentApi.util.updateQueryData("getComments", q.originalArgs, (draft: any) => {
                   if (!draft?.data?.comments) return;
-                  const idx = draft.data.comments.findIndex((c: any) => c.id === commentId);
-                  if (idx >= 0)
-                    draft.data.comments[idx].isPinned = !draft.data.comments[idx].isPinned;
+                  const toggleInList = (list: any[]) => {
+                    const idx = list.findIndex((c: any) => c.id === commentId);
+                    if (idx >= 0) list[idx].isPinned = !list[idx].isPinned;
+                  };
+                  toggleInList(draft.data.comments);
+                  for (const c of draft.data.comments) {
+                    if (c.replies) toggleInList(c.replies);
+                  }
                 }),
               );
+              patches.push(p);
             } catch {}
-            break;
           }
         }
         try {
           await queryFulfilled;
         } catch {
-          patch?.undo();
+          patches.forEach((p) => p.undo());
           soundManager.playError();
         }
       },

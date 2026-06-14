@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
-import { CalendarClock, Clock, FileText, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -9,34 +8,59 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { FieldGroup } from "@/components/ui/field";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { useCreatePostMutation, useUpdatePostMutation, uploadPostImage } from "@/redux/api/postApi";
 import { useAppSelector } from "@/hooks";
-import { toast } from "sonner";
-import { getErrorMessage } from "@/lib/getErrorMessage";
 import { useSound } from "@/hooks/useSound";
+import { cn } from "@/lib/utils";
+import { getErrorMessage } from "@/lib/getErrorMessage";
+import {
+  uploadPostImage,
+  useCreatePostMutation,
+  useGetPostQuery,
+  useUpdatePostMutation,
+} from "@/redux/api/postApi";
+import type { CreatePostPayload, Post } from "@/types/post";
+import {
+  BarChart3,
+  CalendarClock,
+  Clock,
+  FileText,
+  Globe,
+  HelpCircle,
+  ImagePlus,
+  Loader2,
+  Lock,
+  Users,
+  UtensilsCrossed,
+} from "lucide-react";
+import { useCallback, useRef, useState } from "react";
+import { toast } from "sonner";
 import RecipeForm from "../health/RecipeForm";
-import { ContentEditor } from "./ContentEditor";
 import type { ContentEditorHandle } from "./ContentEditor";
-import { MediaUploader } from "./MediaUploader";
+import { ContentEditor } from "./ContentEditor";
 import type { MediaUploaderHandle } from "./MediaUploader";
-import { QuizEditor } from "./QuizEditor";
-import type { QuizEditorHandle } from "./QuizEditor";
-import { PollEditor } from "./PollEditor";
+import { MediaUploader } from "./MediaUploader";
 import type { PollEditorHandle } from "./PollEditor";
-import { TagPicker } from "./TagPicker";
+import { PollEditor } from "./PollEditor";
+import type { QuizEditorHandle } from "./QuizEditor";
+import { QuizEditor } from "./QuizEditor";
 import type { TagPickerHandle } from "./TagPicker";
-import type { CreatePostPayload } from "@/types/post";
+import { TagPicker } from "./TagPicker";
 
 type TemplateMode = null | "BEFORE_AFTER" | "RECIPE" | "QUIZ" | "POLL";
+
+const TEMPLATES: { value: TemplateMode; label: string; icon: typeof FileText }[] = [
+  { value: null, label: "Post", icon: FileText },
+  { value: "BEFORE_AFTER", label: "Before & After", icon: ImagePlus },
+  { value: "RECIPE", label: "Recipe", icon: UtensilsCrossed },
+  { value: "QUIZ", label: "Quiz", icon: HelpCircle },
+  { value: "POLL", label: "Poll", icon: BarChart3 },
+];
 
 interface CreatePostModalProps {
   open: boolean;
   onClose: () => void;
   onCreated?: () => void;
-  initialPost?: { id: string; content: string; privacy: string };
+  initialPost?: Post;
   groupId?: string;
 }
 
@@ -52,11 +76,24 @@ export function CreatePostModal({
   const [updatePost] = useUpdatePostMutation();
   const { play } = useSound();
   const isEdit = !!initialPost;
-  const [templateMode, setTemplateMode] = useState<TemplateMode>(null);
-  const [recipeData, setRecipeData] = useState<Record<string, unknown> | null>(null);
+  const { data: fetchedPost, isLoading: postLoading } = useGetPostQuery(initialPost?.id ?? "", {
+    skip: !isEdit,
+  });
+  const fullPost = initialPost ?? (fetchedPost?.data as Post | undefined) ?? null;
+  const [templateMode, setTemplateMode] = useState<TemplateMode>(
+    () => (fullPost?.templateType as TemplateMode) || null,
+  );
+  const [privacy, setPrivacy] = useState<"PUBLIC" | "FRIENDS" | "PRIVATE">(
+    () => (fullPost?.privacy as "PUBLIC" | "FRIENDS" | "PRIVATE") || "PUBLIC",
+  );
+  const [recipeData, setRecipeData] = useState<Record<string, unknown> | null>(() =>
+    fullPost?.templateType === "RECIPE" && fullPost?.templateData ? fullPost.templateData : null,
+  );
   const [recipeContent, setRecipeContent] = useState("");
-  const [scheduledAt, setScheduledAt] = useState("");
-  const [showSchedule, setShowSchedule] = useState(false);
+  const [scheduledAt, setScheduledAt] = useState(() =>
+    fullPost?.scheduledAt ? new Date(fullPost.scheduledAt).toISOString().slice(0, 16) : "",
+  );
+  const [showSchedule, setShowSchedule] = useState(() => !!fullPost?.scheduledAt);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const contentRef = useRef<ContentEditorHandle>(null);
@@ -69,8 +106,6 @@ export function CreatePostModal({
 
   const draftRef = useRef(false);
   const postNowRef = useRef(false);
-
-  const privacy = initialPost?.privacy || "PUBLIC";
 
   const resetAll = useCallback(() => {
     contentRef.current?.reset();
@@ -117,10 +152,11 @@ export function CreatePostModal({
       postNowRef.current = false;
 
       try {
-        // Step 1 — upload images to Cloudinary FIRST
-        const mediaUrls: string[] = await Promise.all(
+        const keptUrls: string[] = mediaRef.current?.getKeptUrls() ?? [];
+        const newlyUploadedUrls: string[] = await Promise.all(
           mediaFiles.map((file) => uploadPostImage(file, token!)),
         );
+        const mediaUrls: string[] = [...keptUrls, ...newlyUploadedUrls];
 
         const payload: CreatePostPayload & { groupId?: string; mediaUrls: string[] } = {
           content:
@@ -167,11 +203,10 @@ export function CreatePostModal({
         if (isDraft) payload.isDraft = true;
         if (!isPostNow && scheduledAt) payload.scheduledAt = new Date(scheduledAt).toISOString();
 
-        // Step 2 — create or update post WITH media URLs in a single call
-        if (isEdit && initialPost?.id) {
+        if (isEdit && fullPost?.id) {
           const updatePayload = { ...payload };
           delete updatePayload.groupId;
-          await updatePost({ id: initialPost.id, ...updatePayload }).unwrap();
+          await updatePost({ id: fullPost.id, ...updatePayload }).unwrap();
         } else {
           await create(payload).unwrap();
         }
@@ -198,7 +233,7 @@ export function CreatePostModal({
       recipeContent,
       scheduledAt,
       isEdit,
-      initialPost,
+      fullPost,
       groupId,
       play,
       onCreated,
@@ -217,11 +252,25 @@ export function CreatePostModal({
   const hasPoll = templateMode === "POLL";
   const hasBeforeAfter = templateMode === "BEFORE_AFTER";
   const hasRecipe = templateMode === "RECIPE";
-  const isPlainMode = !templateMode;
+
+  const initialTags = fullPost?.content
+    ? [...new Set(fullPost.content.match(/#(\w+)/g)?.map((t) => t.slice(1)) ?? [])]
+    : [];
+
+  const quizTemplateData = fullPost?.templateData as
+    | { question?: string; options?: string[]; correctIndex?: number }
+    | undefined;
+  const quizInitialData = fullPost?.templateData
+    ? {
+        question: quizTemplateData?.question ?? "",
+        options: quizTemplateData?.options ?? [""],
+        correctIndex: quizTemplateData?.correctIndex ?? 0,
+      }
+    : undefined;
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-display text-lg">
             {isEdit ? "Edit post" : "Create post"}
@@ -229,134 +278,210 @@ export function CreatePostModal({
           <DialogDescription>Share your health journey with the community.</DialogDescription>
         </DialogHeader>
 
-        <div>
-          <ToggleGroup
-            type="single"
-            value={templateMode ?? "TEXT"}
-            onValueChange={(v) => handleTemplateSelect(v === "TEXT" ? null : (v as TemplateMode))}
-            size="sm"
-            className="justify-start flex-wrap gap-1"
-          >
-            <ToggleGroupItem value="TEXT">📝 Text</ToggleGroupItem>
-            <ToggleGroupItem value="BEFORE_AFTER">📸 Before & After</ToggleGroupItem>
-            <ToggleGroupItem value="RECIPE">🍳 Recipe</ToggleGroupItem>
-            <ToggleGroupItem value="QUIZ">❓ Quiz</ToggleGroupItem>
-            <ToggleGroupItem value="POLL">📊 Poll</ToggleGroupItem>
-          </ToggleGroup>
-        </div>
+        {isEdit && postLoading && (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="size-6 animate-spin text-muted-foreground" />
+          </div>
+        )}
 
-        <form ref={formRef} onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <FieldGroup className="gap-4">
-            {hasBeforeAfter ? (
-              <>
-                <ContentEditor ref={contentRef} placeholder="Share your transformation story..." />
-                <MediaUploader
-                  ref={mediaRef}
-                  slots={[
-                    { index: 0, label: "Before" },
-                    { index: 1, label: "After" },
-                  ]}
-                />
-              </>
-            ) : hasRecipe ? (
-              <RecipeForm
-                data={recipeData}
-                onChange={setRecipeData}
-                onContentChange={setRecipeContent}
-                content={recipeContent}
-              />
-            ) : hasQuiz ? (
-              <QuizEditor ref={quizRef} />
-            ) : hasPoll ? (
-              <PollEditor ref={pollRef} />
-            ) : (
-              <>
-                <ContentEditor ref={contentRef} />
-                <MediaUploader ref={mediaRef} />
-              </>
-            )}
-          </FieldGroup>
-
-          {isPlainMode && <TagPicker ref={tagsRef} />}
-
-          {hasBeforeAfter && <TagPicker ref={tagsRef} />}
-          {hasQuiz && <TagPicker ref={tagsRef} />}
-          {hasPoll && <TagPicker ref={tagsRef} />}
-
-          {showSchedule ? (
-            <div className="flex items-center gap-2 rounded-lg border border-[var(--glass-border)] bg-[var(--bg-overlay)] p-3">
-              <CalendarClock className="size-4 shrink-0 text-muted-foreground" />
-              <input
-                type="datetime-local"
-                value={scheduledAt}
-                onChange={(e) => setScheduledAt(e.target.value)}
-                className="flex-1 bg-transparent text-sm outline-none [color-scheme:dark]"
-                min={new Date().toISOString().slice(0, 16)}
-              />
-              <button
-                type="button"
-                onClick={() => {
-                  setScheduledAt("");
-                  setShowSchedule(false);
-                }}
-                className="shrink-0 text-xs text-muted-foreground hover:text-foreground"
-              >
-                {scheduledAt ? "Clear" : "Cancel"}
-              </button>
+        {(!isEdit || !postLoading) && (
+          <form ref={formRef} onSubmit={handleSubmit} className="flex flex-col gap-5">
+            {/* Template selector */}
+            <div className="flex flex-wrap gap-2">
+              {TEMPLATES.map((t) => {
+                const active = templateMode === t.value;
+                const Icon = t.icon;
+                return (
+                  <button
+                    key={t.label}
+                    type="button"
+                    onClick={() => handleTemplateSelect(t.value)}
+                    className={cn(
+                      "inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition-all",
+                      active
+                        ? "bg-gradient-to-r from-brand-teal to-brand-green text-white shadow-sm"
+                        : "border border-[var(--border-default)] bg-[var(--bg-subtle)] text-[var(--text-secondary)] hover:border-brand-teal/40 hover:text-brand-teal",
+                    )}
+                  >
+                    <Icon className="size-3.5" />
+                    {t.label}
+                  </button>
+                );
+              })}
             </div>
-          ) : (
-            <Button
-              type="button"
-              variant={scheduledAt ? "default" : "outline"}
-              onClick={() => setShowSchedule(true)}
-              className="gap-2"
-            >
-              <Clock className="size-4" />
-              {scheduledAt
-                ? `Scheduled: ${new Date(scheduledAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}`
-                : "Schedule post"}
-            </Button>
-          )}
 
-          <Button
-            type="submit"
-            variant="outline"
-            disabled={isSubmitting}
-            onClick={() => (draftRef.current = true)}
-            className="gap-2"
-          >
-            <FileText className="size-4" />
-            Save as Draft
-          </Button>
+            {/* Content editor area */}
+            <div className="rounded-2xl border border-[var(--border-default)] bg-[var(--bg-overlay)] p-4">
+              {hasBeforeAfter ? (
+                <div className="flex flex-col gap-4">
+                  <ContentEditor
+                    ref={contentRef}
+                    placeholder="Share your transformation story..."
+                    initialContent={fullPost?.content ?? ""}
+                  />
+                  <MediaUploader
+                    ref={mediaRef}
+                    slots={[
+                      { index: 0, label: "Before" },
+                      { index: 1, label: "After" },
+                    ]}
+                    initialUrls={fullPost?.mediaUrls}
+                  />
+                </div>
+              ) : hasRecipe ? (
+                <RecipeForm
+                  data={recipeData}
+                  onChange={setRecipeData}
+                  onContentChange={setRecipeContent}
+                  content={recipeContent}
+                />
+              ) : hasQuiz ? (
+                <QuizEditor ref={quizRef} initialData={quizInitialData} />
+              ) : hasPoll ? (
+                <PollEditor
+                  ref={pollRef}
+                  initialData={
+                    fullPost?.poll
+                      ? {
+                          question: fullPost.poll.question ?? "",
+                          options: fullPost.poll.options ?? [""],
+                          isMultipleChoice: fullPost.poll.isMultipleChoice ?? false,
+                        }
+                      : undefined
+                  }
+                />
+              ) : (
+                <div className="flex flex-col gap-4">
+                  <ContentEditor ref={contentRef} initialContent={fullPost?.content ?? ""} />
+                  <MediaUploader ref={mediaRef} initialUrls={fullPost?.mediaUrls} />
+                </div>
+              )}
+            </div>
 
-          {scheduledAt ? (
-            <div className="flex gap-2">
+            {/* Tags */}
+            {!hasRecipe && <TagPicker ref={tagsRef} initialTags={initialTags} />}
+
+            {/* Privacy + Schedule row */}
+            <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-[var(--border-default)] bg-[var(--bg-overlay)] px-4 py-3">
+              <div className="flex items-center gap-1">
+                {(
+                  [
+                    { value: "PUBLIC", icon: Globe, label: "Public" },
+                    { value: "FRIENDS", icon: Users, label: "Friends" },
+                    { value: "PRIVATE", icon: Lock, label: "Private" },
+                  ] as const
+                ).map((opt) => {
+                  const active = privacy === opt.value;
+                  const Icon = opt.icon;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setPrivacy(opt.value)}
+                      className={cn(
+                        "inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition-all",
+                        active
+                          ? "bg-gradient-to-r from-brand-teal to-brand-green text-white"
+                          : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
+                      )}
+                    >
+                      <Icon className="size-3.5" />
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="ml-auto flex items-center gap-2">
+                {showSchedule ? (
+                  <div className="flex items-center gap-2 rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] px-3 py-1.5">
+                    <CalendarClock className="size-3.5 shrink-0 text-muted-foreground" />
+                    <input
+                      type="datetime-local"
+                      value={scheduledAt}
+                      onChange={(e) => setScheduledAt(e.target.value)}
+                      className="w-40 bg-transparent text-xs outline-none [color-scheme:dark]"
+                      min={new Date().toISOString().slice(0, 16)}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setScheduledAt("");
+                        setShowSchedule(false);
+                      }}
+                      className="shrink-0 text-[11px] font-medium text-muted-foreground hover:text-foreground"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setShowSchedule(true)}
+                    className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[var(--text-muted)] hover:text-brand-teal transition-colors"
+                  >
+                    <Clock className="size-3.5" />
+                    Schedule
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Bottom bar */}
+            <div className="flex items-center justify-between border-t border-[var(--border-default)] pt-4">
               <Button
                 type="submit"
                 variant="outline"
                 disabled={isSubmitting}
-                onClick={() => (postNowRef.current = true)}
-                className="flex-1 gap-2"
+                onClick={() => (draftRef.current = true)}
+                className="gap-2"
+                size="sm"
               >
-                Post Now →
+                <FileText className="size-3.5" />
+                Save Draft
               </Button>
-              <Button type="submit" variant="gradient" disabled={isSubmitting} className="flex-[2]">
-                {isSubmitting && <Loader2 className="animate-spin" />}
-                {isSubmitting ? "Submitting..." : "Schedule Post"}
-              </Button>
+
+              <div className="flex gap-2">
+                {scheduledAt ? (
+                  <>
+                    <Button
+                      type="submit"
+                      variant="outline"
+                      disabled={isSubmitting}
+                      onClick={() => (postNowRef.current = true)}
+                      className="gap-2"
+                      size="sm"
+                    >
+                      Post Now
+                    </Button>
+                    <Button
+                      type="submit"
+                      variant="gradient"
+                      disabled={isSubmitting}
+                      className="gap-2"
+                      size="sm"
+                    >
+                      {isSubmitting && <Loader2 className="size-3.5 animate-spin" />}
+                      {isSubmitting ? "Submitting..." : "Schedule Post"}
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    type="submit"
+                    variant="gradient"
+                    disabled={isSubmitting}
+                    onClick={() => (postNowRef.current = true)}
+                    className="gap-2"
+                    size="sm"
+                  >
+                    {isSubmitting && <Loader2 className="size-3.5 animate-spin" />}
+                    {isSubmitting ? "Posting..." : isEdit ? "Save" : "Post Now"}
+                  </Button>
+                )}
+              </div>
             </div>
-          ) : (
-            <Button
-              type="submit"
-              variant="gradient"
-              disabled={isSubmitting}
-              onClick={() => (postNowRef.current = true)}
-            >
-              {isSubmitting && <Loader2 className="animate-spin" />}
-              {isSubmitting ? "Posting..." : isEdit ? "Save" : "Post"}
-            </Button>
-          )}
-        </form>
+          </form>
+        )}
       </DialogContent>
     </Dialog>
   );

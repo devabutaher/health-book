@@ -87,6 +87,21 @@ export function useMessageRealtime(conversationId: string | null, userId?: strin
           }),
         );
       })
+      .on("broadcast", { event: "PARTICIPANT_REMOVED" }, () => {
+        dispatch(messagingApi.util.invalidateTags([{ type: "Conversation", id: conversationId }]));
+      })
+      .on("broadcast", { event: "MESSAGES_CLEARED" }, () => {
+        dispatch(messagingApi.util.invalidateTags([{ type: "Conversation", id: conversationId }]));
+      })
+      .on("broadcast", { event: "PARTICIPANT_ADDED" }, () => {
+        dispatch(messagingApi.util.invalidateTags([{ type: "Conversation", id: conversationId }]));
+      })
+      .on("broadcast", { event: "ADMIN_PROMOTED" }, () => {
+        dispatch(messagingApi.util.invalidateTags([{ type: "Conversation", id: conversationId }]));
+      })
+      .on("broadcast", { event: "GROUP_INFO_UPDATED" }, () => {
+        dispatch(messagingApi.util.invalidateTags([{ type: "Conversation", id: conversationId }]));
+      })
       .subscribe((status) => {
         if (status === "TIMED_OUT" && subscribeRetries < 3) {
           subscribeRetries++;

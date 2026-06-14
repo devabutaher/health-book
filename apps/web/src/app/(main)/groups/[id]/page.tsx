@@ -172,7 +172,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
       await deleteGroup(id).unwrap();
       toast.success("Group deleted");
       setDeleteOpen(false);
-      window.location.href = "/groups";
+      router.push("/groups");
     } catch (err) {
       toast.error(getErrorMessage(err, "Failed to delete group"));
     }
@@ -281,7 +281,20 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-4 sm:space-y-6">
+    <>
+      {/* Full-width cover */}
+      <div className="relative h-40 w-full overflow-hidden bg-[var(--bg-subtle)] md:h-56">
+        {group.coverPhoto ? (
+          <div
+            className="size-full bg-cover bg-center"
+            style={{ backgroundImage: `url(${group.coverPhoto})` }}
+          />
+        ) : (
+          <div className="size-full bg-gradient-to-r from-brand-teal/20 via-brand-blue/20 to-brand-green/20" />
+        )}
+      </div>
+
+      <div className="relative -mt-16 z-10 mx-auto max-w-4xl space-y-4 sm:space-y-6">
       <GroupHeader
         group={group}
         isMember={group.isMember}
@@ -305,8 +318,8 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
             </button>
           </div>
           <form onSubmit={handleSaveEdit} className="space-y-4">
-            <div className="flex gap-4">
-              <div className="flex flex-col items-center gap-2">
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col items-center gap-2 self-start">
                 <div
                   className="relative size-20 cursor-pointer overflow-hidden rounded-full border-2 border-dashed border-[var(--border-default)]"
                   onClick={() => editAvatarRef.current?.click()}
@@ -335,7 +348,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
               </div>
               <div className="flex flex-col items-center gap-2">
                 <div
-                  className="relative h-14 w-28 cursor-pointer overflow-hidden rounded-xl border-2 border-dashed border-[var(--border-default)]"
+                  className="relative w-full aspect-video cursor-pointer overflow-hidden rounded-xl border-2 border-dashed border-[var(--border-default)]"
                   onClick={() => editCoverRef.current?.click()}
                 >
                   {editCoverUrl ? (
@@ -816,5 +829,6 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
         </AlertDialogContent>
       </AlertDialog>
     </div>
+    </>
   );
 }

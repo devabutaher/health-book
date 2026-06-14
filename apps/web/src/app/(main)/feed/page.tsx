@@ -8,7 +8,6 @@ import { Virtuoso } from "react-virtuoso";
 import { PostCard } from "@/components/post/PostCard";
 import { PostSkeletonList } from "@/components/shared/PostSkeleton";
 import { useGetDraftsQuery, useGetFeedQuery } from "@/redux/api/postApi";
-import { useFeedRealtime } from "@/hooks/useFeedRealtime";
 import { useAppSelector } from "@/hooks";
 import { useFeedPagination } from "@/hooks/useFeedPagination";
 import type { Post } from "@/types/post";
@@ -48,7 +47,6 @@ const FeatureDiscoveryCards = dynamic(() =>
 );
 
 export default function FeedPage() {
-  useFeedRealtime();
   const [createOpen, setCreateOpen] = useState(false);
   const [draftsOpen, setDraftsOpen] = useState(false);
   const { data: draftsData } = useGetDraftsQuery();
@@ -84,16 +82,9 @@ export default function FeedPage() {
     };
   }, [isLoading]);
 
-  // Track which cursor values have already been applied to prevent infinite
-  // re-render loops when cached query data cycles cursor back and forth.
-  const appliedCursors = useRef(new Set<string | undefined>());
   const appendRef = useRef(false);
   useEffect(() => {
     if (!data?.data) return;
-    // Skip if we've already applied data for this cursor value.
-    // On reload, the cursor can cycle between pages via cache hits.
-    if (appliedCursors.current.has(cursor)) return;
-    appliedCursors.current.add(cursor);
     applyPage(
       { posts: data.data.posts, nextCursor: data.data.nextCursor, hasMore: data.data.hasMore },
       appendRef.current,
@@ -102,10 +93,8 @@ export default function FeedPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data]);
 
-  // Clear applied cursors on reset so pull-to-refresh still works
   const originalReset = reset;
   const wrappedReset = useCallback(() => {
-    appliedCursors.current.clear();
     appendRef.current = false;
     originalReset();
   }, [originalReset]);
@@ -135,7 +124,7 @@ export default function FeedPage() {
         <div className="mb-4 sm:mb-6 flex items-center justify-between">
           <div>
             <h1 className="font-display text-2xl font-extrabold tracking-tight">Your Feed</h1>
-            <p className="text-sm text-muted-foreground">Latest from people you follow</p>
+            <p className="text-sm text-muted-foreground">Discover health posts from the community</p>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="gradient" onClick={() => setCreateOpen(true)} className="gap-1.5">
@@ -209,9 +198,9 @@ export default function FeedPage() {
             <EmptyMedia variant="gradient">
               <Users />
             </EmptyMedia>
-            <EmptyTitle>Your feed is empty</EmptyTitle>
+            <EmptyTitle>No posts yet</EmptyTitle>
             <EmptyDescription>
-              Follow some people to see their posts here, or share your own health journey.
+              Be the first to share your health journey with the community.
             </EmptyDescription>
             <Button variant="gradient" onClick={() => setCreateOpen(true)}>
               <Plus /> Share your first post

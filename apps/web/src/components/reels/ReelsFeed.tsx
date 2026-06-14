@@ -7,8 +7,9 @@ import { useBrowseReelsQuery, useToggleReelLikeMutation } from "@/redux/api/reel
 import { useReelRealtime } from "@/hooks/useReelRealtime";
 import { useFollowActions } from "@/hooks/useFollow";
 import type { Reel } from "@/types/reel";
-import { AlertCircle, Loader2, Plus, RefreshCw, UserPlus, Video } from "lucide-react";
+  import { AlertCircle, Loader2, Plus, RefreshCw, UserPlus, Video } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Empty, EmptyDescription, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
@@ -21,7 +22,7 @@ import { getImageUrl } from "@/lib/utils";
 /** Only mount full ReelPlayer for active reindeer ± this window; others show thumbnail */
 const MOUNT_WINDOW = 1;
 
-export function ReelsFeed({ onUploadClick }: { onUploadClick?: () => void }) {
+export function ReelsFeed({ onUploadClick, isPaused }: { onUploadClick?: () => void; isPaused?: boolean }) {
   const [cursor, setCursor] = useState<string | undefined>(undefined);
   const [allReels, setAllReels] = useState<Reel[]>([]);
   const [activeIdx, setActiveIdx] = useState(0);
@@ -222,19 +223,19 @@ export function ReelsFeed({ onUploadClick }: { onUploadClick?: () => void }) {
                     {mountPlayer ? (
                       <ReelPlayer
                         videoUrl={reel.videoUrl}
-                        isActive={index === activeIdx && commentsReelId !== reel.id}
+                        isActive={index === activeIdx && commentsReelId !== reel.id && !isPaused}
                         onDoubleTapLike={() => handleLikeToggle(reel.id)}
                         thumbnailUrl={reel.thumbnailUrl}
                       />
                     ) : (
-                      <div className="h-full w-full bg-[var(--bg-subtle)]">
+                      <div className="relative h-full w-full bg-[var(--bg-subtle)]">
                         {reel.thumbnailUrl && (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={getImageUrl(reel.thumbnailUrl, "q_auto,f_auto,w_400") ?? undefined}
+                          <Image
+                            src={getImageUrl(reel.thumbnailUrl, "q_auto,f_auto,w_400") ?? ""}
                             alt=""
-                            className="h-full w-full object-cover"
-                            loading="lazy"
+                            fill
+                            className="object-cover"
+                            sizes="400px"
                           />
                         )}
                       </div>

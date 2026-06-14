@@ -104,11 +104,7 @@ export function DraftsList() {
         <CreatePostModal
           open={true}
           onClose={() => setEditingPost(null)}
-          initialPost={{
-            id: editingPost.id,
-            content: editingPost.content || "",
-            privacy: editingPost.privacy,
-          }}
+          initialPost={editingPost}
         />
       )}
     </div>

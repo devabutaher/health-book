@@ -23,7 +23,7 @@ export function ChatWindow({
   conversationId: string;
   isGroup?: boolean;
 }) {
-  const { data, isLoading, error, isError } = useGetConversationQuery({ id: conversationId });
+  const { data, isLoading, error, isError, refetch } = useGetConversationQuery({ id: conversationId });
   const [sendMessage] = useSendMessageMutation();
   const [markRead] = useMarkReadMutation();
   const loadingOlderRef = useRef(false);
@@ -108,7 +108,7 @@ export function ChatWindow({
           {error instanceof Error ? error.message : "Something went wrong"}
         </p>
         <button
-          onClick={() => window.location.reload()}
+          onClick={() => refetch()}
           className="rounded-lg bg-[var(--bg-overlay)] px-4 py-2 text-xs text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-subtle)]"
         >
           Try again

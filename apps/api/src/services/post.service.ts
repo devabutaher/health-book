@@ -232,7 +232,7 @@ export const postService = {
           take: 1,
           select: { type: true, userId: true },
         },
-        _count: { select: { comments: true } },
+        _count: { select: { reactions: true, comments: true } },
         healthLog: healthLogSelect,
         poll: pollWithVotes,
       },
@@ -419,16 +419,8 @@ export const postService = {
   },
 
   async getFeed(userId: string, cursor?: string, limit = 10) {
-    const follows = await prisma.follow.findMany({
-      where: { followerId: userId },
-      select: { followingId: true },
-    });
-    const followedIds = follows.map((f) => f.followingId);
-    const userIds = [userId, ...followedIds];
-
     const fullPosts = await prisma.post.findMany({
       where: {
-        userId: { in: userIds },
         privacy: "PUBLIC",
         isDraft: false,
       },
@@ -438,7 +430,7 @@ export const postService = {
         ...postSelectFields,
         user: userSelect,
         reactions: { where: { userId }, take: 1, select: { type: true, userId: true } },
-        _count: { select: { comments: true } },
+        _count: { select: { reactions: true, comments: true } },
         healthLog: healthLogSelect,
         poll: pollWithVotes,
       },
@@ -474,7 +466,7 @@ export const postService = {
           take: 1,
           select: { type: true, userId: true },
         },
-        _count: { select: { comments: true } },
+        _count: { select: { reactions: true, comments: true } },
         healthLog: healthLogSelect,
         poll: pollWithVotes,
       },
@@ -515,7 +507,7 @@ export const postService = {
         ...postSelectFields,
         user: userSelect,
         reactions: { where: { userId }, take: 1, select: { type: true, userId: true } },
-        _count: { select: { comments: true } },
+        _count: { select: { reactions: true, comments: true } },
         healthLog: healthLogSelect,
         poll: pollWithVotes,
       },

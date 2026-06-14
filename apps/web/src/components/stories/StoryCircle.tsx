@@ -35,7 +35,7 @@ export const StoryCircle = memo(function StoryCircle({
   return (
     <button
       onClick={onClick}
-      className="relative h-44 w-28 shrink-0 overflow-hidden rounded-2xl bg-(--bg-subtle) transition-transform active:scale-95"
+      className="relative h-44 w-28 shrink-0 overflow-hidden rounded-2xl bg-[var(--bg-subtle)] transition-transform active:scale-95"
     >
       {storyMediaUrl ? (
         <Image

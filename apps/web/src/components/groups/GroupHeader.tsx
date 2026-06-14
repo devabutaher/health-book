@@ -24,33 +24,16 @@ export function GroupHeader({
   const initials = group.name.slice(0, 2).toUpperCase();
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-[var(--border-default)] bg-[var(--bg-elevated)]">
-      <div
-        className="aspect-video sm:h-48 overflow-hidden bg-[var(--bg-subtle)]"
-        style={
-          group.coverPhoto
-            ? {
-                backgroundImage: `url(${group.coverPhoto})`,
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-              }
-            : {}
-        }
-      >
-        {!group.coverPhoto && (
-          <div className="size-full bg-gradient-to-r from-brand-teal/20 via-brand-blue/20 to-brand-green/20" />
-        )}
-      </div>
-
+    <div className="rounded-2xl border border-[var(--border-default)] bg-[var(--bg-elevated)]">
       <div className="relative px-4 sm:px-6 pb-4 sm:pb-5">
-        <Avatar className="absolute -top-10 sm:-top-12 size-20 shrink-0 ring-4 ring-[var(--bg-elevated)]">
+        <Avatar className="absolute -top-12 size-20 shrink-0 ring-4 ring-[var(--bg-elevated)]">
           {group.avatar ? <AvatarImage src={group.avatar} alt={group.name} /> : null}
           <AvatarFallback className="bg-gradient-to-br from-brand-teal to-brand-green text-xl text-white">
             {initials}
           </AvatarFallback>
         </Avatar>
 
-        <div className="flex flex-col gap-4 pt-12 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex flex-col gap-4 pt-14 sm:flex-row sm:items-end sm:justify-between">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <h1 className="truncate font-display text-xl font-bold text-[var(--text-primary)]">

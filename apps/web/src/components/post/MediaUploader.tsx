@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, forwardRef, useImperativeHandle, memo, useCallback } from "react";
+import { useState, useRef, forwardRef, useImperativeHandle, memo, useCallback, useEffect } from "react";
 import { ImagePlus, X } from "lucide-react";
 
 export interface MediaFile {
@@ -12,6 +12,7 @@ export interface MediaUploaderHandle {
   getMedia(): MediaFile[];
   getFiles(): File[];
   getPreviews(): string[];
+  getKeptUrls(): string[];
   reset(): void;
 }
 
@@ -24,15 +25,22 @@ interface MediaUploaderProps {
   maxFiles?: number;
   /** null = free-form uploads, a slot array = before/after mode */
   slots?: BeforeAfterSlot[];
+  /** URLs of existing images (edit mode) */
+  initialUrls?: string[];
 }
 
 export const MediaUploader = memo(
   forwardRef<MediaUploaderHandle, MediaUploaderProps>(function MediaUploader(
-    { maxFiles = 10, slots },
+    { maxFiles = 10, slots, initialUrls },
     ref,
   ) {
     const [media, setMedia] = useState<MediaFile[]>([]);
+    const [keptUrls, setKeptUrls] = useState<string[]>(initialUrls ?? []);
     const inputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+      if (initialUrls) setKeptUrls(initialUrls);
+    }, [initialUrls]);
 
     const removeFile = useCallback((index: number) => {
       setMedia((prev) => {
@@ -42,18 +50,24 @@ export const MediaUploader = memo(
       });
     }, []);
 
+    const removeKeptUrl = useCallback((url: string) => {
+      setKeptUrls((prev) => prev.filter((u) => u !== url));
+    }, []);
+
     useImperativeHandle(
       ref,
       () => ({
         getMedia: () => media,
         getFiles: () => media.map((m) => m.file),
         getPreviews: () => media.map((m) => m.preview),
+        getKeptUrls: () => keptUrls,
         reset: () => {
           media.forEach((m) => URL.revokeObjectURL(m.preview));
           setMedia([]);
+          setKeptUrls(initialUrls ?? []);
         },
       }),
-      [media],
+      [media, keptUrls, initialUrls],
     );
 
     const handleFileSelect = useCallback(
@@ -118,10 +132,28 @@ export const MediaUploader = memo(
     }
 
     // Free-form grid mode
+    const totalItems = keptUrls.length + media.length;
     return (
       <>
-        {media.length > 0 && (
+        {totalItems > 0 && (
           <div className="grid grid-cols-3 gap-2">
+            {keptUrls.map((url, i) => (
+              <div
+                key={`existing-${i}`}
+                className="relative aspect-square overflow-hidden rounded-2xl border border-[var(--glass-border)]"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={url} alt="" className="size-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => removeKeptUrl(url)}
+                  className="absolute right-1 top-1 flex size-9 items-center justify-center rounded-full bg-black/70 text-white hover:bg-black/90"
+                  aria-label="Remove"
+                >
+                  <X className="size-4" />
+                </button>
+              </div>
+            ))}
             {media.map((item, i) => (
               <div
                 key={i}
@@ -142,7 +174,7 @@ export const MediaUploader = memo(
           </div>
         )}
 
-        {media.length === 0 ? (
+        {totalItems === 0 ? (
           <button
             type="button"
             onClick={() => inputRef.current?.click()}

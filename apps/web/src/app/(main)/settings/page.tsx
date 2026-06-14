@@ -65,10 +65,10 @@ export default function SettingsPage() {
 
   const [updateProfile, { isLoading: isUpdating }] = useUpdateProfileMutation();
 
-  const [name, setName] = useState("");
-  const [bio, setBio] = useState("");
-  const [gender, setGender] = useState("");
-  const [isPrivate, setIsPrivate] = useState(false);
+  const [name, setName] = useState(() => currentUser?.name || "");
+  const [bio, setBio] = useState(() => currentUser?.bio || "");
+  const [gender, setGender] = useState(() => currentUser?.gender || "");
+  const [isPrivate, setIsPrivate] = useState(() => currentUser?.isPrivate || false);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
   const prevSettingsUser = useRef(currentUser?.id);

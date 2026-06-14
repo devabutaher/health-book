@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Mail, ArrowRight, Sparkles } from "lucide-react";
+import { Mail, ArrowRight, Sparkles, LogIn } from "lucide-react";
 import { useLoginMutation } from "@/redux/api/authApi";
 import { setCredentials } from "@/redux/slices/authSlice";
 import { useAppDispatch } from "@/hooks";
@@ -35,6 +35,37 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [oauthLoading, setOauthLoading] = useState(false);
+  const [demoLoading, setDemoLoading] = useState(false);
+
+  const handleDemoLogin = async () => {
+    setDemoLoading(true);
+    try {
+      const result = await login({
+        email: "demo@healthbook.app",
+        password: "Demo123!",
+      }).unwrap();
+      dispatch(
+        setCredentials({
+          user: result.data.user,
+          accessToken: result.data.accessToken,
+          refreshToken: result.data.refreshToken,
+        }),
+      );
+      const cookieBase = `path=/; maxAge=604800; SameSite=Lax${location.protocol === "https:" ? "; Secure" : ""}`;
+      document.cookie = `hb_token=${result.data.accessToken}; ${cookieBase}`;
+      document.cookie = `hb_rt=${result.data.refreshToken}; ${cookieBase}`;
+      new Audio("/sounds/badge-earned.mp3").play().catch(() => {});
+      const { postApi } = await import("@/redux/api/postApi");
+      const { userApi } = await import("@/redux/api/userApi");
+      dispatch(postApi.util.prefetch("getFeed", { cursor: undefined }, { force: true }));
+      dispatch(userApi.util.prefetch("getSuggested", undefined, { force: true }));
+      router.push("/feed");
+    } catch (err: unknown) {
+      const msg = (err as { data?: { message?: string } })?.data?.message || "Demo login failed";
+      toast.error(msg);
+      setDemoLoading(false);
+    }
+  };
 
   const handleGoogleLogin = async () => {
     setOauthLoading(true);
@@ -191,6 +222,29 @@ export default function LoginPage() {
               </svg>
             )}
             {oauthLoading ? "Connecting..." : "Sign in with Google"}
+          </Button>
+
+          <div className="relative my-2">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-[var(--border-default)]" />
+            </div>
+            <div className="relative flex justify-center text-xs">
+              <span className="bg-[var(--card-bg)] px-2 text-muted-foreground">
+                or try the app
+              </span>
+            </div>
+          </div>
+
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            onClick={handleDemoLogin}
+            disabled={demoLoading}
+            className="w-full border-brand-teal/40 font-display text-brand-teal hover:bg-brand-teal/10"
+          >
+            {demoLoading ? <Spinner /> : <LogIn className="mr-2 size-4" />}
+            {demoLoading ? "Logging in..." : "Try Demo Account"}
           </Button>
 
           <FieldDescription className="pt-4 text-center text-sm">

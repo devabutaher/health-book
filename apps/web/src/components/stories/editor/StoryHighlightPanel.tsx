@@ -15,7 +15,7 @@ export function StoryHighlightPanel({
   onClose,
   onCreated,
 }: StoryHighlightPanelProps) {
-  const { data: highlights } = useGetHighlightsQuery();
+  const { data: highlights, isLoading, isError, refetch } = useGetHighlightsQuery();
   const [addHighlightItem] = useAddHighlightItemMutation();
 
   return (
@@ -25,8 +25,15 @@ export function StoryHighlightPanel({
       className="absolute inset-x-0 bottom-0 z-30 rounded-t-2xl border-t border-white/10 bg-[#0a0a0a] p-4 backdrop-blur-xl"
     >
       <h3 className="mb-3 text-center text-sm font-semibold text-white">Save to Highlight?</h3>
-      <div className="mb-3 flex max-h-32 flex-wrap justify-center gap-2 overflow-y-auto">
-        {highlights && highlights.length > 0 ? (
+        <div className="mb-3 flex max-h-32 flex-wrap justify-center gap-2 overflow-y-auto">
+          {isLoading ? (
+            <div className="size-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+          ) : isError ? (
+            <div className="text-center">
+              <p className="text-xs text-white/50">Failed to load</p>
+              <button onClick={refetch} className="text-xs text-brand-teal underline">Retry</button>
+            </div>
+          ) : highlights && highlights.length > 0 ? (
           highlights.map((hl) => (
             <button
               key={hl.id}

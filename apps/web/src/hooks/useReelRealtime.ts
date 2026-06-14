@@ -27,6 +27,12 @@ export function useReelRealtime(reelId: string | null) {
       .on("broadcast", { event: "REEL_COMMENTED" }, () => {
         dispatch(reelsApi.util.invalidateTags([{ type: "Reel", id: reelId }]));
       })
+      .on("broadcast", { event: "REEL_UPDATED" }, () => {
+        dispatch(reelsApi.util.invalidateTags([{ type: "Reel", id: reelId }]));
+      })
+      .on("broadcast", { event: "REEL_DELETED" }, () => {
+        dispatch(reelsApi.util.invalidateTags([{ type: "Reel", id: reelId }, "Reels"]));
+      })
       .subscribe();
 
     return () => {

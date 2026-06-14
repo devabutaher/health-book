@@ -69,8 +69,7 @@ export const groupsApi = createApi({
         method: "POST",
         body,
       }),
-      // Optimistic update handles cache — no server invalidation needed
-      invalidatesTags: () => [],
+      invalidatesTags: ["Groups", "MyGroups"],
       transformResponse: (response: { success: boolean; data: Group }) => response.data,
       onQueryStarted: async (args, { dispatch, getState, queryFulfilled }) => {
         const user = (getState() as RootState).auth.user;
@@ -92,22 +91,54 @@ export const groupsApi = createApi({
           updatedAt: new Date().toISOString(),
         };
 
-        const patch = dispatch(
-          groupsApi.util.updateQueryData("getMyGroups", undefined, (draft) => {
-            draft.unshift(optimistic);
-          }),
+        const patches: { undo: () => void }[] = [];
+        patches.push(
+          dispatch(
+            groupsApi.util.updateQueryData("getMyGroups", undefined, (draft) => {
+              draft.unshift(optimistic);
+            }),
+          ),
         );
+        const state = getState() as RootState;
+        const queries = state?.groupsApi?.queries ?? {};
+        for (const key of Object.keys(queries)) {
+          const q = queries[key];
+            if ((q?.endpointName === "browseGroups" || q?.endpointName === "searchGroups") && q?.status === "fulfilled") {
+            patches.push(
+              dispatch(
+                groupsApi.util.updateQueryData(q.endpointName, q.originalArgs, (draft: GroupListData) => {
+                  if (draft?.groups) draft.groups.unshift(optimistic);
+                }),
+              ),
+            );
+          }
+        }
 
         try {
           const { data } = await queryFulfilled;
-          dispatch(
-            groupsApi.util.updateQueryData("getMyGroups", undefined, (draft) => {
-              const idx = draft.findIndex((g) => g.id === tempId);
-              if (idx >= 0) draft[idx].id = data.id;
-            }),
-          );
+          for (const key of Object.keys(queries)) {
+            const q = queries[key];
+            if (q?.endpointName === "getMyGroups" && q?.status === "fulfilled") {
+              dispatch(
+                groupsApi.util.updateQueryData("getMyGroups", q.originalArgs, (draft) => {
+                  const idx = draft.findIndex((g) => g.id === tempId);
+                  if (idx >= 0) draft[idx].id = data.id;
+                }),
+              );
+            }
+            if ((q?.endpointName === "browseGroups" || q?.endpointName === "searchGroups") && q?.status === "fulfilled") {
+              dispatch(
+                groupsApi.util.updateQueryData(q.endpointName, q.originalArgs, (draft: GroupListData) => {
+                  if (draft?.groups) {
+                    const idx = draft.groups.findIndex((g) => g.id === tempId);
+                    if (idx >= 0) draft.groups[idx].id = data.id;
+                  }
+                }),
+              );
+            }
+          }
         } catch {
-          patch.undo();
+          patches.forEach((p) => p.undo());
           soundManager.playError();
         }
       },

@@ -117,11 +117,7 @@ export function DraftsDialog({ open, onClose }: { open: boolean; onClose: () => 
         <CreatePostModal
           open={true}
           onClose={() => setEditingPost(null)}
-          initialPost={{
-            id: editingPost.id,
-            content: editingPost.content || "",
-            privacy: editingPost.privacy,
-          }}
+          initialPost={editingPost}
         />
       )}
     </>

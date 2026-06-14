@@ -98,7 +98,7 @@ export function CreateGroupModal({ open, onClose }: { open: boolean; onClose: ()
               <div className="flex gap-4">
                 <div className="flex flex-col items-center gap-2">
                   <div
-                    className="relative size-20 cursor-pointer overflow-hidden rounded-full border-2 border-dashed border-[var(--border-default)]"
+                    className="relative size-20 shrink-0 cursor-pointer overflow-hidden rounded-full border-2 border-dashed border-[var(--border-default)]"
                     onClick={() => avatarRef.current?.click()}
                   >
                     {avatarUrl ? (
@@ -121,9 +121,9 @@ export function CreateGroupModal({ open, onClose }: { open: boolean; onClose: ()
                     }}
                   />
                 </div>
-                <div className="flex flex-col items-center gap-2">
+                <div className="flex flex-1 flex-col items-center gap-2">
                   <div
-                    className="relative h-14 w-28 cursor-pointer overflow-hidden rounded-xl border-2 border-dashed border-[var(--border-default)]"
+                    className="relative w-full aspect-[2/1] cursor-pointer overflow-hidden rounded-xl border-2 border-dashed border-[var(--border-default)]"
                     onClick={() => coverRef.current?.click()}
                   >
                     {coverUrl ? (

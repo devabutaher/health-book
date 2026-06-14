@@ -1,6 +1,7 @@
 import { createApi } from "@reduxjs/toolkit/query/react";
 import { createBaseQuery } from "../baseQuery";
 import { soundManager } from "@/lib/soundManager";
+import type { RootState } from "../store";
 
 export interface PeriodLog {
   id: string;
@@ -45,18 +46,24 @@ export const periodLogApi = createApi({
         body,
       }),
       invalidatesTags: ["PeriodLogs"],
-      onQueryStarted: async (_args, { dispatch, queryFulfilled }) => {
+      onQueryStarted: async (_args, { dispatch, getState, queryFulfilled }) => {
         try {
           const { data: res } = await queryFulfilled;
           const log = (res as { data: PeriodLog }).data;
           if (!log) return;
-          dispatch(
-            periodLogApi.util.updateQueryData("getPeriodLogs", { limit: 50 }, (draft) => {
-              if ((draft as { logs?: PeriodLog[] }).logs) {
-                (draft as { logs: PeriodLog[] }).logs.unshift(log);
-              }
-            }),
-          );
+          const state = getState() as RootState;
+          const queries = state?.periodLogApi?.queries ?? {};
+          for (const key of Object.keys(queries)) {
+            const q = queries[key];
+            if (q?.endpointName === "getPeriodLogs" && q?.status === "fulfilled") {
+              dispatch(
+                periodLogApi.util.updateQueryData("getPeriodLogs", q.originalArgs, (draft) => {
+                  const d = draft as { logs?: PeriodLog[] };
+                  if (d.logs) d.logs.unshift(log);
+                }),
+              );
+            }
+          }
         } catch {
           soundManager.playError();
         }
@@ -79,21 +86,26 @@ export const periodLogApi = createApi({
         body,
       }),
       invalidatesTags: ["PeriodLogs"],
-      onQueryStarted: async ({ id, ...body }, { dispatch, queryFulfilled }) => {
+      onQueryStarted: async ({ id, ...body }, { dispatch, getState, queryFulfilled }) => {
         const patches: { undo: () => void }[] = [];
-        for (const args of [{ limit: 50 }, {}]) {
-          try {
-            const p = dispatch(
-              periodLogApi.util.updateQueryData("getPeriodLogs", args, (draft) => {
-                const d = draft as { logs?: PeriodLog[] };
-                if (d.logs) {
-                  const idx = d.logs.findIndex((l) => l.id === id);
-                  if (idx >= 0) Object.assign(d.logs[idx], body);
-                }
-              }),
-            );
-            patches.push(p);
-          } catch {}
+        const state = getState() as RootState;
+        const queries = state?.periodLogApi?.queries ?? {};
+        for (const key of Object.keys(queries)) {
+          const q = queries[key];
+          if (q?.endpointName === "getPeriodLogs" && q?.status === "fulfilled") {
+            try {
+              const p = dispatch(
+                periodLogApi.util.updateQueryData("getPeriodLogs", q.originalArgs, (draft) => {
+                  const d = draft as { logs?: PeriodLog[] };
+                  if (d.logs) {
+                    const idx = d.logs.findIndex((l) => l.id === id);
+                    if (idx >= 0) Object.assign(d.logs[idx], body);
+                  }
+                }),
+              );
+              patches.push(p);
+            } catch {}
+          }
         }
         try {
           await queryFulfilled;
@@ -106,20 +118,25 @@ export const periodLogApi = createApi({
     deletePeriodLog: builder.mutation({
       query: (id: string) => ({ url: `/${id}`, method: "DELETE" }),
       invalidatesTags: ["PeriodLogs"],
-      onQueryStarted: async (id, { dispatch, queryFulfilled }) => {
+      onQueryStarted: async (id, { dispatch, getState, queryFulfilled }) => {
         const patches: { undo: () => void }[] = [];
-        for (const args of [{ limit: 50 }, {}]) {
-          try {
-            const p = dispatch(
-              periodLogApi.util.updateQueryData("getPeriodLogs", args, (draft) => {
-                const d = draft as { logs?: PeriodLog[] };
-                if (d.logs) {
-                  d.logs = d.logs.filter((l) => l.id !== id);
-                }
-              }),
-            );
-            patches.push(p);
-          } catch {}
+        const state = getState() as RootState;
+        const queries = state?.periodLogApi?.queries ?? {};
+        for (const key of Object.keys(queries)) {
+          const q = queries[key];
+          if (q?.endpointName === "getPeriodLogs" && q?.status === "fulfilled") {
+            try {
+              const p = dispatch(
+                periodLogApi.util.updateQueryData("getPeriodLogs", q.originalArgs, (draft) => {
+                  const d = draft as { logs?: PeriodLog[] };
+                  if (d.logs) {
+                    d.logs = d.logs.filter((l) => l.id !== id);
+                  }
+                }),
+              );
+              patches.push(p);
+            } catch {}
+          }
         }
         try {
           await queryFulfilled;

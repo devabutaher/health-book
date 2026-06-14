@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { ExternalLink, Newspaper } from "lucide-react";
 import { motion } from "framer-motion";
 import { GlassCard } from "@/components/ui/glass-card";
@@ -68,11 +69,13 @@ export function HealthNewsFeed() {
             >
               {article.imageUrl && (
                 <div className="relative -mx-4 -mt-4 mb-3 h-36 overflow-hidden rounded-t-2xl">
-                  <img
+                  <Image
                     src={article.imageUrl}
                     alt={article.title}
                     className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                    loading="lazy"
+                    width={400}
+                    height={200}
+                    style={{ objectFit: "cover" }}
                   />
                 </div>
               )}

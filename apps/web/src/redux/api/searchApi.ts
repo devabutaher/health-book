@@ -17,6 +17,7 @@ export const searchApi = createApi({
   endpoints: (builder) => ({
     searchUsers: builder.query<SearchUser[], string>({
       query: (q) => `/users?q=${encodeURIComponent(q)}`,
+      providesTags: ["Search"],
       transformResponse: (response: { success: boolean; users: SearchUser[] }) => response.users,
       keepUnusedDataFor: 60,
     }),

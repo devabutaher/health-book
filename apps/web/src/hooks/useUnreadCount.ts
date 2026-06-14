@@ -46,6 +46,15 @@ export function useUnreadCount() {
           if (soundKey) playRef.current(soundKey);
         }
       })
+      .on("broadcast", { event: "NOTIFICATION_READ" }, () => {
+        dispatch(notificationApi.util.invalidateTags(["Notifications"]));
+      })
+      .on("broadcast", { event: "ALL_NOTIFICATIONS_READ" }, () => {
+        dispatch(notificationApi.util.invalidateTags(["Notifications"]));
+      })
+      .on("broadcast", { event: "NOTIFICATION_DELETED" }, () => {
+        dispatch(notificationApi.util.invalidateTags(["Notifications"]));
+      })
       .subscribe();
 
     return () => {

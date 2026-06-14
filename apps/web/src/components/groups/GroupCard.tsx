@@ -90,7 +90,7 @@ export const GroupCard = memo(function GroupCard({ group }: { group: Group }) {
                 size="sm"
                 onClick={handleLeave}
                 disabled={isLeaving}
-                className="h-8 rounded-lg border-brand-teal/30 text-[11px] font-semibold text-brand-teal hover:bg-brand-teal/10 hover:text-brand-teal"
+                className="mt-2 h-8 rounded-lg border-brand-teal/30 text-[11px] font-semibold text-brand-teal hover:bg-brand-teal/10 hover:text-brand-teal"
               >
                 {isLeaving ? (
                   <Loader2 className="size-3 animate-spin" />
@@ -105,7 +105,7 @@ export const GroupCard = memo(function GroupCard({ group }: { group: Group }) {
                 size="sm"
                 onClick={handleJoin}
                 disabled={isJoining}
-                className="h-8 rounded-lg px-3 text-[11px] font-semibold"
+                className="mt-2 h-8 rounded-lg px-3 text-[11px] font-semibold"
               >
                 {isJoining ? <Loader2 className="size-3 animate-spin" /> : null}
                 {isJoining ? "Joining..." : "Join"}

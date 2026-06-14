@@ -21,7 +21,7 @@ export function HighlightManager({
   onClose: () => void;
   onSelect?: (highlightId: string) => void;
 }) {
-  const { data: highlights } = useGetHighlightsQuery();
+  const { data: highlights, isLoading, isError, refetch } = useGetHighlightsQuery();
   const [createHighlight, { isLoading: isCreating }] = useCreateHighlightMutation();
   const [updateHighlight] = useUpdateHighlightMutation();
   const [deleteHighlight] = useDeleteHighlightMutation();
@@ -104,7 +104,21 @@ export function HighlightManager({
 
         {/* Existing highlights */}
         <div className="space-y-2">
-          {!highlights || highlights.length === 0 ? (
+          {isLoading ? (
+            <div className="flex justify-center py-8">
+              <div className="size-6 animate-spin rounded-full border-2 border-brand-teal border-t-transparent" />
+            </div>
+          ) : isError ? (
+            <div className="py-4 text-center">
+              <p className="text-sm text-red-400">Failed to load highlights</p>
+              <button
+                onClick={refetch}
+                className="mt-2 text-xs text-brand-teal underline underline-offset-2"
+              >
+                Try again
+              </button>
+            </div>
+          ) : !highlights || highlights.length === 0 ? (
             <p className="py-4 text-center text-sm text-muted-foreground">
               No highlights yet. Create one to start saving stories.
             </p>

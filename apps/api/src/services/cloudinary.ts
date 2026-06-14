@@ -9,7 +9,9 @@ cloudinary.config({
 export async function uploadImage(filePath: string, folder: string): Promise<string> {
   const result = await cloudinary.uploader.upload(filePath, {
     folder: `healthbook/${folder}`,
-    transformation: [{ quality: "auto", fetch_format: "auto" }],
+    transformation: [
+      { width: 1920, crop: "limit", quality: "auto", fetch_format: "auto" },
+    ],
   });
   return result.secure_url;
 }

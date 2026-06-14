@@ -4,6 +4,8 @@ import { ReelSkeleton } from "@/components/reels/ReelSkeleton";
 import dynamic from "next/dynamic";
 import { Plus } from "lucide-react";
 import { useState } from "react";
+import { useAppDispatch } from "@/hooks";
+import { reelsApi } from "@/redux/api/reelsApi";
 
 const ReelUploadModal = dynamic(
   () => import("@/components/reels/ReelUploadModal").then((m) => ({ default: m.ReelUploadModal })),
@@ -19,10 +21,18 @@ const ReelsFeed = dynamic(
 
 export default function ReelsPage() {
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [uploadKey, setUploadKey] = useState(0);
+  const dispatch = useAppDispatch();
+
+  const handleUploadComplete = () => {
+    setUploadOpen(false);
+    setUploadKey((k) => k + 1);
+    dispatch(reelsApi.util.invalidateTags(["Reels"]));
+  };
 
   return (
     <div className="relative h-[calc(100dvh-11rem)] lg:h-[calc(100dvh-8rem)]">
-      <ReelsFeed onUploadClick={() => setUploadOpen(true)} />
+      <ReelsFeed key={uploadKey} onUploadClick={() => setUploadOpen(true)} isPaused={uploadOpen} />
 
       {/* Floating upload button */}
       <button
@@ -36,7 +46,7 @@ export default function ReelsPage() {
       <ReelUploadModal
         open={uploadOpen}
         onClose={() => setUploadOpen(false)}
-        onUploadComplete={() => setUploadOpen(false)}
+        onUploadComplete={handleUploadComplete}
       />
     </div>
   );

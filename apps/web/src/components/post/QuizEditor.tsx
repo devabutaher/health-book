@@ -14,11 +14,15 @@ export interface QuizEditorHandle {
   reset(): void;
 }
 
+interface QuizEditorProps {
+  initialData?: QuizData;
+}
+
 export const QuizEditor = memo(
-  forwardRef<QuizEditorHandle, object>(function QuizEditor(_props, ref) {
-    const [question, setQuestion] = useState("");
-    const [options, setOptions] = useState<string[]>([""]);
-    const [correctIndex, setCorrectIndex] = useState(0);
+  forwardRef<QuizEditorHandle, QuizEditorProps>(function QuizEditor({ initialData }, ref) {
+    const [question, setQuestion] = useState(initialData?.question ?? "");
+    const [options, setOptions] = useState<string[]>(initialData?.options ?? [""]);
+    const [correctIndex, setCorrectIndex] = useState(initialData?.correctIndex ?? 0);
 
     useImperativeHandle(
       ref,

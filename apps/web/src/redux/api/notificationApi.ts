@@ -49,22 +49,17 @@ export const notificationApi = createApi({
         const queries = (getState() as RootState as any).notificationApi?.queries ?? {};
         const patches: { undo: () => void }[] = [];
         for (const key of Object.keys(queries)) {
-          const entry = queries[key];
-          if (entry?.data?.notifications?.some((n: any) => n.id === id)) {
+          const q = queries[key];
+          if (q?.endpointName === "getNotifications" && q?.status === "fulfilled") {
             try {
               const p = dispatch(
-                notificationApi.util.updateQueryData(
-                  "getNotifications",
-                  entry.arg,
-                  (draft: any) => {
-                    const n = draft.notifications?.find((x: any) => x.id === id);
-                    if (n) n.read = true;
-                  },
-                ),
+                notificationApi.util.updateQueryData("getNotifications", q.originalArgs, (draft: any) => {
+                  const n = draft.notifications?.find((x: any) => x.id === id);
+                  if (n) n.read = true;
+                }),
               );
               patches.push(p);
             } catch {}
-            break;
           }
         }
         try {
@@ -85,19 +80,15 @@ export const notificationApi = createApi({
         const queries = (getState() as RootState as any).notificationApi?.queries ?? {};
         const patches: { undo: () => void }[] = [];
         for (const key of Object.keys(queries)) {
-          const entry = queries[key];
-          if (entry?.data?.notifications) {
+          const q = queries[key];
+          if (q?.endpointName === "getNotifications" && q?.status === "fulfilled") {
             try {
               const p = dispatch(
-                notificationApi.util.updateQueryData(
-                  "getNotifications",
-                  entry.arg,
-                  (draft: any) => {
-                    for (const n of draft.notifications ?? []) {
-                      n.read = true;
-                    }
-                  },
-                ),
+                notificationApi.util.updateQueryData("getNotifications", q.originalArgs, (draft: any) => {
+                  for (const n of draft.notifications ?? []) {
+                    n.read = true;
+                  }
+                }),
               );
               patches.push(p);
             } catch {}
@@ -121,21 +112,16 @@ export const notificationApi = createApi({
         const queries = (getState() as RootState as any).notificationApi?.queries ?? {};
         const patches: { undo: () => void }[] = [];
         for (const key of Object.keys(queries)) {
-          const entry = queries[key];
-          if (entry?.data?.notifications?.some((n: any) => n.id === id)) {
+          const q = queries[key];
+          if (q?.endpointName === "getNotifications" && q?.status === "fulfilled") {
             try {
               const p = dispatch(
-                notificationApi.util.updateQueryData(
-                  "getNotifications",
-                  entry.arg,
-                  (draft: any) => {
-                    draft.notifications = draft.notifications.filter((n: any) => n.id !== id);
-                  },
-                ),
+                notificationApi.util.updateQueryData("getNotifications", q.originalArgs, (draft: any) => {
+                  draft.notifications = draft.notifications.filter((n: any) => n.id !== id);
+                }),
               );
               patches.push(p);
             } catch {}
-            break;
           }
         }
         try {

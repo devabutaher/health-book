@@ -1,15 +1,14 @@
 "use client";
 
-import Link from "next/link";
-import { AlertCircle, ArrowLeft, Bookmark } from "lucide-react";
-import { motion } from "framer-motion";
 import { PostCard } from "@/components/post/PostCard";
 import { PostSkeleton } from "@/components/shared/PostSkeleton";
-import { useGetSavedQuery } from "@/redux/api/postApi";
-import { Empty, EmptyDescription, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { Button } from "@/components/ui/button";
+import { Empty, EmptyDescription, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { staggerContainer, staggerItem } from "@/lib/motion/variants";
+import { useGetSavedQuery } from "@/redux/api/postApi";
 import type { Post } from "@/types/post";
+import { motion } from "framer-motion";
+import { AlertCircle, Bookmark } from "lucide-react";
 
 export default function SavedPage() {
   const { data, isLoading, isError, refetch } = useGetSavedQuery({});
@@ -17,14 +16,6 @@ export default function SavedPage() {
 
   return (
     <div className="mx-auto max-w-[600px]">
-      <Link
-        href="/feed"
-        className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
-      >
-        <ArrowLeft className="size-4" />
-        Back to feed
-      </Link>
-
       <div className="mb-4 sm:mb-6 flex items-center gap-3">
         <div className="flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-amber to-brand-coral shadow-[var(--shadow-glow-amber)]">
           <Bookmark className="size-6 text-white" />

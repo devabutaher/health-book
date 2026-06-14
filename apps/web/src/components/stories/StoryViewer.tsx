@@ -122,6 +122,8 @@ export function StoryViewer({
   const elapsedRef = useRef(0);
   const lastTickRef = useRef(0);
   const longPressRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const likeTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const reactionTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const pausedRef = useRef(paused);
   useEffect(() => {
     pausedRef.current = paused;
@@ -256,6 +258,14 @@ export function StoryViewer({
     return () => window.removeEventListener("keydown", onKey);
   }, [goBack, goNext, onClose]);
 
+  useEffect(() => {
+    return () => {
+      if (longPressRef.current) clearTimeout(longPressRef.current);
+      if (likeTimerRef.current) clearTimeout(likeTimerRef.current);
+      if (reactionTimerRef.current) clearTimeout(reactionTimerRef.current);
+    };
+  }, []);
+
   if (!story) return null;
 
   const handleDelete = async () => {
@@ -270,7 +280,8 @@ export function StoryViewer({
 
   const handleLike = async () => {
     setLikeAnimating(true);
-    setTimeout(() => setLikeAnimating(false), 700);
+    clearTimeout(likeTimerRef.current);
+    likeTimerRef.current = setTimeout(() => setLikeAnimating(false), 700);
     playLikeSound();
     try {
       await reactToStory({ storyId: story.id, emoji: "❤️" }).unwrap();
@@ -351,7 +362,8 @@ export function StoryViewer({
 
   const handleReaction = async (emoji: string) => {
     setReactionAnimating(emoji);
-    setTimeout(() => setReactionAnimating(null), 600);
+    clearTimeout(reactionTimerRef.current);
+    reactionTimerRef.current = setTimeout(() => setReactionAnimating(null), 600);
     playReactionSound();
     try {
       await reactToStory({ storyId: story.id, emoji }).unwrap();

@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { AlertCircle, ArrowLeft, Video } from "lucide-react";
+import { AlertCircle, Video } from "lucide-react";
 import { StoryCircle } from "@/components/stories/StoryCircle";
 import { StoryViewer } from "@/components/stories/StoryViewer";
 import { StoryCreateButton } from "@/components/stories/StoryCreateButton";
@@ -32,14 +31,6 @@ export default function StoriesPage() {
 
   return (
     <div className="mx-auto max-w-[600px]">
-      <Link
-        href="/feed"
-        className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
-      >
-        <ArrowLeft className="size-4" />
-        Back to feed
-      </Link>
-
       <div className="mb-6 flex items-center gap-3">
         <div className="flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-purple to-brand-pink shadow-[var(--shadow-glow-purple)]">
           <Video className="size-6 text-white" />

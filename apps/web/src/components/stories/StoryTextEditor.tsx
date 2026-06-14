@@ -205,6 +205,7 @@ export function StoryTextEditor({
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
         >
           {textBgColor !== "transparent" && (
             <span

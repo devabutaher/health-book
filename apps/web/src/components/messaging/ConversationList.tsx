@@ -35,7 +35,7 @@ export function ConversationList({
   activeId?: string;
   onSelect: (id: string) => void;
 }) {
-  const { data: conversationsData, isLoading } = useGetConversationsQuery();
+  const { data: conversationsData, isLoading, isError, refetch } = useGetConversationsQuery();
   const conversations = conversationsData?.data ?? [];
   const currentUserId = useAppSelector((s) => s.auth.user?.id);
 
@@ -51,6 +51,20 @@ export function ConversationList({
             </div>
           </div>
         ))}
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="flex flex-col items-center py-16 text-center">
+        <p className="text-sm text-red-400">Failed to load</p>
+        <button
+          onClick={() => refetch()}
+          className="mt-2 text-xs text-brand-teal underline underline-offset-2"
+        >
+          Retry
+        </button>
       </div>
     );
   }

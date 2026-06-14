@@ -48,31 +48,35 @@ export function DayPlanEditor({
 
   useEffect(() => {
     if (onChange) onChange(plans);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [plans]);
 
   useEffect(() => {
     if (initialPlans?.length) {
-      setPlans(initialPlans);
+      queueMicrotask(() => setPlans(initialPlans));
     }
   }, [initialPlans]);
 
   useEffect(() => {
     if (initialPlans?.length) return;
-    setPlans((prev) => {
-      if (prev.length === dayCount) return prev;
-      if (prev.length < dayCount) {
-        const extra = Array.from({ length: dayCount - prev.length }, (_, i) => ({
-          dayNumber: prev.length + i + 1,
-          title: "",
-          description: "",
-          tips: "",
-          mediaUrls: [] as string[],
-          duration: 0,
-        }));
-        return [...prev, ...extra];
-      }
-      return prev.slice(0, dayCount);
+    queueMicrotask(() => {
+      setPlans((prev) => {
+        if (prev.length === dayCount) return prev;
+        if (prev.length < dayCount) {
+          const extra = Array.from({ length: dayCount - prev.length }, (_, i) => ({
+            dayNumber: prev.length + i + 1,
+            title: "",
+            description: "",
+            tips: "",
+            mediaUrls: [] as string[],
+            duration: 0,
+          }));
+          return [...prev, ...extra];
+        }
+        return prev.slice(0, dayCount);
+      });
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dayCount]);
 
   const toggleDay = (day: number) => {

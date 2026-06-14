@@ -24,6 +24,7 @@ export const highlightsApi = createApi({
         method: "POST",
         body,
       }),
+      invalidatesTags: ["Highlights"],
       onQueryStarted: async (_args, { dispatch, queryFulfilled }) => {
         try {
           const { data: newHighlight } = await queryFulfilled;
@@ -47,7 +48,7 @@ export const highlightsApi = createApi({
         method: "PUT",
         body,
       }),
-      // Fix: optimistic update instead of invalidate
+      invalidatesTags: ["Highlights"],
       onQueryStarted: async ({ id, ...body }, { dispatch, queryFulfilled }) => {
         const patch = dispatch(
           highlightsApi.util.updateQueryData("getHighlights", undefined, (draft) => {
@@ -69,6 +70,7 @@ export const highlightsApi = createApi({
         url: `/${id}`,
         method: "DELETE",
       }),
+      invalidatesTags: ["Highlights"],
       onQueryStarted: async (id, { dispatch, queryFulfilled }) => {
         const patch = dispatch(
           highlightsApi.util.updateQueryData("getHighlights", undefined, (draft) => {
@@ -99,6 +101,7 @@ export const highlightsApi = createApi({
         url: `/${highlightId}/items/${itemId}`,
         method: "DELETE",
       }),
+      invalidatesTags: ["Highlights"],
       onQueryStarted: async ({ highlightId, itemId }, { dispatch, queryFulfilled }) => {
         const patch = dispatch(
           highlightsApi.util.updateQueryData("getHighlights", undefined, (draft) => {

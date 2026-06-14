@@ -49,6 +49,32 @@ export function useGroupRealtime(groupId: string | null) {
           dispatch(postApi.util.invalidateTags([{ type: "Posts", id: `group-${gid}` }]));
         }
       })
+      .on("broadcast", { event: "GROUP_UPDATED" }, () => {
+        dispatch(
+          groupsApi.util.invalidateTags([
+            { type: "Group", id: groupId },
+            "Groups",
+            "MyGroups",
+          ]),
+        );
+      })
+      .on("broadcast", { event: "GROUP_DELETED" }, () => {
+        dispatch(
+          groupsApi.util.invalidateTags([
+            { type: "Group", id: groupId },
+            "Groups",
+            "MyGroups",
+          ]),
+        );
+      })
+      .on("broadcast", { event: "MEMBER_ROLE_CHANGED" }, () => {
+        dispatch(
+          groupsApi.util.invalidateTags([
+            { type: "Group", id: groupId },
+            { type: "GroupMembers", id: `${groupId}-members` },
+          ]),
+        );
+      })
       .subscribe();
 
     return () => {

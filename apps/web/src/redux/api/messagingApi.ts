@@ -58,6 +58,7 @@ export const messagingApi = createApi({
       Conversation,
       { participantIds: string[]; isGroup?: boolean; groupName?: string }
     >({
+      invalidatesTags: ["Conversations"],
       query: (body) => ({
         url: "/conversations",
         method: "POST",
@@ -230,6 +231,7 @@ export const messagingApi = createApi({
       void,
       { messageId: string; conversationId: string; forAll?: boolean }
     >({
+      invalidatesTags: (_result, _error, { conversationId }) => [{ type: "Conversation", id: conversationId }],
       query: ({ messageId, forAll }) => ({
         url: "/messages/" + messageId + (forAll ? "?forAll=true" : ""),
         method: "DELETE",

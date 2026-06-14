@@ -49,17 +49,18 @@ self.addEventListener("fetch", (event) => {
   }
 
   // Cache-first for static assets (images, fonts, icons)
-  if (
-    url.pathname.match(/\.(png|jpg|jpeg|gif|svg|ico|webp|woff2?|ttf|eot|css|js)$/i) ||
-    url.origin === self.location.origin
-  ) {
+  if (url.pathname.match(/\.(png|jpg|jpeg|gif|svg|ico|webp|woff2?|ttf|eot|css|js)$/i)) {
     event.respondWith(
       caches.open(STATIC_CACHE).then(async (cache) => {
         const cached = await cache.match(event.request);
         if (cached) return cached;
-        const response = await fetch(event.request);
-        if (response.status === 200) cache.put(event.request, response.clone());
-        return response;
+        try {
+          const response = await fetch(event.request);
+          if (response.status === 200) cache.put(event.request, response.clone());
+          return response;
+        } catch {
+          return new Response("Offline", { status: 503 });
+        }
       }),
     );
     return;

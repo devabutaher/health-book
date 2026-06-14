@@ -78,7 +78,7 @@ export const storiesApi = createApi({
               backgroundColor: args.backgroundColor || undefined,
               viewed: false,
               createdAt: new Date().toISOString(),
-              expiresAt: new Date(Date.now() + 86400000).toISOString(),
+              expiresAt: new Date(Date.now() + 604800000).toISOString(),
             });
           }),
         );
@@ -192,6 +192,7 @@ export const storiesApi = createApi({
     }),
 
     voteStoryPoll: builder.mutation<PollResults, { storyId: string; optionIndex: number }>({
+      invalidatesTags: (_result, _error, { storyId }) => [{ type: "Stories", id: storyId }],
       query: ({ storyId, ...body }) => ({ url: `/${storyId}/vote`, method: "POST", body }),
       transformResponse: (response: { success: boolean; data: PollResults }) => response.data,
       onQueryStarted: async ({ storyId, optionIndex }, { dispatch, queryFulfilled }) => {

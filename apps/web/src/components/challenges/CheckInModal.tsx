@@ -113,20 +113,21 @@ export function CheckInModal({
     setMediaPreviews((prev) => prev.filter((m) => m.id !== id));
   };
 
-  // Pre-fill fields when editing an existing entry
   useEffect(() => {
     if (open && existingEntry) {
-      setNotes(existingEntry.notes ?? "");
-      setSharedToFeed(existingEntry.sharedToFeed);
-      setValue(existingEntry.value ?? "");
-      setMediaPreviews(
-        existingEntry.mediaUrls.map((url) => ({
-          id: `existing-${url}`,
-          localUrl: url,
-          remoteUrl: url,
-          uploading: false,
-        })),
-      );
+      queueMicrotask(() => {
+        setNotes(existingEntry.notes ?? "");
+        setSharedToFeed(existingEntry.sharedToFeed);
+        setValue(existingEntry.value ?? "");
+        setMediaPreviews(
+          existingEntry.mediaUrls.map((url) => ({
+            id: `existing-${url}`,
+            localUrl: url,
+            remoteUrl: url,
+            uploading: false,
+          })),
+        );
+      });
     }
   }, [open, existingEntry]);
 

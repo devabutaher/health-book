@@ -182,7 +182,7 @@ function ActiveNowAvatars({ variant = "online" }: { variant?: "online" | "full" 
   }
 
   return (
-    <div className="flex items-center gap-3 overflow-x-auto scrollbar-none">
+    <div className="flex items-center gap-3 overflow-x-auto scrollbar-none px-3">
       <AnimatePresence initial={false}>
         {displayUsers.map((u) => {
           const isOnline = onlineIds.includes(u.id);

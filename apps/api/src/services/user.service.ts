@@ -159,6 +159,10 @@ export const userService = {
       followerId,
       followingId,
     }).catch(() => {});
+    broadcastRealtime(`hb-feed:${followerId}`, "FOLLOW_CHANGED", {
+      userId: followingId,
+      isFollowing: true,
+    }).catch(() => {});
 
     if (followerId !== followingId) {
       notificationService
@@ -179,6 +183,10 @@ export const userService = {
     broadcastRealtime(`hb-user:${followingId}`, "UNFOLLOWED", {
       followerId,
       followingId,
+    }).catch(() => {});
+    broadcastRealtime(`hb-feed:${followerId}`, "FOLLOW_CHANGED", {
+      userId: followingId,
+      isFollowing: false,
     }).catch(() => {});
   },
 

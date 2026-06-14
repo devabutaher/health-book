@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { memo, useState, useRef } from "react";
+import { memo, useState, useRef, useEffect } from "react";
 import type { Message } from "@/types/conversation";
 import { cn, formatRelativeTime, getImageUrl } from "@/lib/utils";
 import { useAppSelector } from "@/hooks";
@@ -78,6 +78,14 @@ export const ChatBubble = memo(function ChatBubble({
   const [deleteDialog, setDeleteDialog] = useState<"me" | "everyone" | null>(null);
   const [deleteMessage] = useDeleteMessageMutation();
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (longPressTimer.current) {
+        clearTimeout(longPressTimer.current);
+      }
+    };
+  }, []);
 
   if (message.isDeleted) return null;
 

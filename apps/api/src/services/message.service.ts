@@ -306,7 +306,7 @@ export const messageService = {
       }
     }
 
-    broadcastRealtime(`hb-message:${message.conversationId}`, "MESSAGE_DELETED", {
+    broadcastRealtime(`room:${message.conversationId}:messages`, "MESSAGE_DELETED", {
       messageId,
       conversationId: message.conversationId,
       userId,

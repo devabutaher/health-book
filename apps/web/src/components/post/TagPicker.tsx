@@ -10,9 +10,13 @@ export interface TagPickerHandle {
   reset(): void;
 }
 
+interface TagPickerProps {
+  initialTags?: string[];
+}
+
 export const TagPicker = memo(
-  forwardRef<TagPickerHandle, object>(function TagPicker(_props, ref) {
-    const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  forwardRef<TagPickerHandle, TagPickerProps>(function TagPicker({ initialTags }, ref) {
+    const [selectedTags, setSelectedTags] = useState<string[]>(initialTags ?? []);
     const [showTags, setShowTags] = useState(false);
 
     useImperativeHandle(

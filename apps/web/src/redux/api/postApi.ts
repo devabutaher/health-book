@@ -8,14 +8,14 @@ import { soundManager } from "@/lib/soundManager";
 export const postApi = createApi({
   reducerPath: "postApi",
   baseQuery: createBaseQuery(`${process.env["NEXT_PUBLIC_API_URL"]}/api/posts`),
-  tagTypes: ["Posts", "Post", "Feed", "Saved", "Drafts"],
+  tagTypes: ["Posts", "Post", "Saved", "Drafts"],
   refetchOnFocus: false,
   refetchOnReconnect: true,
   endpoints: (builder) => ({
     getFeed: builder.query({
       query: ({ cursor }: { cursor?: string } = {}) => `/feed${cursor ? `?cursor=${cursor}` : ""}`,
-      providesTags: ["Feed"],
-      keepUnusedDataFor: 300,
+      providesTags: ["Posts"],
+      keepUnusedDataFor: 600,
     }),
     getUserPosts: builder.query({
       query: ({ userId, cursor }: { userId: string; cursor?: string }) =>
@@ -139,6 +139,16 @@ export const postApi = createApi({
                 );
                 patches.push(p);
               }
+            }
+            if (q?.endpointName === "getExplore" && q?.status === "fulfilled") {
+              const p = dispatch(
+                postApi.util.updateQueryData("getExplore", q.originalArgs, (draft: any) => {
+                  if (draft?.data?.posts) {
+                    draft.data.posts.unshift(optimisticPost);
+                  }
+                }),
+              );
+              patches.push(p);
             }
           }
           // Optimistic insert into getGroupFeed if applicable
@@ -293,6 +303,16 @@ export const postApi = createApi({
             );
             patches.push(p);
           }
+          if (q?.endpointName === "getExplore" && q?.status === "fulfilled") {
+            const p = dispatch(
+              postApi.util.updateQueryData("getExplore", q.originalArgs, (draft: any) => {
+                if (draft?.data?.posts) {
+                  draft.data.posts = draft.data.posts.filter((p: any) => p.id !== id);
+                }
+              }),
+            );
+            patches.push(p);
+          }
           if (q?.endpointName === "getSaved" && q?.status === "fulfilled") {
             const p = dispatch(
               postApi.util.updateQueryData("getSaved", q.originalArgs, (draft: any) => {
@@ -324,6 +344,7 @@ export const postApi = createApi({
       },
     }),
     toggleReaction: builder.mutation({
+      invalidatesTags: (_result, _error, { postId }) => [{ type: "Post", id: postId }],
       query: ({
         postId,
         type,
@@ -342,17 +363,21 @@ export const postApi = createApi({
         const updateReactions = (draft: any) => {
           const reactions = draft?.reactions ?? draft?.data?.reactions;
           if (!reactions) return;
+          const isDataLevel = !!draft?.data?.reactions;
+          const countObj = isDataLevel ? draft?.data?._count : draft?._count;
           const existing = reactions.findIndex(
             (r: { userId: string; type: string }) => r.userId === userId,
           );
           if (existing >= 0) {
             if (reactions[existing].type === type) {
-              reactions.splice(existing, 1); // toggle off
+              reactions.splice(existing, 1);
+              if (countObj?.reactions !== undefined) countObj.reactions -= 1;
             } else {
-              reactions[existing].type = type; // change type
+              reactions[existing].type = type;
             }
           } else {
             reactions.push({ userId, type });
+            if (countObj?.reactions !== undefined) countObj.reactions += 1;
           }
         };
 
@@ -387,6 +412,17 @@ export const postApi = createApi({
             patches.push(
               dispatch(
                 postApi.util.updateQueryData("getUserPosts", q.originalArgs, (draft: any) => {
+                  if (!draft?.data?.posts) return;
+                  const post = draft.data.posts.find((p: any) => p.id === postId);
+                  if (post) updateReactions(post);
+                }),
+              ),
+            );
+          }
+          if (q?.endpointName === "getGroupFeed" && q?.status === "fulfilled") {
+            patches.push(
+              dispatch(
+                postApi.util.updateQueryData("getGroupFeed", q.originalArgs, (draft: any) => {
                   if (!draft?.data?.posts) return;
                   const post = draft.data.posts.find((p: any) => p.id === postId);
                   if (post) updateReactions(post);
@@ -443,6 +479,17 @@ export const postApi = createApi({
             patches.push(
               dispatch(
                 postApi.util.updateQueryData("getUserPosts", q.originalArgs, (draft: any) => {
+                  if (!draft?.data?.posts) return;
+                  const post = draft.data.posts.find((p: any) => p.id === postId);
+                  if (post) post.isSaved = !post.isSaved;
+                }),
+              ),
+            );
+          }
+          if (q?.endpointName === "getExplore" && q?.status === "fulfilled") {
+            patches.push(
+              dispatch(
+                postApi.util.updateQueryData("getExplore", q.originalArgs, (draft: any) => {
                   if (!draft?.data?.posts) return;
                   const post = draft.data.posts.find((p: any) => p.id === postId);
                   if (post) post.isSaved = !post.isSaved;

@@ -95,28 +95,43 @@ export const healthLogApi = createApi({
           createdAt: new Date().toISOString(),
         };
 
-        const patch = dispatch(
-          healthLogApi.util.updateQueryData("getHealthLogs", { limit: 50 }, (draft) => {
-            if ((draft as { logs: HealthLog[] }).logs) {
-              (draft as { logs: HealthLog[] }).logs.unshift(optimistic);
-            }
-          }),
-        );
+        const patches: { undo: () => void }[] = [];
+        const state = getState() as RootState;
+        const queries = state?.healthLogApi?.queries ?? {};
+        for (const key of Object.keys(queries)) {
+          const q = queries[key];
+          if (q?.endpointName === "getHealthLogs" && q?.status === "fulfilled") {
+            patches.push(
+              dispatch(
+                healthLogApi.util.updateQueryData("getHealthLogs", q.originalArgs, (draft) => {
+                  const d = draft as { logs: HealthLog[] };
+                  if (d.logs) d.logs.unshift(optimistic);
+                }),
+              ),
+            );
+          }
+        }
 
         try {
           const { data: res } = await queryFulfilled;
           const log = (res as { data: HealthLog }).data;
           if (!log?.id) return;
-          dispatch(
-            healthLogApi.util.updateQueryData("getHealthLogs", { limit: 50 }, (draft) => {
-              if ((draft as { logs: HealthLog[] }).logs) {
-                const idx = (draft as { logs: HealthLog[] }).logs.findIndex((l) => l.id === tempId);
-                if (idx >= 0) (draft as { logs: HealthLog[] }).logs[idx].id = log.id;
-              }
-            }),
-          );
+          for (const key of Object.keys(queries)) {
+            const q = queries[key];
+            if (q?.endpointName === "getHealthLogs" && q?.status === "fulfilled") {
+              dispatch(
+                healthLogApi.util.updateQueryData("getHealthLogs", q.originalArgs, (draft) => {
+                  const d = draft as { logs: HealthLog[] };
+                  if (d.logs) {
+                    const idx = d.logs.findIndex((l) => l.id === tempId);
+                    if (idx >= 0) d.logs[idx].id = log.id;
+                  }
+                }),
+              );
+            }
+          }
         } catch {
-          patch.undo();
+          patches.forEach((p) => p.undo());
           soundManager.playError();
         }
       },
@@ -137,17 +152,38 @@ export const healthLogApi = createApi({
         body,
       }),
       invalidatesTags: (_result, _error, { id }) => [{ type: "HealthLogs", id }, "HealthStats"],
-      onQueryStarted: async ({ id, ...body }, { dispatch, queryFulfilled }) => {
-        const patch = dispatch(
-          healthLogApi.util.updateQueryData("getHealthLog", id, (draft) => {
-            if (!draft) return;
-            Object.assign(draft as object, body);
-          }),
+      onQueryStarted: async ({ id, ...body }, { dispatch, getState, queryFulfilled }) => {
+        const patches: { undo: () => void }[] = [];
+        patches.push(
+          dispatch(
+            healthLogApi.util.updateQueryData("getHealthLog", id, (draft) => {
+              if (!draft) return;
+              Object.assign(draft as object, body);
+            }),
+          ),
         );
+        const state = getState() as RootState;
+        const queries = state?.healthLogApi?.queries ?? {};
+        for (const key of Object.keys(queries)) {
+          const q = queries[key];
+          if (q?.endpointName === "getHealthLogs" && q?.status === "fulfilled") {
+            patches.push(
+              dispatch(
+                healthLogApi.util.updateQueryData("getHealthLogs", q.originalArgs, (draft) => {
+                  const d = draft as { logs: HealthLog[] };
+                  if (d.logs) {
+                    const idx = d.logs.findIndex((l) => l.id === id);
+                    if (idx >= 0) Object.assign(d.logs[idx] as object, body);
+                  }
+                }),
+              ),
+            );
+          }
+        }
         try {
           await queryFulfilled;
         } catch {
-          patch.undo();
+          patches.forEach((p) => p.undo());
           soundManager.playError();
         }
       },
@@ -194,18 +230,24 @@ export const healthLogApi = createApi({
         method: "POST",
       }),
       invalidatesTags: ["HealthLogs", "HealthStats"],
-      onQueryStarted: async (_id, { dispatch, queryFulfilled }) => {
+      onQueryStarted: async (_id, { dispatch, getState, queryFulfilled }) => {
         try {
           const { data: res } = await queryFulfilled;
           const log = (res as { data: HealthLog }).data;
           if (!log) return;
-          dispatch(
-            healthLogApi.util.updateQueryData("getHealthLogs", { limit: 50 }, (draft) => {
-              if ((draft as { logs: HealthLog[] }).logs) {
-                (draft as { logs: HealthLog[] }).logs.unshift(log);
-              }
-            }),
-          );
+          const state = getState() as RootState;
+          const queries = state?.healthLogApi?.queries ?? {};
+          for (const key of Object.keys(queries)) {
+            const q = queries[key];
+            if (q?.endpointName === "getHealthLogs" && q?.status === "fulfilled") {
+              dispatch(
+                healthLogApi.util.updateQueryData("getHealthLogs", q.originalArgs, (draft) => {
+                  const d = draft as { logs: HealthLog[] };
+                  if (d.logs) d.logs.unshift(log);
+                }),
+              );
+            }
+          }
         } catch {
           soundManager.playError();
         }
@@ -219,22 +261,25 @@ export const healthLogApi = createApi({
         body: { content },
       }),
       invalidatesTags: ["HealthLogs"],
-      onQueryStarted: async (_args, { dispatch, queryFulfilled }) => {
+      onQueryStarted: async (_args, { dispatch, getState, queryFulfilled }) => {
         try {
           const { data: res } = await queryFulfilled;
           const newPost = (res as PostSingleResponse)?.data;
           if (!newPost) return;
-          dispatch(
-            postApi.util.updateQueryData(
-              "getFeed",
-              { cursor: undefined },
-              (draft: PostApiResponse) => {
-                if (draft?.data?.posts) {
-                  draft.data.posts.unshift(newPost);
-                }
-              },
-            ),
-          );
+          const state = getState() as RootState;
+          const queries = state?.postApi?.queries ?? {};
+          for (const key of Object.keys(queries)) {
+            const q = queries[key];
+            if (q?.endpointName === "getFeed" && q?.status === "fulfilled") {
+              dispatch(
+                postApi.util.updateQueryData("getFeed", q.originalArgs, (draft: PostApiResponse) => {
+                  if (draft?.data?.posts) {
+                    draft.data.posts.unshift(newPost);
+                  }
+                }),
+              );
+            }
+          }
         } catch {
           soundManager.playError();
         }

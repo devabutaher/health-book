@@ -154,6 +154,26 @@ export const userApi = createApi({
             );
             patches.push(p);
           }
+          if (q?.endpointName === "getUserPosts" && q?.status === "fulfilled") {
+            const p = dispatch(
+              postApi.util.updateQueryData("getUserPosts", q.originalArgs, (draft: any) => {
+                draft?.data?.posts?.forEach((post: any) => {
+                  if (post.user?.id === userId) post.user.isFollowing = true;
+                });
+              }),
+            );
+            patches.push(p);
+          }
+          if (q?.endpointName === "getExplore" && q?.status === "fulfilled") {
+            const p = dispatch(
+              postApi.util.updateQueryData("getExplore", q.originalArgs, (draft: any) => {
+                draft?.data?.posts?.forEach((post: any) => {
+                  if (post.user?.id === userId) post.user.isFollowing = true;
+                });
+              }),
+            );
+            patches.push(p);
+          }
         }
 
         try {
@@ -244,6 +264,26 @@ export const userApi = createApi({
           if (q?.endpointName === "getFeed" && q?.status === "fulfilled") {
             const p = dispatch(
               postApi.util.updateQueryData("getFeed", q.originalArgs, (draft: any) => {
+                draft?.data?.posts?.forEach((post: any) => {
+                  if (post.user?.id === userId) post.user.isFollowing = false;
+                });
+              }),
+            );
+            patches.push(p);
+          }
+          if (q?.endpointName === "getUserPosts" && q?.status === "fulfilled") {
+            const p = dispatch(
+              postApi.util.updateQueryData("getUserPosts", q.originalArgs, (draft: any) => {
+                draft?.data?.posts?.forEach((post: any) => {
+                  if (post.user?.id === userId) post.user.isFollowing = false;
+                });
+              }),
+            );
+            patches.push(p);
+          }
+          if (q?.endpointName === "getExplore" && q?.status === "fulfilled") {
+            const p = dispatch(
+              postApi.util.updateQueryData("getExplore", q.originalArgs, (draft: any) => {
                 draft?.data?.posts?.forEach((post: any) => {
                   if (post.user?.id === userId) post.user.isFollowing = false;
                 });

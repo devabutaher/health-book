@@ -38,18 +38,13 @@ export function ReelActions({
 }) {
   const [deleteReel, { isLoading: deleting }] = useDeleteReelMutation();
   const [updateReel, { isLoading: updating }] = useUpdateReelMutation();
-  const [optimisticLiked, setOptimisticLiked] = useState<boolean | null>(null);
-  const [optimisticLikesCount, setOptimisticLikesCount] = useState<number | null>(null);
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState(currentCaption || "");
 
-  const liked = optimisticLiked ?? initialLiked;
-  const likesCount = optimisticLikesCount ?? (initialLikesCount ?? 0);
+  const liked = initialLiked;
+  const likesCount = initialLikesCount ?? 0;
 
   const handleLike = () => {
-    const next = !liked;
-    setOptimisticLiked(next);
-    setOptimisticLikesCount((c) => (c ?? initialLikesCount ?? 0) + (next ? 1 : -1));
     onLikeToggle?.();
   };
 

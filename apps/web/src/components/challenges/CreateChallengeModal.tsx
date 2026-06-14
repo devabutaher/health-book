@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { X, LayoutTemplate, Swords, Users as UsersIcon, Target, Trophy, Calendar, ChevronDown, ChevronRight } from "lucide-react";
+import { X, LayoutTemplate, Swords, Users as UsersIcon, Target, Trophy, ChevronDown, ChevronRight } from "lucide-react";
 import {
   useCreateChallengeMutation,
   useGetChallengeTemplatesQuery,

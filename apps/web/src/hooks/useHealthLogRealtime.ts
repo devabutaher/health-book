@@ -28,6 +28,9 @@ export function useHealthLogRealtime() {
       .on("broadcast", { event: "HEALTH_LOG_DELETED" }, () => {
         dispatch(healthLogApi.util.invalidateTags(["HealthLogs", "HealthStats"]));
       })
+      .on("broadcast", { event: "HEALTH_LOG_SHARED" }, () => {
+        dispatch(healthLogApi.util.invalidateTags(["HealthLogs"]));
+      })
       .subscribe();
 
     return () => {

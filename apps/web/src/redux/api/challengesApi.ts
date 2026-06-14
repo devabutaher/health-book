@@ -853,7 +853,17 @@ export const challengesApi = createApi({
       string
     >({
       query: (challengeId) => `/${challengeId}/ratings`,
-      transformResponse: (response: { success: boolean; data: { ratings: Array<Record<string, unknown>>; averageRating: number; ratingCount: number } }) => response.data as any,
+      transformResponse: (response: { success: boolean; data: { ratings: Array<Record<string, unknown>>; averageRating: number; ratingCount: number } }) => response.data as {
+        ratings: Array<{
+          id: string;
+          rating: number;
+          review?: string | null;
+          createdAt: string;
+          user: { id: string; name: string | null; username: string; avatar: string | null };
+        }>;
+        averageRating: number;
+        ratingCount: number;
+      },
       providesTags: (_result, _error, challengeId) => [
         { type: "Challenge", id: challengeId },
       ],
