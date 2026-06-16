@@ -344,7 +344,7 @@ export const postApi = createApi({
       },
     }),
     toggleReaction: builder.mutation({
-      invalidatesTags: (_result, _error, { postId }) => [{ type: "Post", id: postId }],
+      invalidatesTags: (_result, _error, { postId }) => [{ type: "Post", id: postId }, "Posts"],
       query: ({
         postId,
         type,

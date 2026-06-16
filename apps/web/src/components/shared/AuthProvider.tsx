@@ -117,7 +117,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         retryTimer.current = setTimeout(() => refetchRef.current(), delay);
       } else {
         clearTimeout(retryTimer.current);
-        dispatch(setLoading(false));
+        dispatch(logout());
       }
     }
     return () => clearTimeout(retryTimer.current);

@@ -321,30 +321,36 @@ export const postService = {
     if (existing) {
       if (existing.type === type) {
         await prisma.reaction.delete({ where: { id: existing.id } });
-        broadcastRealtime(`hb-post:${postId}`, "REACTION_REMOVED", {
-          postId,
-          userId,
-          type,
-        }).catch(() => {});
+        setTimeout(() => {
+          broadcastRealtime(`hb-post:${postId}`, "REACTION_REMOVED", {
+            postId,
+            userId,
+            type,
+          }).catch(() => {});
+        }, 0);
         return { type, removed: true };
       }
       await prisma.reaction.update({ where: { id: existing.id }, data: { type } });
-      broadcastRealtime(`hb-post:${postId}`, "REACTION_CHANGED", {
-        postId,
-        userId,
-        fromType: existing.type,
-        toType: type,
-      }).catch(() => {});
+      setTimeout(() => {
+        broadcastRealtime(`hb-post:${postId}`, "REACTION_CHANGED", {
+          postId,
+          userId,
+          fromType: existing.type,
+          toType: type,
+        }).catch(() => {});
+      }, 0);
       return { type, changed: true };
     }
 
     await prisma.reaction.create({ data: { type, postId, userId } });
 
-    broadcastRealtime(`hb-post:${postId}`, "REACTION_ADDED", {
-      postId,
-      userId,
-      type,
-    }).catch(() => {});
+    setTimeout(() => {
+      broadcastRealtime(`hb-post:${postId}`, "REACTION_ADDED", {
+        postId,
+        userId,
+        type,
+      }).catch(() => {});
+    }, 0);
 
     const post = await prisma.post.findUnique({ where: { id: postId }, select: { userId: true } });
     if (post && post.userId !== userId) {

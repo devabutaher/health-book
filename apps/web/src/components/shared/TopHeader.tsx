@@ -48,6 +48,9 @@ export default function TopHeader() {
     } catch {
       // still clear local state even if server call fails
     }
+    const proto = location.protocol === "https:" ? "; Secure" : "";
+    document.cookie = `hb_token=; path=/; maxAge=0; SameSite=Lax${proto}`;
+    document.cookie = `hb_rt=; path=/; maxAge=0; SameSite=Lax${proto}`;
     dispatch(logout());
     router.push("/login");
   };

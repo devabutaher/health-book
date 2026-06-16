@@ -24,10 +24,19 @@ import { userApi } from "./api/userApi";
 import { weightLogApi } from "./api/weightLogApi";
 import { newsApi } from "./api/newsApi";
 import { pushApi } from "./api/pushApi";
+import { logout } from "./slices/authSlice";
 import authReducer from "./slices/authSlice";
 import settingsReducer, { type SettingsState } from "./slices/settingsSlice";
 
 const SETTINGS_STORAGE_KEY = "hb-settings";
+
+const resetCacheOnLogoutMiddleware: Middleware = () => (next) => (action) => {
+  const result = next(action);
+  if ((action as { type: string }).type === logout.type) {
+    resetApiCache();
+  }
+  return result;
+};
 
 const persistSettingsMiddleware: Middleware = (store) => {
   let lastSerialized = "";
@@ -87,6 +96,7 @@ export const store = configureStore({
       immutableCheck: false,
       serializableCheck: false,
     }).concat(
+      resetCacheOnLogoutMiddleware,
       persistSettingsMiddleware,
       authApi.middleware,
       userApi.middleware,
