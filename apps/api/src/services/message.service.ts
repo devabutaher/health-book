@@ -94,49 +94,47 @@ export const messageService = {
   ) {
     const allIds = [...new Set([userId, ...participantIds])];
 
-    if (!isGroup && allIds.length === 2) {
-      const existing = await prisma.conversation.findFirst({
-        where: {
-          isGroup: false,
-          participants: {
-            every: { userId: { in: allIds } },
-          },
-          AND: allIds.map((id) => ({
-            participants: { some: { userId: id } },
-          })),
-        },
+    const include = {
+      participants: {
         include: {
+          user: { select: { id: true, name: true, username: true, avatar: true } },
+        },
+      },
+    } as const;
+
+    const conversation = await prisma.$transaction(async (tx) => {
+      if (!isGroup && allIds.length === 2) {
+        const existing = await tx.conversation.findFirst({
+          where: {
+            isGroup: false,
+            participants: {
+              every: { userId: { in: allIds } },
+            },
+            AND: allIds.map((id) => ({
+              participants: { some: { userId: id } },
+            })),
+          },
+          include,
+        });
+
+        if (existing) return existing;
+      }
+
+      return tx.conversation.create({
+        data: {
+          isGroup: isGroup ?? false,
+          groupName,
           participants: {
-            include: {
-              user: { select: { id: true, name: true, username: true, avatar: true } },
+            createMany: {
+              data: allIds.map((id) => ({
+                userId: id,
+                role: id === userId ? "ADMIN" : "MEMBER",
+              })),
             },
           },
         },
+        include,
       });
-
-      if (existing) return existing;
-    }
-
-    const conversation = await prisma.conversation.create({
-      data: {
-        isGroup: isGroup ?? false,
-        groupName,
-        participants: {
-          createMany: {
-            data: allIds.map((id) => ({
-              userId: id,
-              role: id === userId ? "ADMIN" : "MEMBER",
-            })),
-          },
-        },
-      },
-      include: {
-        participants: {
-          include: {
-            user: { select: { id: true, name: true, username: true, avatar: true } },
-          },
-        },
-      },
     });
 
     await Promise.allSettled(

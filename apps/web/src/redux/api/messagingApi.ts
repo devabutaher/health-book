@@ -27,7 +27,7 @@ export const messagingApi = createApi({
       }) => response.data,
       serializeQueryArgs: ({ queryArgs }) => {
         const arg = queryArgs as { cursor?: string } | undefined;
-        return arg?.cursor ? "1" : "0";
+        return arg?.cursor ?? "__initial__";
       },
       merge: (currentCache, newItems) => {
         if (!newItems) return;
@@ -197,7 +197,18 @@ export const messagingApi = createApi({
             const conv = draft.data.find((c) => c.id === conversationId);
             if (conv) {
               (conv as any).lastMessage = {
+                id: tempId,
                 content: content || null,
+                mediaUrl: mediaUrl || null,
+                sharedPostId: (sharedPostId as string | null) || null,
+                messageType: messageType || "text",
+                senderId: user.id,
+                sender: {
+                  id: user.id,
+                  name: user.name,
+                  username: user.username,
+                  avatar: user.avatar,
+                },
                 createdAt: new Date().toISOString(),
               };
             }
@@ -291,20 +302,24 @@ export const messagingApi = createApi({
             if (!draft?.data) return;
             const conv = draft.data.find((c) => c.id === conversationId);
             if (!conv) return;
-            (conv as any).unreadCount = 0;
-          }),
-        );
-        // Also update global unread count
-        const patchUnread = dispatch(
-          messagingApi.util.updateQueryData("getUnreadCount", undefined, (draft) => {
-            if (draft.count > 0) draft.count = Math.max(0, draft.count - 1);
+            const actualUnread = conv.unreadCount || 0;
+            conv.unreadCount = 0;
+            // Also update global count by the actual unread amount
+            const patchUnread = dispatch(
+              messagingApi.util.updateQueryData("getUnreadCount", undefined, (draft2) => {
+                if (draft2.count > 0) draft2.count = Math.max(0, draft2.count - actualUnread);
+              }),
+            );
+            // Track patchUnread for rollback
+            (patchConv as any).__unread = patchUnread;
           }),
         );
         try {
           await queryFulfilled;
         } catch {
-          patchConv.undo();
-          patchUnread.undo();
+          const p = patchConv as any;
+          p.undo();
+          if (p.__unread) p.__unread.undo();
           soundManager.playError();
         }
       },

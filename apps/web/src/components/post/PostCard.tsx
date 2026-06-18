@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import dynamic from "next/dynamic";
@@ -41,7 +41,7 @@ const PostQuizCard = dynamic(() =>
   import("./PostQuizCard").then((m) => ({ default: m.PostQuizCard })),
 );
 
-export const PostCard = memo(function PostCard({ post }: { post: Post }) {
+export function PostCard({ post }: { post: Post }) {
   const user = useAppSelector((s) => s.auth.user);
   const isOwner = user?.id === post.userId;
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
@@ -311,4 +311,4 @@ export const PostCard = memo(function PostCard({ post }: { post: Post }) {
       )}
     </motion.div>
   );
-});
+}

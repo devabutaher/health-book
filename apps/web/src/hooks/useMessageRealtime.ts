@@ -46,7 +46,6 @@ export function useMessageRealtime(conversationId: string | null, userId?: strin
 
         const messageId = raw.id as string;
         if (messageId.startsWith("temp-")) return;
-        if (raw.senderId === userId) return;
 
         const rawSender = raw.sender as
           | { id: string; name: string; username: string; avatar: string | null }
@@ -76,7 +75,12 @@ export function useMessageRealtime(conversationId: string | null, userId?: strin
 
         dispatch(
           messagingApi.util.updateQueryData("getConversation", { id: conversationId }, (draft) => {
-            if (!draft.messages.some((m) => m.id === message.id)) {
+            const tempIdx = draft.messages.findIndex(
+              (m) => m.senderId === message.senderId && m.id.startsWith("temp-"),
+            );
+            if (tempIdx >= 0) {
+              draft.messages[tempIdx] = message;
+            } else if (!draft.messages.some((m) => m.id === message.id)) {
               draft.messages.push(message);
             }
           }),
