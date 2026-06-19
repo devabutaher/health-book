@@ -27,13 +27,15 @@ import { pushApi } from "./api/pushApi";
 import { logout } from "./slices/authSlice";
 import authReducer from "./slices/authSlice";
 import settingsReducer, { type SettingsState } from "./slices/settingsSlice";
+import feedReducer, { reset } from "./slices/feedSlice";
 
 const SETTINGS_STORAGE_KEY = "hb-settings";
 
-const resetCacheOnLogoutMiddleware: Middleware = () => (next) => (action) => {
+const resetCacheOnLogoutMiddleware: Middleware = (store) => (next) => (action) => {
   const result = next(action);
   if ((action as { type: string }).type === logout.type) {
     resetApiCache();
+    store.dispatch(reset());
   }
   return result;
 };
@@ -60,6 +62,7 @@ const persistSettingsMiddleware: Middleware = (store) => {
 const rootReducer = combineReducers({
   auth: authReducer,
   settings: settingsReducer,
+  feed: feedReducer,
   [authApi.reducerPath]: authApi.reducer,
   [userApi.reducerPath]: userApi.reducer,
   [postApi.reducerPath]: postApi.reducer,

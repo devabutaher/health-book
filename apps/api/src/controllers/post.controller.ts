@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { createPostSchema, updatePostSchema, reactionSchema } from "../utils/validators";
 import { postService } from "../services/post.service";
 import { uploadImage, uploadVideo } from "../services/cloudinary";
+import { AppError } from "../utils/AppError";
 
 interface MulterFile {
   fieldname: string;
@@ -171,7 +172,8 @@ export const postController = {
       const cursor = req.query.cursor as string | undefined;
       const limit = Number(req.query.limit) || 20;
       const category = req.query.category as string | undefined;
-      const result = await postService.getExplore(cursor, limit, category);
+      if (!req.user) return next(new AppError(401, "Not authenticated"));
+      const result = await postService.getExplore(req.user.id, cursor, limit, category);
       res.json({ success: true, data: result });
     } catch (err) {
       next(err);

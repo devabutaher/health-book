@@ -567,7 +567,7 @@ export const postService = {
     return enrichPost(updated, userId);
   },
 
-  async getExplore(cursor?: string, limit = 20, category?: string) {
+  async getExplore(userId: string, cursor?: string, limit = 20, category?: string) {
     const categoryTemplateMap: Record<string, string> = {
       fitness: "WORKOUT",
       "mental-health": "MOOD",
@@ -592,6 +592,7 @@ export const postService = {
       select: {
         ...postSelectFields,
         user: userSelect,
+        reactions: { where: { userId }, take: 1, select: { type: true, userId: true } },
         _count: { select: { reactions: true, comments: true } },
         healthLog: healthLogSelect,
         poll: pollWithVotes,

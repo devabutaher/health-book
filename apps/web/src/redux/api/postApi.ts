@@ -4,6 +4,7 @@ import { createApi } from "@reduxjs/toolkit/query/react";
 import { createBaseQuery } from "../baseQuery";
 import type { RootState } from "../store";
 import { soundManager } from "@/lib/soundManager";
+import { updateReaction as feedUpdateReaction } from "../slices/feedSlice";
 
 export const postApi = createApi({
   reducerPath: "postApi",
@@ -430,7 +431,21 @@ export const postApi = createApi({
               ),
             );
           }
+          if (q?.endpointName === "getExplore" && q?.status === "fulfilled") {
+            patches.push(
+              dispatch(
+                postApi.util.updateQueryData("getExplore", q.originalArgs, (draft: any) => {
+                  if (!draft?.data?.posts) return;
+                  const post = draft.data.posts.find((p: any) => p.id === postId);
+                  if (post) updateReactions(post);
+                }),
+              ),
+            );
+          }
         }
+
+        // Also update feed Redux slice directly (bypasses local state bridge)
+        dispatch(feedUpdateReaction({ postId, userId, type }));
 
         try {
           await queryFulfilled;

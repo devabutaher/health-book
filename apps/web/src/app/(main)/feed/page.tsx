@@ -8,8 +8,8 @@ import { Virtuoso } from "react-virtuoso";
 import { PostCard } from "@/components/post/PostCard";
 import { PostSkeletonList } from "@/components/shared/PostSkeleton";
 import { useGetDraftsQuery, useGetFeedQuery } from "@/redux/api/postApi";
-import { useAppSelector } from "@/hooks";
-import { useFeedPagination } from "@/hooks/useFeedPagination";
+import { useAppSelector, useAppDispatch } from "@/hooks";
+import { mergePage, setCursor, reset as resetFeed } from "@/redux/slices/feedSlice";
 import type { Post } from "@/types/post";
 import { Button } from "@/components/ui/button";
 import { Empty, EmptyDescription, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
@@ -47,6 +47,7 @@ const FeatureDiscoveryCards = dynamic(() =>
 );
 
 export default function FeedPage() {
+  const dispatch = useAppDispatch();
   const [createOpen, setCreateOpen] = useState(false);
   const [draftsOpen, setDraftsOpen] = useState(false);
   const { data: draftsData } = useGetDraftsQuery();
@@ -55,7 +56,8 @@ export default function FeedPage() {
     : ((draftsData as { data?: unknown[] } | undefined)?.data?.length ?? 0);
   const accessToken = useAppSelector((s) => s.auth.accessToken);
   const authLoading = useAppSelector((s) => s.auth.isLoading);
-  const { cursor, allPosts, loadMore, applyPage, reset } = useFeedPagination<Post>();
+  const cursor = useAppSelector((s) => s.feed.cursor);
+  const allPosts = useAppSelector((s) => s.feed.allPosts);
   const { data, isLoading, isFetching, isError, error, refetch } = useGetFeedQuery(
     { cursor },
     { skip: !accessToken },
@@ -85,19 +87,21 @@ export default function FeedPage() {
   const appendRef = useRef(false);
   useEffect(() => {
     if (!data?.data) return;
-    applyPage(
-      { posts: data.data.posts, nextCursor: data.data.nextCursor, hasMore: data.data.hasMore },
-      appendRef.current,
+    dispatch(
+      mergePage({
+        posts: data.data.posts as Post[],
+        cursor: data.data.nextCursor as string | undefined,
+        hasMore: data.data.hasMore ?? false,
+        append: appendRef.current,
+      }),
     );
     appendRef.current = true;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data]);
+  }, [data, dispatch]);
 
-  const originalReset = reset;
   const wrappedReset = useCallback(() => {
     appendRef.current = false;
-    originalReset();
-  }, [originalReset]);
+    dispatch(resetFeed());
+  }, [dispatch]);
 
   const handlePostCreated = useCallback(() => {
     wrappedReset();
@@ -114,9 +118,9 @@ export default function FeedPage() {
 
   const endReached = useCallback(() => {
     if (hasMoreRef.current && cursorRef.current && !isFetchingRef.current) {
-      loadMore(cursorRef.current);
+      dispatch(setCursor(cursorRef.current));
     }
-  }, [loadMore]);
+  }, [dispatch]);
 
   return (
     <>
