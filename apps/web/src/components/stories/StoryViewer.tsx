@@ -140,6 +140,24 @@ export function StoryViewer({
   const isText = story?.type === "text";
   const isMedia = story?.type === "media";
 
+  const imageLoadedRef = useRef(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const needsImageLoad = isMedia && story?.mediaType !== "video";
+
+  useEffect(() => {
+    imageLoadedRef.current = false;
+    queueMicrotask(() => setImageLoaded(false));
+  }, [story]);
+
+  // Preload next story image
+  useEffect(() => {
+    const nextStory = groups[groupIdx]?.stories?.[storyIdx + 1] || groups[groupIdx + 1]?.stories?.[0];
+    const nextUrl = nextStory?.mediaUrl;
+    if (!nextUrl || nextStory?.mediaType === "video") return;
+    const img = new window.Image();
+    img.src = getImageUrl(nextUrl, "w_800,h_1424,c_fill,q_auto:best,f_auto") ?? nextUrl;
+  }, [storyIdx, groupIdx, groups]);
+
   const { data: interactionsData } = useGetStoryInteractionsQuery(story?.id ?? "", {
     skip: !interactionsOpen || !story,
   });
@@ -174,7 +192,7 @@ export function StoryViewer({
     advanceRef.current = advance;
   }, [advance]);
 
-  // Single unified progress timer — no race condition
+  // Single unified progress timer — waits for image to load for media stories
   useEffect(() => {
     if (!story) return;
 
@@ -182,6 +200,9 @@ export function StoryViewer({
     elapsedRef.current = 0;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setProgress(0);
+
+    // For image stories, wait until image actually loads before starting timer
+    if (needsImageLoad && !imageLoadedRef.current) return;
 
     const duration = story.duration ? story.duration * 1000 : isText ? 8000 : 10000;
 
@@ -209,7 +230,7 @@ export function StoryViewer({
     }, 50);
 
     return () => clearInterval(id);
-  }, [story, isText]);
+  }, [story, isText, needsImageLoad, imageLoaded]);
 
   useEffect(() => {
     if (story && !story.viewed) viewStory(story.id);
@@ -528,7 +549,10 @@ export function StoryViewer({
                     />
                   ) : isMedia ? (
                     <Image
-                      src={getImageUrl(story.mediaUrl, "q_auto:best,f_auto") ?? story.mediaUrl!}
+                      src={
+                        getImageUrl(story.mediaUrl, "w_800,h_1424,c_fill,q_auto:best,f_auto") ??
+                        story.mediaUrl!
+                      }
                       alt={story.textOverlay || "Story"}
                       className="h-full w-full object-contain"
                       width={400}
@@ -539,6 +563,10 @@ export function StoryViewer({
                         getImageUrl(story.mediaUrl, "w_20,e_blur:2000,q_auto:low,f_auto") ??
                         undefined
                       }
+                      onLoad={() => {
+                        imageLoadedRef.current = true;
+                        setImageLoaded(true);
+                      }}
                     />
                   ) : null}
                 </div>

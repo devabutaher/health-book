@@ -102,39 +102,60 @@ export const messageService = {
       },
     } as const;
 
-    const conversation = await prisma.$transaction(async (tx) => {
-      if (!isGroup && allIds.length === 2) {
-        const existing = await tx.conversation.findFirst({
-          where: {
+    // For 1-on-1, use directKey unique constraint to prevent duplicates
+    if (!isGroup && allIds.length === 2) {
+      const [a, b] = [...allIds].sort();
+      const directKey = `${a}:${b}`;
+
+      const existing = await prisma.conversation.findUnique({
+        where: { directKey },
+        include,
+      });
+      if (existing) return existing;
+
+      try {
+        const created = await prisma.conversation.create({
+          data: {
             isGroup: false,
+            directKey,
             participants: {
-              every: { userId: { in: allIds } },
+              createMany: {
+                data: allIds.map((id) => ({
+                  userId: id,
+                  role: id === userId ? "ADMIN" : "MEMBER",
+                })),
+              },
             },
-            AND: allIds.map((id) => ({
-              participants: { some: { userId: id } },
-            })),
           },
           include,
         });
-
-        if (existing) return existing;
+        return created;
+      } catch (err) {
+        if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+          const existing = await prisma.conversation.findUnique({
+            where: { directKey },
+            include,
+          });
+          if (existing) return existing;
+        }
+        throw err;
       }
+    }
 
-      return tx.conversation.create({
-        data: {
-          isGroup: isGroup ?? false,
-          groupName,
-          participants: {
-            createMany: {
-              data: allIds.map((id) => ({
-                userId: id,
-                role: id === userId ? "ADMIN" : "MEMBER",
-              })),
-            },
+    const conversation = await prisma.conversation.create({
+      data: {
+        isGroup: isGroup ?? false,
+        groupName,
+        participants: {
+          createMany: {
+            data: allIds.map((id) => ({
+              userId: id,
+              role: id === userId ? "ADMIN" : "MEMBER",
+            })),
           },
         },
-        include,
-      });
+      },
+      include,
     });
 
     await Promise.allSettled(

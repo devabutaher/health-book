@@ -403,6 +403,7 @@ model Notification {
 model Conversation {
   id          String   @id @default(uuid())
   isGroup     Boolean  @default(false)
+  directKey   String?  @unique
   groupName   String?
   groupAvatar String?
   createdAt   DateTime @default(now())

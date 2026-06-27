@@ -39,7 +39,7 @@ export const StoryCircle = memo(function StoryCircle({
     >
       {storyMediaUrl ? (
         <Image
-          src={getImageUrl(storyMediaUrl, "q_auto:good,f_auto") ?? storyMediaUrl}
+          src={getImageUrl(storyMediaUrl, "w_224,h_352,c_fill,q_auto:good,f_auto") ?? storyMediaUrl}
           alt={group.user.name}
           className="absolute inset-0 h-full w-full object-cover"
           width={112}

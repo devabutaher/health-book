@@ -161,7 +161,7 @@ export function HighlightViewer({
             ) : (
               <Image
                 src={
-                  getImageUrl(currentItem.story?.mediaUrl, "q_auto:best,f_auto") ??
+                  getImageUrl(currentItem.story?.mediaUrl, "w_800,h_1400,c_fill,q_auto:best,f_auto") ??
                   currentItem.story?.mediaUrl ??
                   ""
                 }
